@@ -41,7 +41,6 @@ public class PlayerNameLabelHideMixin {
         if (player == null) return;
 
         if (com.shyeuar.baity.utils.AntiBotUtils.isBot(player)) {
-            ci.cancel();
             return;
         }
 
@@ -51,7 +50,6 @@ public class PlayerNameLabelHideMixin {
                 ci.cancel();
                 return;
             }
-            // 如果未启用show own nametag，让原版标签正常渲染（原版行为）
             return;
         }
 

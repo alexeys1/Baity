@@ -14,7 +14,6 @@ import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.utils.MessageUtils;
-import java.util.regex.Pattern;
 
 @Environment(EnvType.CLIENT)
 public class PepCat {
@@ -78,56 +77,54 @@ public class PepCat {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return false;
         
-        String currentPlayerName = client.player.getGameProfile().getName();
         String messageText = message.getString();
-        
-        if (!isDeathMessage(message)) {
+        return isSecondPersonEnglishDeathMessage(messageText);
+    }
+    
+    private static final String[] ENGLISH_SECOND_PERSON_DEATH_PREFIXES = {
+        "you died",
+        "you were killed",
+        "you were slain",
+        "you were shot",
+        "you were blown up",
+        "you were pricked",
+        "you were squashed",
+        "you were crushed",
+        "you were impaled",
+        "you were doomed to fall",
+        "you were struck by lightning",
+        "you were doomed to fall by",
+        "you were slain by",
+        "you were killed by",
+        "you were slain as",
+        "you were knocked into the void",
+        "you were consumed",
+        "you were incinerated",
+        "you fell",
+        "you hit the ground too hard",
+        "you discovered the floor was lava",
+        "you drowned",
+        "you suffocated",
+        "you suffocated in a wall",
+        "you burned",
+        "you burned to death",
+        "you went up in flames",
+        "you tried to swim in lava",
+        "you blew up",
+        "you froze to death",
+    };
+    
+    private static boolean isSecondPersonEnglishDeathMessage(String rawMessage) {
+        if (rawMessage == null || rawMessage.isEmpty()) {
             return false;
         }
         
-        return containsPlayerName(messageText, currentPlayerName);
-    }
-    
-    private static boolean containsPlayerName(String message, String playerName) {
-        if (message == null || playerName == null) return false;
-        
-        String lowerMessage = message.toLowerCase();
-        String lowerPlayerName = playerName.toLowerCase();
-        
-        String pattern = "\\b" + Pattern.quote(lowerPlayerName) + "\\b";
-        boolean hasPlayerName = lowerMessage.matches(".*" + pattern + ".*");
-        boolean hasYou = lowerMessage.contains("you");
-        return hasPlayerName || hasYou;
-    }
-    
-    private static boolean isDeathMessage(Text message) {
-        String messageText = message.getString().toLowerCase();
-        
-        String[] chineseDeathPatterns = {
-            "死亡", "摔死", "淹死", "烧死", "炸死", "饿死", "被杀死", 
-            "被炸死", "被烧死", "被淹死", "被摔死", "被饿死",
-            "被", "杀死了", "炸死了", "烧死了", "淹死了", "摔死了", "饿死了"
-        };
-        
-        String[] englishDeathPatterns = {
-            "died", "death", "killed", "fell", "drowned", "burned", "exploded", 
-            "starved", "suffocated", "was slain", "was shot", "was pricked",
-            "was killed", "was blown up", "was burned", "was drowned", 
-            "fell out of the world", "was squashed", "was killed by"
-        };
-        
-        for (String pattern : chineseDeathPatterns) {
-            if (messageText.contains(pattern)) {
+        String normalized = rawMessage.toLowerCase();
+        for (String fragment : ENGLISH_SECOND_PERSON_DEATH_PREFIXES) {
+            if (normalized.contains(fragment)) {
                 return true;
             }
         }
-        
-        for (String pattern : englishDeathPatterns) {
-            if (messageText.contains(pattern)) {
-                return true;
-            }
-        }
-        
         return false;
     }
     

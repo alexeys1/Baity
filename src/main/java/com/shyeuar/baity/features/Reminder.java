@@ -68,13 +68,8 @@ public class Reminder {
     private void initMeowAlert() {
         if (!hasRegisteredMeowAlert) {
             ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
-                com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
-                boolean meowAlertEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "meowalert", false);
-                if (!meowAlertEnabled) {
-                    return;
-                }
-                
-                if (sender != null) {
+                if (com.shyeuar.baity.config.ConfigManager.reminderEnabled && 
+                    com.shyeuar.baity.config.ConfigManager.meowAlertEnabled && sender != null) {
                     MinecraftClient client = MinecraftClient.getInstance();
                     if (client.player != null) {
                         String currentPlayerName = client.player.getGameProfile().getName();
@@ -136,15 +131,11 @@ public class Reminder {
     }
     
     private boolean isCookieEnabled() {
-        com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
-        boolean cookieReminderEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "cookie buff reminder", false);
-        return isOnSkyBlock() && cookieReminderEnabled;
+        return isOnSkyBlock() && com.shyeuar.baity.config.ConfigManager.cookieBuffReminderEnabled;
     }
     
     private boolean isGodPotionEnabled() {
-        com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
-        boolean godPotionReminderEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "god potion reminder", false);
-        return isOnSkyBlock() && godPotionReminderEnabled;
+        return isOnSkyBlock() && com.shyeuar.baity.config.ConfigManager.godPotionReminderEnabled;
     }
     
     private void update() {
@@ -321,11 +312,11 @@ public class Reminder {
         Reminder instance = getInstance();
         if (instance == null) return;
         
-        boolean cookieReminderEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBooleanRaw(
+        boolean cookieReminderEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(
             reminderModule, "cookie buff reminder", false);
-        boolean godPotionReminderEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBooleanRaw(
+        boolean godPotionReminderEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(
             reminderModule, "god potion reminder", false);
-        boolean meowAlertEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBooleanRaw(
+        boolean meowAlertEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(
             reminderModule, "meowalert", false);
         
         instance.setCookieReminderEnabled(cookieReminderEnabled);
@@ -383,5 +374,4 @@ public class Reminder {
         com.shyeuar.baity.config.ConfigManager.meowAlertEnabled = enabled;
     }
 }
-
 

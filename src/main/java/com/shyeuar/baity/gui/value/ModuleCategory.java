@@ -20,4 +20,3 @@ public enum ModuleCategory {
         return displayName;
     }
 }
-

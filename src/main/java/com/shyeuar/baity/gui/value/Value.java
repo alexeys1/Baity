@@ -14,9 +14,4 @@ public interface Value {
     default ValueStyle getStyle() {
         return ValueStyle.DEFAULT;
     }
-    
-    default boolean isIndependentOfParentModule() {
-        return false;
-    }
 }
-

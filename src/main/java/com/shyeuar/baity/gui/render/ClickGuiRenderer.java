@@ -253,8 +253,8 @@ public class ClickGuiRenderer {
     private static void renderTooltip(DrawContext context, MinecraftClient client,
                                      Theme theme, ClickGuiState state,
                                      double mouseX, double mouseY) {
-        int tooltipX = (int)(mouseX + 5);
-        int tooltipY = (int)(mouseY + 5);
+        int tooltipX = (int)(mouseX + 6);
+        int tooltipY = (int)(mouseY + 6);
         
         float tooltipScaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
         float tipScale = 0.75f * tooltipScaleRatio;
@@ -335,5 +335,3 @@ public class ClickGuiRenderer {
         return state.getModuleExpandAnimations().getOrDefault(moduleName, 0.0f);
     }
 }
-
-

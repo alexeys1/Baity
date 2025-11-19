@@ -67,11 +67,6 @@ public class ButtonValue implements Value {
         return defaultDisplayText;
     }
     
-    @Override
-    public boolean isIndependentOfParentModule() {
-        return buttonValueType == ButtonValueType.KEYBIND;
-    }
-    
     public String getDisplayText(java.util.function.Function<Object, String> formatter) {
         if (formatter != null) {
             String formatted = formatter.apply(value);
@@ -85,5 +80,4 @@ public class ButtonValue implements Value {
         return value != null ? value.toString() : defaultDisplayText;
     }
 }
-
 

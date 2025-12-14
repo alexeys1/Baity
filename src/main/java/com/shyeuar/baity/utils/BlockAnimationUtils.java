@@ -15,7 +15,8 @@ public final class BlockAnimationUtils {
 
     public static boolean isEntityBlocking(LivingEntity entity) {
         if (!ConfigManager.blockAnimationMode || entity == null) return false;
-        if (!entity.getWorld().isClient) return false;
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.world == null) return false;
         return isPlayerRightClicking() && canSwordBlock(entity);
     }
 
@@ -38,7 +39,8 @@ public final class BlockAnimationUtils {
                item == Items.IRON_SWORD ||
                item == Items.GOLDEN_SWORD ||
                item == Items.DIAMOND_SWORD ||
-               item == Items.NETHERITE_SWORD;
+               item == Items.NETHERITE_SWORD ||
+               item == Items.COPPER_SWORD;
     }
 
     public static Hand getBlockingHand(LivingEntity entity) {

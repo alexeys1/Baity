@@ -32,11 +32,11 @@ public class ButtonValue implements Value {
     }
     
     public ButtonValue(String name, String displayName, Object defaultValue, ModuleCategory category, ButtonValueType buttonValueType) {
-        this(name, displayName, defaultValue, "NOTSET", category, buttonValueType);
+        this(name, displayName, defaultValue, "☄ NOTSET", category, buttonValueType);
     }
     
     public ButtonValue(String name, String displayName, Object defaultValue, ModuleCategory category) {
-        this(name, displayName, defaultValue, "NOTSET", category, ButtonValueType.KEYBIND);
+        this(name, displayName, defaultValue, "☄ NOTSET", category, ButtonValueType.KEYBIND);
     }
     
     public ButtonValueType getButtonValueType() {

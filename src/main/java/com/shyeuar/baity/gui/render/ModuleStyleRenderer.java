@@ -75,6 +75,9 @@ public class ModuleStyleRenderer {
    public static void renderKeybindBoxContent(DrawContext context, MinecraftClient client, Theme theme,
                                               float containerX2, float containerY, float containerHeight,
                                               float mouseX, float mouseY, boolean isListening, String displayText) {
+       if (displayText == null || displayText.isEmpty()) {
+           displayText = "☄ NOTSET";
+       }
        String plainText = displayText.replaceAll("§[0-9a-fklmnor]", "");
        int textWidth = client.textRenderer.getWidth(plainText);
        int boxWidth = textWidth + 16;
@@ -112,11 +115,15 @@ public class ModuleStyleRenderer {
                int prefixWidth = client.textRenderer.getWidth(prefix);
                net.minecraft.text.Text keyTextObj = net.minecraft.text.Text.literal(keyName);
                context.drawText(client.textRenderer, keyTextObj, baseX + prefixWidth, baseY, keyNameRGB, false);
-           } else if (displayPlainText.startsWith("☄")) {
+           } else if (displayPlainText.startsWith("☄") || 
+                       displayPlainText.toUpperCase().contains("NOTSET") || 
+                       displayPlainText.toUpperCase().contains("NONE") || 
+                       displayPlainText.toUpperCase().contains("UNKNOWN")) {
                String prefix = "☄";
-               String notsetText = displayPlainText.substring(1);
-               int prefixRGB = 0xFFFF00;
-               int notsetRGB = 0xAAAAAA;
+               String notsetText = displayPlainText.startsWith("☄") ? displayPlainText.substring(1) : (" " + displayPlainText);
+               // 1.21.10 需要完整的 ARGB 值（包含 alpha 通道）
+               int prefixRGB = 0xFFFFFF00;  // 黄色，完全不透明
+               int notsetRGB = 0xFFAAAAAA;  // 灰色，完全不透明
 
                net.minecraft.text.Text prefixText = net.minecraft.text.Text.literal(prefix);
                context.drawText(client.textRenderer, prefixText, baseX, baseY, prefixRGB, false);

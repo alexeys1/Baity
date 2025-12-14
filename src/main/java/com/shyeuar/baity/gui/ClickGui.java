@@ -18,6 +18,8 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.Click;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 
 @Environment(EnvType.CLIENT)
@@ -89,17 +91,17 @@ public class ClickGui extends Screen {
     }
     
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (inputHandler.handleMouseClick(mouseX, mouseY, button)) {
+    public boolean mouseClicked(Click click, boolean isInsideWindow) {
+        if (inputHandler.handleMouseClick(click.x(), click.y(), click.button())) {
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(click, isInsideWindow);
     }
     
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        inputHandler.handleMouseRelease(button);
-        return super.mouseReleased(mouseX, mouseY, button);
+    public boolean mouseReleased(Click click) {
+        inputHandler.handleMouseRelease(click.button());
+        return super.mouseReleased(click);
     }
     
     @Override
@@ -109,11 +111,14 @@ public class ClickGui extends Screen {
     }
     
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyInput input) {
+        int keyCode = input.getKeycode();
+        int scanCode = input.scancode();
+        int modifiers = input.modifiers();
         if (inputHandler.handleKeyPress(keyCode, scanCode, modifiers)) {
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(input);
     }
     
     @Override
@@ -144,7 +149,7 @@ public class ClickGui extends Screen {
             int keyCode = (Integer) value;
             return com.shyeuar.baity.utils.KeyMappingUtils.formatKeyDisplay(keyCode, "");
         }
-        return value != null ? value.toString() : "☄NOTSET";
+        return value != null ? value.toString() : "☄ NOTSET";
     }
     
     private void updateKeyDisplay() {

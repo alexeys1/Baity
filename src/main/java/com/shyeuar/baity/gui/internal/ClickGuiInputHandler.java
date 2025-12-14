@@ -299,7 +299,7 @@ public class ClickGuiInputHandler {
                         int keyCode = (Integer) val;
                         return com.shyeuar.baity.utils.KeyMappingUtils.formatKeyDisplay(keyCode, "");
                     }
-                    return val != null ? val.toString() : "☄NOTSET";
+                    return val != null ? val.toString() : "☄ NOTSET";
                 });
                 String plainText = boxText.replaceAll("§[0-9a-fklmnor]", "");
                 MinecraftClient client = MinecraftClient.getInstance();

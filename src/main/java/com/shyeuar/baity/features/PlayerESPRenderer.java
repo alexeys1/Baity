@@ -6,24 +6,25 @@ import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.utils.ModuleUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Vec3d;
 
 @Environment(EnvType.CLIENT)
-public class PlayerESPRenderer implements WorldRenderEvents.AfterTranslucent {
+public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
     private static final MinecraftClient mc = MinecraftClient.getInstance();
     
     private static long lastTimeUpdate = 0;
     private static double cachedSinValue = 0.0;
     
     @Override
-    public void afterTranslucent(WorldRenderContext context) {
+    public void afterEntities(WorldRenderContext context) {
         Module m = ModuleManager.getModuleByName("PlayerESP");
         if (m == null || !m.isEnabled()) {
             return; 
@@ -31,11 +32,23 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterTranslucent {
         
         if (mc.world == null || mc.player == null) return;
         
-        MatrixStack matrices = context.matrixStack();
-        if (matrices == null) return; 
+        // 从 CameraRenderState 获取相机位置，从 Camera 获取旋转信息
+        Vec3d cameraPos = context.worldState().cameraRenderState.pos;
+        Camera camera = mc.gameRenderer.getCamera();
+        float tickDelta = mc.getRenderTickCounter().getTickProgress(false);
+        float cameraYaw = camera.getYaw();
+        float cameraPitch = camera.getPitch();
         
-        Vec3d cameraPos = context.camera().getPos();
-        float tickDelta = context.tickCounter().getTickProgress(true);
+        // 使用 context 提供的 matrices
+        MatrixStack matrices = context.matrices();
+        if (matrices == null) {
+            matrices = new MatrixStack();
+            matrices.multiply(new org.joml.Quaternionf().rotationXYZ(
+                (float) Math.toRadians(cameraPitch),
+                (float) Math.toRadians(cameraYaw + 180.0f),
+                0.0f
+            ));
+        }
         
         updateCache();
         
@@ -64,7 +77,7 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterTranslucent {
             matrices.push();
             try {
                 matrices.translate(x, y, z);
-                renderPlayerName(matrices, player, context.camera().getYaw(), context.camera().getPitch(), m);
+                renderPlayerName(matrices, player, cameraYaw, cameraPitch, m);
             } finally {
                 matrices.pop();
             }
@@ -90,7 +103,7 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterTranslucent {
 
             assert mc.player != null;
             double distance = mc.player.distanceTo(player);
-            float baseScale = (float) Math.max(0.03, Math.min(distance * 0.0025, 0.12)); // 远距离+2号，近距离+1号
+            float baseScale = (float) Math.max(0.03, Math.min(distance * 0.0025, 0.12));
             float breathingScale = (float) (baseScale * (1.0 + cachedSinValue * 0.3)); 
             matrices.scale(-breathingScale, -breathingScale, breathingScale);
         
@@ -99,8 +112,8 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterTranslucent {
         boolean showDistance = ModuleUtils.getOptionBoolean(module, "show distance", true);
         
         TextRenderer textRenderer = mc.textRenderer;
-        int nameColor = 0xFF69B4; // 粉色
-        int distanceColor = 0x00FFFF; // 青色
+        int nameColor = 0xFF69B4;
+        int distanceColor = 0x00FFFF;
         
         int totalWidth = textRenderer.getWidth(baseName);
         if (isDeveloper) {
@@ -118,12 +131,17 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterTranslucent {
         
         VertexConsumerProvider.Immediate immediate = mc.getBufferBuilders().getEntityVertexConsumers();
         
+        // 添加 alpha 通道到颜色
+        int nameColorWithAlpha = 0xFFFF69B4;
+        int distanceColorWithAlpha = 0xFF00FFFF;
+        int devColorWithAlpha = DevConfig.DEV_PREFIX_COLOR | 0xFF000000;
+        
         if (isDeveloper) {
-            textRenderer.draw(DevConfig.DEV_PREFIX, currentX, 0, DevConfig.DEV_PREFIX_COLOR, false, matrices.peek().getPositionMatrix(), immediate, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
+            textRenderer.draw(DevConfig.DEV_PREFIX, currentX, 0, devColorWithAlpha, false, matrices.peek().getPositionMatrix(), immediate, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
             currentX += textRenderer.getWidth(DevConfig.DEV_PREFIX) + 2;
         }
         
-        textRenderer.draw(baseName, currentX, 0, nameColor, false, matrices.peek().getPositionMatrix(), immediate, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
+        textRenderer.draw(baseName, currentX, 0, nameColorWithAlpha, false, matrices.peek().getPositionMatrix(), immediate, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
         
         if (showDistance) {
             double dist = mc.player != null ? mc.player.distanceTo(player) : 0.0;
@@ -134,7 +152,7 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterTranslucent {
             } else {
                 distanceX = totalWidth / 2 + 2;
             }
-            textRenderer.draw(distanceText, distanceX, 0, distanceColor, false, matrices.peek().getPositionMatrix(), immediate, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
+            textRenderer.draw(distanceText, distanceX, 0, distanceColorWithAlpha, false, matrices.peek().getPositionMatrix(), immediate, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
         }
         
             immediate.draw();
@@ -151,6 +169,4 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterTranslucent {
             lastTimeUpdate = currentTime;
         }
     }
-    
-
 }

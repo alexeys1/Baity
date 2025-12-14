@@ -15,10 +15,6 @@ public class AntiBotUtils {
     private static Map<String, String> playerMap = new HashMap<>();
     private static int tickCount = 0;
     
-    /**
-     * 更新玩家映射，每40tick执行一次
-     * 使用网络处理器获取所有玩家，包括隐藏的玩家
-     */
     public static void updatePlayerMap() {
         if (mc.player == null || mc.world == null || mc.player.networkHandler == null) return;
         
@@ -26,26 +22,30 @@ public class AntiBotUtils {
         if (tickCount % 40 == 0) {
             playerMap.clear();
             
-            // 使用网络处理器获取所有玩家UUID（包括隐藏的玩家）
             for (UUID uuid : mc.player.networkHandler.getPlayerUuids()) {
                 try {
                     var playerListEntry = mc.player.networkHandler.getPlayerListEntry(uuid);
                     if (playerListEntry == null) continue;
                     
-                    String playerName = playerListEntry.getProfile().getName();
+                    String playerName;
+                    if (playerListEntry.getDisplayName() != null) {
+                        playerName = playerListEntry.getDisplayName().getString();
+                    } else {
+                        playerName = uuid.toString();
+                    }
                     
-                    // 检测方法1：名称前缀检测（Hypixel NPC通常以!开头）
+                    // 检测方法1：名称前缀（hypixel npc通常以!开头)
                     if (playerName.startsWith("!")) {
                         continue;
                     }
                     
-                    // 检测方法2：状态效果检测（真实玩家通常有状态效果）
+                    // 检测方法2：状态效果
                     PlayerEntity worldPlayer = mc.world.getPlayerByUuid(uuid);
                     if (worldPlayer != null && worldPlayer.getStatusEffects().isEmpty()) {
                         continue;
                     }
                     
-                    // 检测方法3：UUID格式检测
+                    // 检测方法3：UUID
                     try {
                         UUID.fromString(uuid.toString());
                     } catch (IllegalArgumentException e) {

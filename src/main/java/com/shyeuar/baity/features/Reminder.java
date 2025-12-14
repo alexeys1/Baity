@@ -67,22 +67,23 @@ public class Reminder {
     
     private void initMeowAlert() {
         if (!hasRegisteredMeowAlert) {
+            // CHAT 事件只监听玩家聊天消息，不包括服务器系统消息
             ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
+                // 额外检查：确保有发送者（是玩家消息而非系统消息）
+                if (sender == null) return;
+                
                 com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
                 boolean meowAlertEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "meowalert", false);
-                if (meowAlertEnabled && sender != null) {
+                if (meowAlertEnabled) {
                     MinecraftClient client = MinecraftClient.getInstance();
                     if (client.player != null) {
-                        String currentPlayerName = client.player.getGameProfile().getName();
-                        String senderName = sender.getName();
-                        if (!currentPlayerName.equals(senderName)) {
-                            String messageText = message.getString();
-                            if (containsPlayerName(messageText, currentPlayerName)) {
-                                long currentTime = System.currentTimeMillis();
-                                if (currentTime - lastMeowTime > MEOW_COOLDOWN_MS) {
-                                    lastMeowTime = currentTime;
-                                    playMeowSound(client.player);
-                                }
+                        String currentPlayerName = client.player.getName().getString();
+                        String messageText = message.getString();
+                        if (containsPlayerName(messageText, currentPlayerName)) {
+                            long currentTime = System.currentTimeMillis();
+                            if (currentTime - lastMeowTime > MEOW_COOLDOWN_MS) {
+                                lastMeowTime = currentTime;
+                                playMeowSound(client.player);
                             }
                         }
                     }
@@ -98,19 +99,8 @@ public class Reminder {
         String lowerMessage = message.toLowerCase();
         String lowerPlayerName = playerName.toLowerCase();
         
-        String regex = "\\b" + java.util.regex.Pattern.quote(lowerPlayerName) + "\\b";
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(regex);
-        java.util.regex.Matcher matcher = pattern.matcher(lowerMessage);
-        
-        if (matcher.find()) {
-            return true;
-        }
-        
-        String looseRegex = "\\b" + java.util.regex.Pattern.quote(lowerPlayerName) + "[a-zA-Z]";
-        java.util.regex.Pattern loosePattern = java.util.regex.Pattern.compile(looseRegex);
-        java.util.regex.Matcher looseMatcher = loosePattern.matcher(lowerMessage);
-        
-        return looseMatcher.find();
+        // 简单包含匹配：只要消息中包含玩家ID即可触发
+        return lowerMessage.contains(lowerPlayerName);
     }
     
     private void playMeowSound(net.minecraft.client.network.ClientPlayerEntity player) {

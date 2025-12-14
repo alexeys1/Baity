@@ -1,7 +1,8 @@
 package com.shyeuar.baity.mixin;
 
 import com.shyeuar.baity.utils.BlockAnimationUtils;
-import com.llamalad7.mixinextras.sugar.Local;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.item.HeldItemRenderer;
 import net.minecraft.item.ItemStack;
@@ -9,62 +10,78 @@ import net.minecraft.item.consume.UseAction;
 import net.minecraft.util.Hand;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 
 public abstract class BlockAnimationMixin {
 
     @Mixin(HeldItemRenderer.class)
     public static abstract class MixinHeldItemRenderer {
 
-        @Redirect(method = "renderFirstPersonItem(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/util/Hand;FLnet/minecraft/item/ItemStack;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getUseAction()Lnet/minecraft/item/consume/UseAction;"))
-        private UseAction blockAnimation$changeItemAction(ItemStack stack, @Local(argsOnly = true) AbstractClientPlayerEntity player, @Local(argsOnly = true) Hand hand) {
-            UseAction defaultUseAction = stack.getUseAction();
+        private static final String RENDER_METHOD = "renderFirstPersonItem(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/util/Hand;FLnet/minecraft/item/ItemStack;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;I)V";
+
+        /**
+         * 拦截 player.isUsingItem() 调用，如果玩家正在"格挡"则返回 true
+         */
+        @WrapOperation(
+            method = RENDER_METHOD,
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;isUsingItem()Z")
+        )
+        private boolean blockAnimation$wrapIsUsingItem(AbstractClientPlayerEntity player, Operation<Boolean> original) {
             if (player != null && BlockAnimationUtils.isEntityBlocking(player)) {
-                if (BlockAnimationUtils.isSword(stack.getItem())) {
-                    Hand blockingHand = BlockAnimationUtils.getBlockingHand(player);
-                    if (blockingHand != null && blockingHand == hand) {
-                        return UseAction.BLOCK;
-                    }
-                }
+                return true;
             }
-            return defaultUseAction;
+            return original.call(player);
         }
 
-        @Redirect(method = "renderFirstPersonItem(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/util/Hand;FLnet/minecraft/item/ItemStack;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;getItemUseTimeLeft()I"))
-        private int blockAnimation$changeUseTimeLeft(AbstractClientPlayerEntity player, @Local(argsOnly = true) Hand hand, @Local(argsOnly = true) ItemStack stack) {
-            if (player == null) {
-                return 0;
-            }
-            if (BlockAnimationUtils.isEntityBlocking(player)) {
-                if (BlockAnimationUtils.isSword(stack.getItem())) {
+        /**
+         * 拦截 player.getItemUseTimeLeft() 调用，如果玩家正在"格挡"则返回 > 0 的值
+         */
+        @WrapOperation(
+            method = RENDER_METHOD,
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;getItemUseTimeLeft()I")
+        )
+        private int blockAnimation$wrapGetItemUseTimeLeft(AbstractClientPlayerEntity player, Operation<Integer> original) {
+            if (player != null && BlockAnimationUtils.isEntityBlocking(player)) {
+                ItemStack mainHand = player.getMainHandStack();
+                ItemStack offHand = player.getOffHandStack();
+                if (BlockAnimationUtils.isSword(mainHand.getItem()) || BlockAnimationUtils.isSword(offHand.getItem())) {
                     return 20;
                 }
             }
-            return player.getItemUseTimeLeft();
+            return original.call(player);
         }
 
-        @Redirect(method = "renderFirstPersonItem(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/util/Hand;FLnet/minecraft/item/ItemStack;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;isUsingItem()Z"))
-        private boolean blockAnimation$forceIsUsingItem(AbstractClientPlayerEntity player, @Local(argsOnly = true) Hand hand, @Local(argsOnly = true) ItemStack stack) {
-            if (player == null) {
-                return false;
-            }
-            if (BlockAnimationUtils.isEntityBlocking(player) && BlockAnimationUtils.isSword(stack.getItem())) {
-                return BlockAnimationUtils.getBlockingHand(player) == hand || player.isUsingItem();
-            }
-            return player.isUsingItem();
-        }
-
-        @Redirect(method = "renderFirstPersonItem(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/util/Hand;FLnet/minecraft/item/ItemStack;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;getActiveHand()Lnet/minecraft/util/Hand;"))
-        private Hand blockAnimation$forceActiveHand(AbstractClientPlayerEntity player) {
-            if (player == null) {
-                return Hand.MAIN_HAND;
-            }
-            if (BlockAnimationUtils.isEntityBlocking(player)) {
+        /**
+         * 拦截 player.getActiveHand() 调用，如果玩家正在"格挡"则返回持剑的手
+         */
+        @WrapOperation(
+            method = RENDER_METHOD,
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;getActiveHand()Lnet/minecraft/util/Hand;")
+        )
+        private Hand blockAnimation$wrapGetActiveHand(AbstractClientPlayerEntity player, Operation<Hand> original) {
+            if (player != null && BlockAnimationUtils.isEntityBlocking(player)) {
                 Hand blockingHand = BlockAnimationUtils.getBlockingHand(player);
-                if (blockingHand != null) return blockingHand;
+                if (blockingHand != null) {
+                    return blockingHand;
+                }
             }
-            return player.getActiveHand();
+            return original.call(player);
+        }
+
+        /**
+         * 拦截 item.getUseAction() 调用，如果玩家正在"格挡"且持剑则返回 BLOCK
+         */
+        @WrapOperation(
+            method = RENDER_METHOD,
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getUseAction()Lnet/minecraft/item/consume/UseAction;")
+        )
+        private UseAction blockAnimation$wrapGetUseAction(ItemStack stack, Operation<UseAction> original) {
+            net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+            if (mc != null && mc.player != null && BlockAnimationUtils.isEntityBlocking(mc.player)) {
+                if (BlockAnimationUtils.isSword(stack.getItem())) {
+                    return UseAction.BLOCK;
+                }
+            }
+            return original.call(stack);
         }
     }
-
 }

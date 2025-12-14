@@ -13,7 +13,7 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 
 @Environment(EnvType.CLIENT)
@@ -64,7 +64,8 @@ public class Baity implements ClientModInitializer {
                 return 1;
             })));
 
-        WorldRenderEvents.AFTER_TRANSLUCENT.register(new com.shyeuar.baity.features.PlayerESPRenderer());
+        // Register PlayerESP renderer using new Fabric API (1.21.10+)
+        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.PlayerESPRenderer());
     }
     
     public static final net.minecraft.sound.SoundEvent LAUGHTER_SOUND = registerSoundEvent("sounds.laughter");
@@ -79,4 +80,3 @@ public class Baity implements ClientModInitializer {
     }
 
 }
-

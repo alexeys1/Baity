@@ -32,9 +32,15 @@ public class ClickGuiRenderer {
         float scaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
         
-        context.getMatrices().push();
-        context.getMatrices().translate(state.getWindowX(), state.getWindowY(), 0);
-        context.getMatrices().scale(scaleRatio, scaleRatio, 1.0f);
+        // TODO: Matrix3x2fStack in 1.21.10 does not support the previous push/translate/scale usage here.
+        // context.getMatrices().push();
+        // context.getMatrices().translate(state.getWindowX(), state.getWindowY(), 0);
+        // context.getMatrices().scale(scaleRatio, scaleRatio, 1.0f);
+
+        var matrices = context.getMatrices();
+        matrices.pushMatrix();
+        matrices.translate(state.getWindowX(), state.getWindowY());
+        matrices.scale(scaleRatio, scaleRatio);
         
         renderWindowBackground(context, theme);
         
@@ -88,8 +94,8 @@ public class ClickGuiRenderer {
         }
         
         renderWatermark(context, client, theme);
-        
-        context.getMatrices().pop();
+
+        matrices.popMatrix();
         
         if (state.getHoveredTooltip() != null) {
             renderTooltip(context, client, theme, state, mouseX, mouseY);
@@ -242,12 +248,15 @@ public class ClickGuiRenderer {
         float baseX = ClickGuiState.WIDTH - scaledWidth - 8;
         float baseY = 8;
         
-        context.getMatrices().push();
-        context.getMatrices().scale(wmScale, wmScale, 1f);
+        // context.getMatrices().push();
+        // context.getMatrices().scale(wmScale, wmScale, 1f);
         int wmColor = new java.awt.Color(120, 124, 132).getRGB();
+        var matrices = context.getMatrices();
+        matrices.pushMatrix();
+        matrices.scale(wmScale, wmScale);
         context.drawText(client.textRenderer, watermark, 
                         (int)(baseX / wmScale), (int)(baseY / wmScale), wmColor, false);
-        context.getMatrices().pop();
+        matrices.popMatrix();
     }
     
     private static void renderTooltip(DrawContext context, MinecraftClient client,
@@ -291,12 +300,19 @@ public class ClickGuiRenderer {
             finalTooltipX = 2;
         }
         
-        var guiMatrices = context.getMatrices();
-        guiMatrices.push();
-        guiMatrices.translate((float)finalTooltipX, (float)finalTooltipY, 0f);
-        guiMatrices.scale(tipScale, tipScale, 1f);
+        // var guiMatrices = context.getMatrices();
+        // guiMatrices.push();
+        // guiMatrices.translate((float)finalTooltipX, (float)finalTooltipY, 0f);
+        // guiMatrices.scale(tipScale, tipScale, 1f);
         
-        GuiRenderUtil.drawRoundedRect(context, 0, 0, rawTooltipWidth, rawTooltipHeight, 4, theme.BG_2.getRGB());
+        var guiMatrices = context.getMatrices();
+        guiMatrices.pushMatrix();
+        guiMatrices.translate((float)finalTooltipX, (float)finalTooltipY);
+        guiMatrices.scale(tipScale, tipScale);
+        
+        GuiRenderUtil.drawRoundedRect(context, 0, 0,
+                                      rawTooltipWidth, rawTooltipHeight,
+                                      4, theme.BG_2.getRGB());
         
         int textX = bgPadding / 2;
         int textY = (rawTooltipHeight - rawFontHeight) / 2;
@@ -306,8 +322,8 @@ public class ClickGuiRenderer {
         } else if (state.getHoveredTooltip() != null) {
             context.drawText(client.textRenderer, state.getHoveredTooltip(), textX, textY, theme.FONT_C.getRGB() | 0xFF000000, false);
         }
-        
-        guiMatrices.pop();
+
+        guiMatrices.popMatrix();
     }
     
     private static void updateModuleExpandAnimations(ClickGuiState state) {

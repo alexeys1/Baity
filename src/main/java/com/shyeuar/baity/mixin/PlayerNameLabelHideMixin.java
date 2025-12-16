@@ -27,33 +27,30 @@ public class PlayerNameLabelHideMixin {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.world == null) return;
         
-        if (state.playerName == null) return;
-        String playerName = state.playerName.getString();
-        
         PlayerEntity player = null;
         for (PlayerEntity p : mc.world.getPlayers()) {
-            if (p.getName().getString().equals(playerName)) {
+            if (p.getId() == state.id) {
                 player = p;
                 break;
             }
         }
         if (player == null) return;
 
+        // 假人保留原版名牌，不隐藏
         if (com.shyeuar.baity.utils.AntiBotUtils.isBot(player)) {
-            ci.cancel();
             return;
         }
 
+        // 自己的名牌处理
         boolean showOwnNametag = ModuleUtils.getOptionBoolean(m, "show own nametag", false);
         if (player == mc.player) {
             if (showOwnNametag) {
-                ci.cancel();
-                return;
+                ci.cancel();  // 显示自定义名牌时隐藏原版
             }
-            // 如果未启用show own nametag，让原版标签正常渲染（原版行为）
             return;
         }
 
+        // 其他真人玩家：隐藏原版名牌，由 PlayerESPRenderer 渲染自定义名牌
         ci.cancel();
     }
 

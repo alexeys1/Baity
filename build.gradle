@@ -60,7 +60,6 @@ jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-// 设置所有 jar 任务不追加版本号（版本号已在 archivesName 中）
 tasks.withType(AbstractArchiveTask).configureEach {
     archiveVersion.set("")
 }

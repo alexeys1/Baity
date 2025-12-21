@@ -2,13 +2,19 @@ package com.shyeuar.baity.mixin;
 
 import com.shyeuar.baity.config.ConfigManager;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.Perspective;
+import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.minecraft.client.render.state.CameraRenderState;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.Entity;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.BlockView;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -74,6 +80,29 @@ public class SmolPeopleMixin {
                     // 忽略潜在的模型实现差异
                 }
             }
+        }
+    }
+
+    @Mixin(Camera.class)
+    public static class SmolCameraMixin {
+        
+        @Shadow
+        private Vec3d pos;
+        
+        @Unique
+        private static final float SMOL_CAMERA_Y_OFFSET = -0.65f;
+        
+        @Inject(method = "update", at = @At("TAIL"))
+        private void baity$adjustCameraForSmolPeople(BlockView area, Entity focusedEntity, boolean thirdPerson, boolean inverseView, float tickDelta, CallbackInfo ci) {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            
+            if (!ConfigManager.smolpeopleMode) return;
+            if (mc.player == null) return;
+            if (focusedEntity != mc.player) return;
+            
+            if (mc.options.getPerspective() != Perspective.THIRD_PERSON_FRONT) return;
+            
+            this.pos = new Vec3d(this.pos.x, this.pos.y + SMOL_CAMERA_Y_OFFSET, this.pos.z);
         }
     }
 }

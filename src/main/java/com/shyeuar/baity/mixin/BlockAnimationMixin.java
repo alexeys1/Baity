@@ -3,6 +3,7 @@ package com.shyeuar.baity.mixin;
 import com.shyeuar.baity.utils.BlockAnimationUtils;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.item.HeldItemRenderer;
 import net.minecraft.item.ItemStack;
@@ -18,9 +19,6 @@ public abstract class BlockAnimationMixin {
 
         private static final String RENDER_METHOD = "renderFirstPersonItem(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/util/Hand;FLnet/minecraft/item/ItemStack;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;I)V";
 
-        /**
-         * 拦截 player.isUsingItem() 调用，如果玩家正在"格挡"则返回 true
-         */
         @WrapOperation(
             method = RENDER_METHOD,
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;isUsingItem()Z")
@@ -32,9 +30,6 @@ public abstract class BlockAnimationMixin {
             return original.call(player);
         }
 
-        /**
-         * 拦截 player.getItemUseTimeLeft() 调用，如果玩家正在"格挡"则返回 > 0 的值
-         */
         @WrapOperation(
             method = RENDER_METHOD,
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;getItemUseTimeLeft()I")
@@ -50,9 +45,6 @@ public abstract class BlockAnimationMixin {
             return original.call(player);
         }
 
-        /**
-         * 拦截 player.getActiveHand() 调用，如果玩家正在"格挡"则返回持剑的手
-         */
         @WrapOperation(
             method = RENDER_METHOD,
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;getActiveHand()Lnet/minecraft/util/Hand;")
@@ -67,15 +59,12 @@ public abstract class BlockAnimationMixin {
             return original.call(player);
         }
 
-        /**
-         * 拦截 item.getUseAction() 调用，如果玩家正在"格挡"且持剑则返回 BLOCK
-         */
         @WrapOperation(
             method = RENDER_METHOD,
             at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getUseAction()Lnet/minecraft/item/consume/UseAction;")
         )
         private UseAction blockAnimation$wrapGetUseAction(ItemStack stack, Operation<UseAction> original) {
-            net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+            MinecraftClient mc = MinecraftClient.getInstance();
             if (mc != null && mc.player != null && BlockAnimationUtils.isEntityBlocking(mc.player)) {
                 if (BlockAnimationUtils.isSword(stack.getItem())) {
                     return UseAction.BLOCK;

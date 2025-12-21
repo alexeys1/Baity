@@ -18,8 +18,8 @@ public class ConfigManager {
     public static boolean godPotionReminderEnabled = true;
     public static boolean meowAlertEnabled = true;
     
-    public static boolean testEnabled = false;
-    public static double testSliderValue = 50;
+    public static boolean customHandHoldingEnabled = false;
+    public static double swingDuration = 6;
     
     private static final String CONFIG_FILE = "baity_config.txt";
 
@@ -65,12 +65,12 @@ public class ConfigManager {
         registerField("MeowAlert", Boolean.class,
             c -> ConfigManager.meowAlertEnabled,
             (c, v) -> ConfigManager.meowAlertEnabled = (Boolean) v);
-        registerField("Test", Boolean.class,
-            c -> ConfigManager.testEnabled,
-            (c, v) -> ConfigManager.testEnabled = (Boolean) v);
-        registerField("TestSliderValue", Double.class,
-            c -> ConfigManager.testSliderValue,
-            (c, v) -> ConfigManager.testSliderValue = (Double) v);
+        registerField("CustomHandHolding", Boolean.class,
+            c -> ConfigManager.customHandHoldingEnabled,
+            (c, v) -> ConfigManager.customHandHoldingEnabled = (Boolean) v);
+        registerField("SwingDuration", Double.class,
+            c -> ConfigManager.swingDuration,
+            (c, v) -> ConfigManager.swingDuration = (Double) v);
     }
     
     private static void registerField(String key, Class<?> type,

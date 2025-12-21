@@ -54,17 +54,17 @@ public class ModuleManager {
         pepCatModule.setEnabled(true);
         
         ModuleRegistry.registerModuleWithValues(
-            "Test", "Test", ModuleCategory.FUN,
-            () -> ConfigManager.testEnabled,
-            val -> ConfigManager.testEnabled = val,
+            "CustomHandHolding", "CustomHandHolding", ModuleCategory.FUN,
+            () -> ConfigManager.customHandHoldingEnabled,
+            val -> ConfigManager.customHandHoldingEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new com.shyeuar.baity.gui.value.SliderValue("test1", "Test Slider", 50, 0, 100, 1, ModuleCategory.FUN)
+                new com.shyeuar.baity.gui.value.SliderValue("swing duration", "Swing Duration", 6, 1, 20, 1, ModuleCategory.FUN)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
-                    "test1",
-                    () -> ConfigManager.testSliderValue,
-                    val -> ConfigManager.testSliderValue = ((Number) val).doubleValue()
+                    "swing duration",
+                    () -> ConfigManager.swingDuration,
+                    val -> ConfigManager.swingDuration = ((Number) val).doubleValue()
                 )
             }
         );

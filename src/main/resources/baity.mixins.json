@@ -12,7 +12,10 @@
     "BlockAnimationMixin$MixinHeldItemRenderer",
     "BlockAnimationMixin$ThirdPersonBlockAnimationMixin",
     "TotemAnimationMixin",
-    "PlayerListHudAccessor"
+    "PlayerListHudAccessor",
+    "CustomHandHoldingMixin$SwingDurationMixin",
+    "CustomHandHoldingMixin$AttackCooldownMixin",
+    "CustomHandHoldingMixin$HeldItemOffsetMixin"
   ],
   "client": [
     "SmolPeopleMixin$SmolNameTagMixin",
@@ -24,7 +27,10 @@
     "BlockAnimationMixin$MixinHeldItemRenderer",
     "BlockAnimationMixin$ThirdPersonBlockAnimationMixin",
     "TotemAnimationMixin",
-    "PlayerListHudAccessor"
+    "PlayerListHudAccessor",
+    "CustomHandHoldingMixin$SwingDurationMixin",
+    "CustomHandHoldingMixin$AttackCooldownMixin",
+    "CustomHandHoldingMixin$HeldItemOffsetMixin"
   ],
   "injectors": {
     "defaultRequire": 1

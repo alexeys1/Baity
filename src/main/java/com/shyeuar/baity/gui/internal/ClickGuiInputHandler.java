@@ -7,6 +7,7 @@ import com.shyeuar.baity.gui.render.GuiRenderUtil;
 import com.shyeuar.baity.gui.value.Value;
 import com.shyeuar.baity.gui.value.ValueStyle;
 import com.shyeuar.baity.gui.value.ButtonValue;
+import com.shyeuar.baity.gui.value.SliderValue;
 import com.shyeuar.baity.gui.value.ValueTypeRegistry;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.utils.TimerUtils;
@@ -84,6 +85,10 @@ public class ClickGuiInputHandler {
             return handleButtonValueKeybindInput(keyCode);
         }
         
+        if (state.isEditingSlider()) {
+            return handleSliderInput(keyCode);
+        }
+        
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             if (state.isListeningForInput()) {
                 state.setListeningForKey(false);
@@ -97,15 +102,105 @@ public class ClickGuiInputHandler {
         return false;
     }
     
+    public boolean handleCharTyped(char chr, int modifiers) {
+        if (state.isEditingSlider()) {
+            String current = state.getSliderInputText();
+            if (Character.isDigit(chr) || chr == '.' || chr == '-') {
+                if (chr == '-' && !current.isEmpty()) return true;
+                if (chr == '.' && current.contains(".")) return true;
+                state.setSliderInputText(current + chr);
+            }
+            return true;
+        }
+        return false;
+    }
+    
+    private boolean handleSliderInput(int keyCode) {
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            state.setEditingSlider(null);
+            state.setSliderInputText("");
+            return true;
+        }
+        
+        if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
+            String current = state.getSliderInputText();
+            if (!current.isEmpty()) {
+                state.setSliderInputText(current.substring(0, current.length() - 1));
+            }
+            return true;
+        }
+        
+        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+            ClickGuiState.SliderInputInfo editInfo = state.getEditingSlider();
+            if (editInfo != null) {
+                String inputText = state.getSliderInputText();
+                try {
+                    double newValue = Double.parseDouble(inputText);
+                    for (Module module : ModuleManager.getModules()) {
+                        if (!module.getName().equals(editInfo.moduleName)) continue;
+                        for (Value value : module.getValues()) {
+                            if (value instanceof SliderValue && value.getName().equals(editInfo.valueName)) {
+                                SliderValue sliderValue = (SliderValue) value;
+                                if (sliderValue.trySetValue(newValue)) {
+                                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
+                                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), sliderValue.getValue());
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            state.setEditingSlider(null);
+            state.setSliderInputText("");
+            return true;
+        }
+        
+        return false;
+    }
+    
     public void handleMouseRelease(int button) {
         if (button == 0) {
             state.resetDragState();
+            state.setDraggingSlider(null);
         }
     }
    
     public void handleMouseMove(double mouseX, double mouseY) {
         if (state.isDragging()) {
             ClickGuiLayout.updateWindowPosition(state, mouseX, mouseY, state.getDragX(), state.getDragY());
+        }
+        
+        if (state.getDraggingSlider() != null) {
+            handleSliderDrag(mouseX, mouseY);
+        }
+    }
+    
+    private void handleSliderDrag(double mouseX, double mouseY) {
+        ClickGuiState.SliderDragInfo dragInfo = state.getDraggingSlider();
+        if (dragInfo == null) return;
+        
+        ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
+        
+        for (Module module : ModuleManager.getModules()) {
+            if (!module.getName().equals(dragInfo.moduleName)) continue;
+            
+            for (Value value : module.getValues()) {
+                if (value instanceof SliderValue && value.getName().equals(dragInfo.valueName)) {
+                    SliderValue sliderValue = (SliderValue) value;
+                    
+                    double percentage = (coords.mouseX - dragInfo.sliderX) / (double) dragInfo.sliderWidth;
+                    percentage = Math.max(0, Math.min(1, percentage));
+                    sliderValue.setFromPercentage(percentage);
+                    
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), sliderValue.getValue());
+                    }
+                    return;
+                }
+            }
         }
     }
     
@@ -327,6 +422,59 @@ public class ClickGuiInputHandler {
                         timer.reset();
                         return true;
                     }
+                }
+            } else if (style == ValueStyle.SLIDER && value instanceof SliderValue) {
+                SliderValue sliderValue = (SliderValue) value;
+                MinecraftClient client = MinecraftClient.getInstance();
+                if (client == null) return false;
+                
+                int subX2 = containerX2 - 4;
+                
+                int resetBoxWidth = 30;
+                int resetBoxHeight = 12;
+                int resetBoxX = subX2 - resetBoxWidth - 6;
+                int resetBoxY = (int)(subModY + (dims.subOptionHeight - resetBoxHeight) / 2);
+                
+                if (GuiRenderUtil.isHovered(resetBoxX, resetBoxY, resetBoxX + resetBoxWidth, resetBoxY + resetBoxHeight, coords.mouseX, coords.mouseY)) {
+                    sliderValue.resetToDefault();
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), sliderValue.getValue());
+                    }
+                    timer.reset();
+                    return true;
+                }
+                
+                String valueText = sliderValue.getFormattedValue();
+                int valueTextWidth = client.textRenderer.getWidth(valueText);
+                int valueDisplayWidth = Math.max(valueTextWidth + 8, 35);
+                int valueDisplayX = resetBoxX - valueDisplayWidth - 8;
+                int valueDisplayY = (int)(subModY + 2);
+                int valueDisplayHeight = dims.subOptionHeight - 4;
+                
+                if (GuiRenderUtil.isHovered(valueDisplayX, valueDisplayY, valueDisplayX + valueDisplayWidth, valueDisplayY + valueDisplayHeight, coords.mouseX, coords.mouseY)) {
+                    state.setEditingSlider(new ClickGuiState.SliderInputInfo(module.getName(), value.getName()));
+                    state.setSliderInputText(sliderValue.getFormattedValue());
+                    timer.reset();
+                    return true;
+                }
+                
+                int sliderWidth = 80;
+                int sliderHeight = 10;
+                int sliderX = valueDisplayX - sliderWidth - 10;
+                int sliderY = (int)(subModY + (dims.subOptionHeight - sliderHeight) / 2);
+                
+                if (GuiRenderUtil.isHovered(sliderX - 5, sliderY - 3, sliderX + sliderWidth + 5, sliderY + sliderHeight + 3, coords.mouseX, coords.mouseY)) {
+                    double percentage = (coords.mouseX - sliderX) / (double) sliderWidth;
+                    percentage = Math.max(0, Math.min(1, percentage));
+                    sliderValue.setFromPercentage(percentage);
+                    
+                    state.setDraggingSlider(new ClickGuiState.SliderDragInfo(module.getName(), value.getName(), sliderX, sliderWidth));
+                    
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), sliderValue.getValue());
+                    }
+                    timer.reset();
+                    return true;
                 }
             } else {
                 if (GuiRenderUtil.isHovered(containerX1 + 4, (int)subModY, 

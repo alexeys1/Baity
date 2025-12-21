@@ -6,6 +6,7 @@ import net.fabricmc.api.Environment;
 @Environment(EnvType.CLIENT)
 public enum ValueStyle {
     DEFAULT,
-    BUTTON_LIKE
+    BUTTON_LIKE,
+    SLIDER
 }
 

@@ -27,6 +27,11 @@ public class ClickGuiState {
     private String currentKeyDisplay = "Right Ctrl";
     private String listeningButtonValueName = null;
     
+    private SliderDragInfo draggingSlider = null;
+    
+    private SliderInputInfo editingSlider = null;
+    private String sliderInputText = "";
+    
     private final Map<String, Float> moduleExpandAnimations = new HashMap<>();
     
     private String hoveredTooltip = null;
@@ -89,6 +94,41 @@ public class ClickGuiState {
         dragX = 0;
         dragY = 0;
         isDragging = false;
+    }
+    
+    public SliderDragInfo getDraggingSlider() { return draggingSlider; }
+    public void setDraggingSlider(SliderDragInfo info) { draggingSlider = info; }
+    
+    public SliderInputInfo getEditingSlider() { return editingSlider; }
+    public void setEditingSlider(SliderInputInfo info) { editingSlider = info; }
+    
+    public String getSliderInputText() { return sliderInputText; }
+    public void setSliderInputText(String text) { sliderInputText = text; }
+    
+    public boolean isEditingSlider() { return editingSlider != null; }
+    
+    public static class SliderDragInfo {
+        public final String moduleName;
+        public final String valueName;
+        public final int sliderX;
+        public final int sliderWidth;
+        
+        public SliderDragInfo(String moduleName, String valueName, int sliderX, int sliderWidth) {
+            this.moduleName = moduleName;
+            this.valueName = valueName;
+            this.sliderX = sliderX;
+            this.sliderWidth = sliderWidth;
+        }
+    }
+    
+    public static class SliderInputInfo {
+        public final String moduleName;
+        public final String valueName;
+        
+        public SliderInputInfo(String moduleName, String valueName) {
+            this.moduleName = moduleName;
+            this.valueName = valueName;
+        }
     }
 }
 

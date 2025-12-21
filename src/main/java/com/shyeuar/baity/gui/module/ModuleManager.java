@@ -54,6 +54,22 @@ public class ModuleManager {
         pepCatModule.setEnabled(true);
         
         ModuleRegistry.registerModuleWithValues(
+            "Test", "Test", ModuleCategory.FUN,
+            () -> ConfigManager.testEnabled,
+            val -> ConfigManager.testEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new com.shyeuar.baity.gui.value.SliderValue("test1", "Test Slider", 50, 0, 100, 1, ModuleCategory.FUN)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "test1",
+                    () -> ConfigManager.testSliderValue,
+                    val -> ConfigManager.testSliderValue = ((Number) val).doubleValue()
+                )
+            }
+        );
+        
+        ModuleRegistry.registerModuleWithValues(
             "Reminder", "Reminder", ModuleCategory.QOL,
             () -> ConfigManager.reminderEnabled,
             val -> ConfigManager.reminderEnabled = val,

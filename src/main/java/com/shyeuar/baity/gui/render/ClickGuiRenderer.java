@@ -31,11 +31,6 @@ public class ClickGuiRenderer {
         
         float scaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
-        
-        // TODO: Matrix3x2fStack in 1.21.10 does not support the previous push/translate/scale usage here.
-        // context.getMatrices().push();
-        // context.getMatrices().translate(state.getWindowX(), state.getWindowY(), 0);
-        // context.getMatrices().scale(scaleRatio, scaleRatio, 1.0f);
 
         var matrices = context.getMatrices();
         matrices.pushMatrix();
@@ -214,7 +209,9 @@ public class ClickGuiRenderer {
                                               getTooltipText, getTooltipTextWithColors,
                                               getDisplayTextFormatter,
                                               state.getListeningButtonValueName(),
-                                              tooltipInfo);
+                                              tooltipInfo,
+                                              state.getEditingSlider(),
+                                              state.getSliderInputText());
                 
                 if (tooltipInfo.tooltip != null) {
                     state.setHoveredTooltip(tooltipInfo.tooltip);
@@ -248,8 +245,6 @@ public class ClickGuiRenderer {
         float baseX = ClickGuiState.WIDTH - scaledWidth - 8;
         float baseY = 8;
         
-        // context.getMatrices().push();
-        // context.getMatrices().scale(wmScale, wmScale, 1f);
         int wmColor = new java.awt.Color(120, 124, 132).getRGB();
         var matrices = context.getMatrices();
         matrices.pushMatrix();
@@ -299,11 +294,6 @@ public class ClickGuiRenderer {
         if (finalTooltipX < 2) {
             finalTooltipX = 2;
         }
-        
-        // var guiMatrices = context.getMatrices();
-        // guiMatrices.push();
-        // guiMatrices.translate((float)finalTooltipX, (float)finalTooltipY, 0f);
-        // guiMatrices.scale(tipScale, tipScale, 1f);
         
         var guiMatrices = context.getMatrices();
         guiMatrices.pushMatrix();

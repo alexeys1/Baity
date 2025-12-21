@@ -20,6 +20,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.input.CharInput;
 import net.minecraft.text.Text;
 
 @Environment(EnvType.CLIENT)
@@ -119,6 +120,15 @@ public class ClickGui extends Screen {
             return true;
         }
         return super.keyPressed(input);
+    }
+    
+    @Override
+    public boolean charTyped(CharInput input) {
+        char chr = (char) input.codepoint();
+        if (inputHandler.handleCharTyped(chr, input.modifiers())) {
+            return true;
+        }
+        return super.charTyped(input);
     }
     
     @Override

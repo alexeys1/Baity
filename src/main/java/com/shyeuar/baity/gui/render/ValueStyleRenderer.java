@@ -61,12 +61,7 @@ public class ValueStyleRenderer {
        
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        String displayText = value.getDisplayName();
-       int warningTextColor = textColor;
-       if ("show own nametag".equals(value.getName())) {
-           displayText = "⚠ " + displayText;
-           warningTextColor = (com.shyeuar.baity.config.DevConfig.DEV_PREFIX_COLOR & 0x00FFFFFF) | (localAlpha << 24);
-       }
-       context.drawText(client.textRenderer, displayText, (int)(x1 + 8), (int)(y + 6), warningTextColor, false);
+       context.drawText(client.textRenderer, displayText, (int)(x1 + 8), (int)(y + 6), textColor, false);
        
        String status;
        int statusColor;

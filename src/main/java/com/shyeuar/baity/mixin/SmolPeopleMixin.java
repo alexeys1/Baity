@@ -27,8 +27,11 @@ public class SmolPeopleMixin {
         
         @Inject(method = "renderLabelIfPresent(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/client/render/state/CameraRenderState;)V", at = @At("HEAD"))
         private void baity$adjustNameTagHeight(PlayerEntityRenderState state, MatrixStack matrices, OrderedRenderCommandQueue queue, CameraRenderState cameraState, CallbackInfo ci) {
+            com.shyeuar.baity.gui.module.Module smolPeopleModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("SmolPeople");
+            if (smolPeopleModule == null || !smolPeopleModule.isEnabled()) return;
+            
             MinecraftClient mc = MinecraftClient.getInstance();
-            if (ConfigManager.smolpeopleMode && mc.player != null && state.id == mc.player.getId()) {
+            if (mc.player != null && state.id == mc.player.getId()) {
                 matrices.translate(0, -0.4, 0); 
             }
         }
@@ -39,8 +42,11 @@ public class SmolPeopleMixin {
         
         @Inject(method = "scale(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;)V", at = @At("TAIL"))
         private void baity$additionalScale(PlayerEntityRenderState playerEntityRenderState, MatrixStack matrixStack, CallbackInfo ci) {
+            com.shyeuar.baity.gui.module.Module smolPeopleModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("SmolPeople");
+            if (smolPeopleModule == null || !smolPeopleModule.isEnabled()) return;
+            
             MinecraftClient mc = MinecraftClient.getInstance();
-            if (ConfigManager.smolpeopleMode && mc.player != null && playerEntityRenderState.id == mc.player.getId()) {
+            if (mc.player != null && playerEntityRenderState.id == mc.player.getId()) {
                 matrixStack.scale(0.5f, 0.5f, 0.5f);
             }
         }
@@ -51,8 +57,11 @@ public class SmolPeopleMixin {
         
         @Inject(method = "setAngles(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;)V", at = @At("TAIL"))
         private void baity$modifyModel(PlayerEntityRenderState playerEntityRenderState, CallbackInfo ci) {
+            com.shyeuar.baity.gui.module.Module smolPeopleModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("SmolPeople");
+            if (smolPeopleModule == null || !smolPeopleModule.isEnabled()) return;
+            
             MinecraftClient mc = MinecraftClient.getInstance();
-            if (ConfigManager.smolpeopleMode && mc.player != null && playerEntityRenderState.id == mc.player.getId()) {
+            if (mc.player != null && playerEntityRenderState.id == mc.player.getId()) {
                 
                 PlayerEntityModel model = (PlayerEntityModel) (Object) this;
                 
@@ -94,9 +103,10 @@ public class SmolPeopleMixin {
         
         @Inject(method = "update", at = @At("TAIL"))
         private void baity$adjustCameraForSmolPeople(BlockView area, Entity focusedEntity, boolean thirdPerson, boolean inverseView, float tickDelta, CallbackInfo ci) {
-            MinecraftClient mc = MinecraftClient.getInstance();
+            com.shyeuar.baity.gui.module.Module smolPeopleModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("SmolPeople");
+            if (smolPeopleModule == null || !smolPeopleModule.isEnabled()) return;
             
-            if (!ConfigManager.smolpeopleMode) return;
+            MinecraftClient mc = MinecraftClient.getInstance();
             if (mc.player == null) return;
             if (focusedEntity != mc.player) return;
             

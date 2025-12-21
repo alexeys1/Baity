@@ -14,7 +14,9 @@ public final class BlockAnimationUtils {
     private BlockAnimationUtils() {}
 
     public static boolean isEntityBlocking(LivingEntity entity) {
-        if (!ConfigManager.blockAnimationMode || entity == null) return false;
+        com.shyeuar.baity.gui.module.Module blockAnimationModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("BlockAnimation");
+        if (blockAnimationModule == null || !blockAnimationModule.isEnabled()) return false;
+        if (entity == null) return false;
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null || client.world == null) return false;
         return isPlayerRightClicking() && canSwordBlock(entity);
@@ -27,7 +29,8 @@ public final class BlockAnimationUtils {
     }
 
     public static boolean canSwordBlock(LivingEntity entity) {
-        if (!ConfigManager.blockAnimationMode) return false;
+        com.shyeuar.baity.gui.module.Module blockAnimationModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("BlockAnimation");
+        if (blockAnimationModule == null || !blockAnimationModule.isEnabled()) return false;
         Item mainHandItem = entity.getMainHandStack().getItem();
         Item offHandItem = entity.getOffHandStack().getItem();
         return isSword(mainHandItem) || isSword(offHandItem);

@@ -119,9 +119,6 @@ public class ModuleManager {
         TooltipManager.registerTooltip("SmolPeople", "Make your character smaller and cuter", 0xFFFFFF);
         TooltipManager.registerTooltip("BlockAnimation", "Restored the blocking animation of version 1.8", 0xFFFFFF);
         TooltipManager.registerTooltip("PepCat", "Play an animation and give pep talk when you died. It's a skill issue!", 0xFFFFFF);
-        TooltipManager.registerTooltip("show own nametag", 
-            "Due to skill issue,you should switch off all the other nametag functions before using this feature,or the game will crash!", 
-            com.shyeuar.baity.config.DevConfig.DEV_PREFIX_COLOR);
         TooltipManager.registerTooltip("meowalert", 
             MessageUtils.createColoredText("play a ", 0xFFFFFF)
                 .append(MessageUtils.createColoredText("ᯠ₋ ̫ ₋.ᯄ ੭", 0xFFC0CB))

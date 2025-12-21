@@ -9,7 +9,7 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.text.Text;
 import net.minecraft.text.MutableText;
 import net.minecraft.util.Formatting;
-import com.shyeuar.baity.utils.TickScheduler;
+import com.shyeuar.baity.utils.TickSchedulerUtils;
 import com.shyeuar.baity.utils.MessageUtils;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -19,96 +19,28 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 @Environment(EnvType.CLIENT)
 public class Reminder {
     
-    private static final ItemStack COOKIE_ICON = new ItemStack(Items.COOKIE);
-    private static final ItemStack GOD_POTION_ICON = new ItemStack(Items.POTION);
+    private static Reminder instance;
     
-    private boolean cookieNotified = false;
+    private static final ItemStack COOKIE_DISPLAY_ICON = new ItemStack(Items.COOKIE);
+    private static final ItemStack GOD_POTION_DISPLAY_ICON = new ItemStack(Items.POTION);
     
-    private boolean godPotionNotified = false;
-    
-    private boolean wasInSkyBlock = false;
-    
-    private boolean hasRegisteredMeowAlert = false;
-    private long lastMeowTime = 0;
-    private static final long MEOW_COOLDOWN_MS = 2000;
-    private static final float MEOW_VOLUME = 1.5F;
-    private static final float MEOW_PITCH = 1.0F;
-    
-    private int cookieTaskId = -1;
-    private int godPotionTaskId = -1;
-    
-    private static final Pattern GOD_POTION_TIME_PATTERN = Pattern.compile(
+    private static final Pattern GOD_POTION_PATTERN = Pattern.compile(
         "You have a God Potion active! (\\d+) (Days?|Hours?|Minutes?|Mins?|Min) Use '/effects' to see the effects!"
     );
     
-    public static void init() {
-        Reminder instance = getInstance();
-        if (instance != null) {
-            instance.startScheduler();
-            instance.registerWorldEvents();
-            instance.initMeowAlert();
-        }
-    }
+    private static final long MEOW_COOLDOWN = 2000;
+    private static final float MEOW_VOLUME = 1.5F;
+    private static final float MEOW_PITCH = 1.0F;
     
-    private void registerWorldEvents() {
-        godPotionTaskId = TickScheduler.getInstance().runRepeating(() -> {
-            boolean currentlyInSkyBlock = isOnSkyBlock();
-            if (currentlyInSkyBlock && !wasInSkyBlock) {
-                cookieNotified = false;
-                godPotionNotified = false;
-            }
-            wasInSkyBlock = currentlyInSkyBlock;
-            
-            if (isOnSkyBlock() && !godPotionNotified) {
-                checkGodPotionBuff();
-            }
-        }, 10, TimeUnit.SECONDS);
-    }
+    private boolean cookieAlreadyNotified = false;
+    private boolean godPotionAlreadyNotified = false;
+    private boolean previouslyInSkyBlock = false;
     
-    private void initMeowAlert() {
-        if (!hasRegisteredMeowAlert) {
-            // CHAT 事件只监听玩家聊天消息，不包括服务器系统消息
-            ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
-                // 额外检查：确保有发送者（是玩家消息而非系统消息）
-                if (sender == null) return;
-                
-                com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
-                boolean meowAlertEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "meowalert", false);
-                if (meowAlertEnabled) {
-                    MinecraftClient client = MinecraftClient.getInstance();
-                    if (client.player != null) {
-                        String currentPlayerName = client.player.getName().getString();
-                        String messageText = message.getString();
-                        if (containsPlayerName(messageText, currentPlayerName)) {
-                            long currentTime = System.currentTimeMillis();
-                            if (currentTime - lastMeowTime > MEOW_COOLDOWN_MS) {
-                                lastMeowTime = currentTime;
-                                playMeowSound(client.player);
-                            }
-                        }
-                    }
-                }
-            });
-            hasRegisteredMeowAlert = true;
-        }
-    }
+    private boolean meowAlertRegistered = false;
+    private long lastMeowTimestamp = 0;
     
-    private boolean containsPlayerName(String message, String playerName) {
-        if (message == null || playerName == null) return false;
-        
-        String lowerMessage = message.toLowerCase();
-        String lowerPlayerName = playerName.toLowerCase();
-        
-        // 简单包含匹配：只要消息中包含玩家ID即可触发
-        return lowerMessage.contains(lowerPlayerName);
-    }
-    
-    private void playMeowSound(net.minecraft.client.network.ClientPlayerEntity player) {
-        player.playSound(net.minecraft.sound.SoundEvents.ENTITY_CAT_AMBIENT, MEOW_VOLUME * 5.0f, MEOW_PITCH);
-        player.playSound(net.minecraft.sound.SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, MEOW_VOLUME * 5.0f, 5.0f);
-    }
-    
-    private static Reminder instance;
+    private int cookieSchedulerId = -1;
+    private int godPotionSchedulerId = -1;
     
     public static Reminder getInstance() {
         if (instance == null) {
@@ -117,98 +49,158 @@ public class Reminder {
         return instance;
     }
     
-    private void startScheduler() {
-        cookieTaskId = TickScheduler.getInstance().runRepeating(this::update, 5, TimeUnit.SECONDS);
-    }
-    
-    private boolean isCookieEnabled() {
-        com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
-        boolean cookieReminderEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "cookie buff reminder", false);
-        return isOnSkyBlock() && cookieReminderEnabled;
-    }
-    
-    private boolean isGodPotionEnabled() {
-        com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
-        boolean godPotionReminderEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "god potion reminder", false);
-        return isOnSkyBlock() && godPotionReminderEnabled;
-    }
-    
-    private void update() {
-        boolean currentlyInSkyBlock = isOnSkyBlock();
-        if (currentlyInSkyBlock && !wasInSkyBlock) {
-            cookieNotified = false;
-            godPotionNotified = false;
+    public static void init() {
+        Reminder reminder = getInstance();
+        if (reminder != null) {
+            reminder.startCookieScheduler();
+            reminder.startGodPotionScheduler();
+            reminder.registerMeowAlert();
         }
-        wasInSkyBlock = currentlyInSkyBlock;
-        
-        checkCookieBuff();
     }
     
-    private void checkCookieBuff() {
-        if (!isCookieEnabled()) return;
-        if (cookieNotified) return;
-
-        String footer = getTabListFooter();
-        if (footer == null || !footer.contains("Cookie Buff")) return;
-
-        if (footer.contains("Not active! Obtain booster cookies from the community")) {
-            cookieNotified = true;
-
-            MutableText prefix = MessageUtils.createBaityPrefix();
-            MutableText message = Text.literal("You don't have a").formatted(Formatting.RED, Formatting.BOLD)
-                    .append(Text.literal(" Booster Cookie ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD))
-                    .append(Text.literal("active!").formatted(Formatting.RED, Formatting.BOLD));
-            MutableText fullMessage = prefix.append(message);
-
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.player != null) {
-                MessageUtils.sendCustomMessage(fullMessage);
-                
-                client.player.playSound(net.minecraft.sound.SoundEvents.ENTITY_BLAZE_DEATH, 1.0f, 0.75f);
-                
-                playCookieAnimation(client, client.player);
+    private void startCookieScheduler() {
+        cookieSchedulerId = TickSchedulerUtils.getInstance().runRepeating(this::tickCookieReminder, 5, TimeUnit.SECONDS);
+    }
+    
+    private void startGodPotionScheduler() {
+        godPotionSchedulerId = TickSchedulerUtils.getInstance().runRepeating(() -> {
+            boolean currentlyInSkyBlock = isInSkyBlock();
+            if (currentlyInSkyBlock && !previouslyInSkyBlock) {
+                cookieAlreadyNotified = false;
+                godPotionAlreadyNotified = false;
             }
+            previouslyInSkyBlock = currentlyInSkyBlock;
+            
+            if (isInSkyBlock() && !godPotionAlreadyNotified) {
+                tickGodPotionReminder();
+            }
+        }, 10, TimeUnit.SECONDS);
+    }
+    
+    private void registerMeowAlert() {
+        if (meowAlertRegistered) return;
+        
+        ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
+            if (sender == null) return;
+            
+            com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
+            if (reminderModule == null || !reminderModule.isEnabled()) return;
+            
+            boolean meowEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "meowalert", false);
+            if (!meowEnabled) return;
+            
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null) return;
+            
+            String playerName = client.player.getName().getString();
+            String messageContent = message.getString();
+            
+            if (messageContainsName(messageContent, playerName)) {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastMeowTimestamp > MEOW_COOLDOWN) {
+                    lastMeowTimestamp = currentTime;
+                    playMeowSound(client.player);
+                }
+            }
+        });
+        meowAlertRegistered = true;
+    }
+    
+    private boolean messageContainsName(String message, String name) {
+        if (message == null || name == null) return false;
+        return message.toLowerCase().contains(name.toLowerCase());
+    }
+    
+    private void playMeowSound(net.minecraft.client.network.ClientPlayerEntity player) {
+        player.playSound(net.minecraft.sound.SoundEvents.ENTITY_CAT_AMBIENT, MEOW_VOLUME * 5.0f, MEOW_PITCH);
+        player.playSound(net.minecraft.sound.SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, MEOW_VOLUME * 5.0f, 5.0f);
+    }
+    
+    private void tickCookieReminder() {
+        boolean currentlyInSkyBlock = isInSkyBlock();
+        if (currentlyInSkyBlock && !previouslyInSkyBlock) {
+            cookieAlreadyNotified = false;
+            godPotionAlreadyNotified = false;
+        }
+        previouslyInSkyBlock = currentlyInSkyBlock;
+        
+        if (!isCookieReminderActive()) return;
+        if (cookieAlreadyNotified) return;
+
+        String tabFooter = getTabFooterText();
+        if (tabFooter == null || !tabFooter.contains("Cookie Buff")) return;
+
+        if (tabFooter.contains("Not active! Obtain booster cookies from the community")) {
+            cookieAlreadyNotified = true;
+            sendCookieNotification();
         }
     }
     
-    private void checkGodPotionBuff() {
-        if (!isGodPotionEnabled()) return;
-        if (godPotionNotified) return;
+    private void tickGodPotionReminder() {
+        if (!isGodPotionReminderActive()) return;
+        if (godPotionAlreadyNotified) return;
 
-        String footer = getTabListFooter();
-        if (footer == null || !footer.contains("God Potion")) return;
+        String tabFooter = getTabFooterText();
+        if (tabFooter == null || !tabFooter.contains("God Potion")) return;
 
-        Matcher matcher = GOD_POTION_TIME_PATTERN.matcher(footer);
+        Matcher matcher = GOD_POTION_PATTERN.matcher(tabFooter);
         if (matcher.find()) {
             int timeValue = Integer.parseInt(matcher.group(1));
             String timeUnit = matcher.group(2).toLowerCase();
-            
-            int remainingMinutes = parseTimeToMinutes(timeValue, timeUnit);
+            int remainingMinutes = convertToMinutes(timeValue, timeUnit);
             
             if (remainingMinutes <= 30) {
-                godPotionNotified = true;
-                
-                MutableText prefix = MessageUtils.createBaityPrefix();
-                MutableText message = Text.literal("Your ").formatted(Formatting.YELLOW, Formatting.BOLD)
-                        .append(Text.literal("God Potion ").formatted(Formatting.GOLD, Formatting.BOLD))
-                        .append(Text.literal("will expire in ").formatted(Formatting.YELLOW, Formatting.BOLD))
-                        .append(Text.literal(formatTime(remainingMinutes)).formatted(Formatting.RED, Formatting.BOLD))
-                        .append(Text.literal("!").formatted(Formatting.YELLOW, Formatting.BOLD));
-                MutableText fullMessage = prefix.append(message);
-
-                MinecraftClient client = MinecraftClient.getInstance();
-                if (client.player != null) {
-                    MessageUtils.sendCustomMessage(fullMessage);
-                    
-                    client.player.playSound(net.minecraft.sound.SoundEvents.ENTITY_BLAZE_DEATH, 1.0f, 0.75f);
-                    
-                    playGodPotionAnimation(client, client.player);
-                }
+                godPotionAlreadyNotified = true;
+                sendGodPotionNotification(remainingMinutes);
             }
         }
     }
     
-    private int parseTimeToMinutes(int value, String unit) {
+    private boolean isCookieReminderActive() {
+        com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
+        if (reminderModule == null || !reminderModule.isEnabled()) return false;
+        boolean subEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "cookie buff reminder", false);
+        return isInSkyBlock() && subEnabled;
+    }
+    
+    private boolean isGodPotionReminderActive() {
+        com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
+        if (reminderModule == null || !reminderModule.isEnabled()) return false;
+        boolean subEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "god potion reminder", false);
+        return isInSkyBlock() && subEnabled;
+    }
+    
+    private void sendCookieNotification() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+        
+        MutableText prefix = MessageUtils.createBaityPrefix();
+        MutableText message = Text.literal("You don't have a").formatted(Formatting.RED, Formatting.BOLD)
+                .append(Text.literal(" Booster Cookie ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD))
+                .append(Text.literal("active!").formatted(Formatting.RED, Formatting.BOLD));
+        
+        MessageUtils.sendCustomMessage(prefix.append(message));
+        client.player.playSound(net.minecraft.sound.SoundEvents.ENTITY_BLAZE_DEATH, 1.0f, 0.75f);
+        showCookieAnimation(client, client.player);
+    }
+    
+    private void sendGodPotionNotification(int remainingMinutes) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+        
+        MutableText prefix = MessageUtils.createBaityPrefix();
+        MutableText message = Text.literal("Your ").formatted(Formatting.YELLOW, Formatting.BOLD)
+                .append(Text.literal("God Potion ").formatted(Formatting.GOLD, Formatting.BOLD))
+                .append(Text.literal("will expire in ").formatted(Formatting.YELLOW, Formatting.BOLD))
+                .append(Text.literal(formatMinutes(remainingMinutes)).formatted(Formatting.RED, Formatting.BOLD))
+                .append(Text.literal("!").formatted(Formatting.YELLOW, Formatting.BOLD));
+        
+        MessageUtils.sendCustomMessage(prefix.append(message));
+        client.player.playSound(net.minecraft.sound.SoundEvents.ENTITY_BLAZE_DEATH, 1.0f, 0.75f);
+        showGodPotionAnimation(client, client.player);
+    }
+    
+    private int convertToMinutes(int value, String unit) {
         switch (unit) {
             case "day":
             case "days":
@@ -226,37 +218,28 @@ public class Reminder {
         }
     }
     
-    private String formatTime(int minutes) {
+    private String formatMinutes(int minutes) {
         if (minutes >= 60) {
             int hours = minutes / 60;
-            int remainingMinutes = minutes % 60;
-            if (remainingMinutes == 0) {
-                return hours + "h";
-            } else {
-                return hours + "h " + remainingMinutes + "m";
-            }
-        } else {
-            return minutes + "m";
+            int remaining = minutes % 60;
+            return remaining == 0 ? hours + "h" : hours + "h " + remaining + "m";
         }
+        return minutes + "m";
     }
     
-    private void playCookieAnimation(MinecraftClient client, net.minecraft.client.network.ClientPlayerEntity player) {
-        if (client.world != null) {
-            client.gameRenderer.showFloatingItem(COOKIE_ICON);
-            
-            client.particleManager.addEmitter(player, ParticleTypes.OMINOUS_SPAWNING, 10);
-        }
+    private void showCookieAnimation(MinecraftClient client, net.minecraft.client.network.ClientPlayerEntity player) {
+        if (client.world == null) return;
+        client.gameRenderer.showFloatingItem(COOKIE_DISPLAY_ICON);
+        client.particleManager.addEmitter(player, ParticleTypes.OMINOUS_SPAWNING, 10);
     }
     
-    private void playGodPotionAnimation(MinecraftClient client, net.minecraft.client.network.ClientPlayerEntity player) {
-        if (client.world != null) {
-            client.gameRenderer.showFloatingItem(GOD_POTION_ICON);
-            
-            client.particleManager.addEmitter(player, ParticleTypes.OMINOUS_SPAWNING, 10);
-        }
+    private void showGodPotionAnimation(MinecraftClient client, net.minecraft.client.network.ClientPlayerEntity player) {
+        if (client.world == null) return;
+        client.gameRenderer.showFloatingItem(GOD_POTION_DISPLAY_ICON);
+        client.particleManager.addEmitter(player, ParticleTypes.OMINOUS_SPAWNING, 10);
     }
     
-    private boolean isOnSkyBlock() {
+    private boolean isInSkyBlock() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world == null || client.player == null) return false;
         
@@ -272,7 +255,7 @@ public class Reminder {
         return false;
     }
     
-    private String getTabListFooter() {
+    private String getTabFooterText() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.inGameHud == null || client.inGameHud.getPlayerListHud() == null) return null;
         
@@ -292,8 +275,7 @@ public class Reminder {
                         }
                     }
                 }
-            } catch (Exception ex) {
-                // 忽略错误
+            } catch (Exception ignored) {
             }
         }
         
@@ -304,19 +286,16 @@ public class Reminder {
         com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
         if (reminderModule == null) return;
         
-        Reminder instance = getInstance();
-        if (instance == null) return;
+        Reminder reminder = getInstance();
+        if (reminder == null) return;
         
-        boolean cookieReminderEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(
-            reminderModule, "cookie buff reminder", false);
-        boolean godPotionReminderEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(
-            reminderModule, "god potion reminder", false);
-        boolean meowAlertEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(
-            reminderModule, "meowalert", false);
+        boolean cookieEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "cookie buff reminder", false);
+        boolean godPotionEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "god potion reminder", false);
+        boolean meowEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "meowalert", false);
         
-        instance.setCookieReminderEnabled(cookieReminderEnabled);
-        instance.setGodPotionReminderEnabled(godPotionReminderEnabled);
-        instance.setMeowAlertEnabled(meowAlertEnabled);
+        reminder.setCookieReminderEnabled(cookieEnabled);
+        reminder.setGodPotionReminderEnabled(godPotionEnabled);
+        reminder.setMeowAlertEnabled(meowEnabled);
     }
     
     public boolean isCookieReminderEnabled() {
@@ -326,14 +305,14 @@ public class Reminder {
     public void setCookieReminderEnabled(boolean enabled) {
         com.shyeuar.baity.config.ConfigManager.cookieBuffReminderEnabled = enabled;
         if (!enabled) {
-            cookieNotified = false;
-            if (cookieTaskId != -1) {
-                TickScheduler.getInstance().cancelTask(cookieTaskId);
-                cookieTaskId = -1;
+            cookieAlreadyNotified = false;
+            if (cookieSchedulerId != -1) {
+                TickSchedulerUtils.getInstance().cancelTask(cookieSchedulerId);
+                cookieSchedulerId = -1;
             }
         } else {
-            if (cookieTaskId == -1) {
-                cookieTaskId = TickScheduler.getInstance().runRepeating(this::update, 5, TimeUnit.SECONDS);
+            if (cookieSchedulerId == -1) {
+                cookieSchedulerId = TickSchedulerUtils.getInstance().runRepeating(this::tickCookieReminder, 5, TimeUnit.SECONDS);
             }
         }
     }
@@ -345,16 +324,16 @@ public class Reminder {
     public void setGodPotionReminderEnabled(boolean enabled) {
         com.shyeuar.baity.config.ConfigManager.godPotionReminderEnabled = enabled;
         if (!enabled) {
-            godPotionNotified = false;
-            if (godPotionTaskId != -1) {
-                TickScheduler.getInstance().cancelTask(godPotionTaskId);
-                godPotionTaskId = -1;
+            godPotionAlreadyNotified = false;
+            if (godPotionSchedulerId != -1) {
+                TickSchedulerUtils.getInstance().cancelTask(godPotionSchedulerId);
+                godPotionSchedulerId = -1;
             }
         } else {
-            if (godPotionTaskId == -1) {
-                godPotionTaskId = TickScheduler.getInstance().runRepeating(() -> {
-                    if (isOnSkyBlock() && !godPotionNotified) {
-                        checkGodPotionBuff();
+            if (godPotionSchedulerId == -1) {
+                godPotionSchedulerId = TickSchedulerUtils.getInstance().runRepeating(() -> {
+                    if (isInSkyBlock() && !godPotionAlreadyNotified) {
+                        tickGodPotionReminder();
                     }
                 }, 10, TimeUnit.SECONDS);
             }

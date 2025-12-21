@@ -214,8 +214,10 @@ public class ClickGuiInputHandler {
         }
         
         if (state.getListeningButtonValueName() != null) {
+            String listeningModule = state.getListeningButtonValueModule();
             String listeningName = state.getListeningButtonValueName();
-            for (Module module : ModuleManager.getModules()) {
+            Module module = ModuleManager.getModuleByName(listeningModule);
+            if (module != null) {
                 for (Value value : module.getValues()) {
                     if (value instanceof ButtonValue && value.getName().equals(listeningName)) {
                         ButtonValue buttonValue = (ButtonValue) value;
@@ -223,12 +225,12 @@ public class ClickGuiInputHandler {
                         if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
                             ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), mouseKeyCode);
                         }
-                        state.setListeningButtonValueName(null);
+                        state.clearListeningButtonValue();
                         return true;
                     }
                 }
             }
-            state.setListeningButtonValueName(null);
+            state.clearListeningButtonValue();
             return true;
         }
         
@@ -412,7 +414,7 @@ public class ClickGuiInputHandler {
                 
                 if (GuiRenderUtil.isHovered(boxX1, boxY1, boxX2, boxY2, coords.mouseX, coords.mouseY)) {
                     if (buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.KEYBIND) {
-                        state.setListeningButtonValueName(value.getName());
+                        state.setListeningButtonValue(module.getName(), value.getName());
                         timer.reset();
                         return true;
                     } else if (buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.TRIGGER) {
@@ -577,13 +579,16 @@ public class ClickGuiInputHandler {
     
     private boolean handleButtonValueKeybindInput(int keyCode) {
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            state.setListeningButtonValueName(null);
+            state.clearListeningButtonValue();
             return true;
         }
         
+        String listeningModule = state.getListeningButtonValueModule();
+        String listeningName = state.getListeningButtonValueName();
+        
         if (KeyMappingUtils.isResetKey(keyCode)) {
-            String listeningName = state.getListeningButtonValueName();
-            for (Module module : ModuleManager.getModules()) {
+            Module module = ModuleManager.getModuleByName(listeningModule);
+            if (module != null) {
                 for (Value value : module.getValues()) {
                     if (value instanceof ButtonValue && value.getName().equals(listeningName)) {
                         ButtonValue buttonValue = (ButtonValue) value;
@@ -591,12 +596,12 @@ public class ClickGuiInputHandler {
                         if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
                             ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), 0);
                         }
-                        state.setListeningButtonValueName(null);
+                        state.clearListeningButtonValue();
                         return true;
                     }
                 }
             }
-            state.setListeningButtonValueName(null);
+            state.clearListeningButtonValue();
             return true;
         }
         
@@ -604,8 +609,8 @@ public class ClickGuiInputHandler {
             return false;
         }
         
-        String listeningName = state.getListeningButtonValueName();
-        for (Module module : ModuleManager.getModules()) {
+        Module module = ModuleManager.getModuleByName(listeningModule);
+        if (module != null) {
             for (Value value : module.getValues()) {
                 if (value instanceof ButtonValue && value.getName().equals(listeningName)) {
                     ButtonValue buttonValue = (ButtonValue) value;
@@ -613,13 +618,13 @@ public class ClickGuiInputHandler {
                     if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
                         ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), keyCode);
                     }
-                    state.setListeningButtonValueName(null);
+                    state.clearListeningButtonValue();
                     return true;
                 }
             }
         }
         
-        state.setListeningButtonValueName(null);
+        state.clearListeningButtonValue();
         return true;
     }
     

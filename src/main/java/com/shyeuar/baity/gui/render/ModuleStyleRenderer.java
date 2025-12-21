@@ -98,6 +98,11 @@ public class ModuleStyleRenderer {
        int baseY = (int)(boxCenterY - 4);
 
        if (isListening) {
+           String hintText = "Press Backspace to reset";
+           int hintColor = 0xFFFFFF00;
+           int hintX = boxX1 - client.textRenderer.getWidth(hintText) - 8;
+           context.drawText(client.textRenderer, hintText, hintX, baseY, hintColor, false);
+           
            net.minecraft.text.Text textObj = net.minecraft.text.Text.literal(displayText);
            context.drawText(client.textRenderer, textObj, baseX, baseY, theme.FONT_C.getRGB(), false);
        } else {
@@ -121,9 +126,8 @@ public class ModuleStyleRenderer {
                        displayPlainText.toUpperCase().contains("UNKNOWN")) {
                String prefix = "☄";
                String notsetText = displayPlainText.startsWith("☄") ? displayPlainText.substring(1) : (" " + displayPlainText);
-               // 1.21.10 需要完整的 ARGB 值（包含 alpha 通道）
-               int prefixRGB = 0xFFFFFF00;  // 黄色，完全不透明
-               int notsetRGB = 0xFFAAAAAA;  // 灰色，完全不透明
+               int prefixRGB = 0xFFFFFF00;  // 黄色
+               int notsetRGB = 0xFFAAAAAA;  // 灰色
 
                net.minecraft.text.Text prefixText = net.minecraft.text.Text.literal(prefix);
                context.drawText(client.textRenderer, prefixText, baseX, baseY, prefixRGB, false);

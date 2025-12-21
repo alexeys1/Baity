@@ -98,6 +98,22 @@ public class ModuleManager {
             }
         );
         
+        ModuleRegistry.registerModuleWithValues(
+            "Test", "Test", ModuleCategory.QOL,
+            () -> ConfigManager.testEnabled,
+            val -> ConfigManager.testEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new ButtonValue("keybind", "Keybind", 4, ModuleCategory.QOL, ButtonValue.ButtonValueType.KEYBIND, false)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "keybind",
+                    () -> ConfigManager.testKeybind,
+                    val -> ConfigManager.testKeybind = ((Number) val).intValue()
+                )
+            }
+        );
+        
         Module clickGUI = new Module("ClickGUI", "ClickGUI", ModuleCategory.HUD);
         clickGUI.setEnabled(true);
         registerModule(clickGUI);

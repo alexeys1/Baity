@@ -25,6 +25,7 @@ public class ClickGuiState {
     
     private boolean isListeningForKey = false;
     private String currentKeyDisplay = "Right Ctrl";
+    private String listeningButtonValueModule = null;
     private String listeningButtonValueName = null;
     
     private SliderDragInfo draggingSlider = null;
@@ -71,6 +72,19 @@ public class ClickGuiState {
     
     public String getListeningButtonValueName() { return listeningButtonValueName; }
     public void setListeningButtonValueName(String name) { listeningButtonValueName = name; }
+    
+    public String getListeningButtonValueModule() { return listeningButtonValueModule; }
+    public void setListeningButtonValueModule(String module) { listeningButtonValueModule = module; }
+    
+    public void setListeningButtonValue(String moduleName, String valueName) {
+        listeningButtonValueModule = moduleName;
+        listeningButtonValueName = valueName;
+    }
+    
+    public void clearListeningButtonValue() {
+        listeningButtonValueModule = null;
+        listeningButtonValueName = null;
+    }
     
     public boolean isListeningForInput() {
         return isListeningForKey || listeningButtonValueName != null;

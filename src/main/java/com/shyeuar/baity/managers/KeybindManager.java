@@ -41,7 +41,8 @@ public class KeybindManager {
             for (Value value : module.getValues()) {
                 if (value instanceof ButtonValue) {
                     ButtonValue buttonValue = (ButtonValue) value;
-                    if (buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.KEYBIND) {
+                    if (buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.KEYBIND
+                        && buttonValue.isIndependentOfParentModule()) {
                         Object keybindValue = buttonValue.getValue();
                         if (keybindValue instanceof Number) {
                             int keyCode = ((Number) keybindValue).intValue();

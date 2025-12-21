@@ -10,6 +10,7 @@
     "CrosshairMixin",
     "PlayerNameLabelHideMixin",
     "BlockAnimationMixin$MixinHeldItemRenderer",
+    "BlockAnimationMixin$ThirdPersonBlockAnimationMixin",
     "TotemAnimationMixin",
     "PlayerListHudAccessor"
   ],
@@ -21,6 +22,7 @@
     "CrosshairMixin",
     "PlayerNameLabelHideMixin",
     "BlockAnimationMixin$MixinHeldItemRenderer",
+    "BlockAnimationMixin$ThirdPersonBlockAnimationMixin",
     "TotemAnimationMixin",
     "PlayerListHudAccessor"
   ],

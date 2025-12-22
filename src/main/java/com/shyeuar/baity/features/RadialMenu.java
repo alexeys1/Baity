@@ -94,7 +94,12 @@ public class RadialMenu {
     private static void open(MinecraftClient client) {
         if (isOpen) return;
         isOpen = true;
-        GLFW.glfwSetInputMode(client.getWindow().getHandle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
+        long windowHandle = client.getWindow().getHandle();
+        GLFW.glfwSetInputMode(windowHandle, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
+        // 将鼠标移到屏幕中心
+        double centerX = client.getWindow().getWidth() / 2.0;
+        double centerY = client.getWindow().getHeight() / 2.0;
+        GLFW.glfwSetCursorPos(windowHandle, centerX, centerY);
     }
 
     private static void close(MinecraftClient client) {

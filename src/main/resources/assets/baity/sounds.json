@@ -4,5 +4,17 @@
       "baity:laughter"
     ],
     "subtitle": "sound.baity.sounds.laughter"
+  },
+  "wooden_button": {
+    "sounds": [
+      "baity:wooden_button"
+    ],
+    "subtitle": "sound.baity.wooden_button"
+  },
+  "bubble": {
+    "sounds": [
+      "baity:bubble"
+    ],
+    "subtitle": "sound.baity.bubble"
   }
 }

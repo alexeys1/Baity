@@ -17,6 +17,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import com.shyeuar.baity.features.RadialMenu;
+import com.shyeuar.baity.utils.SoundUtils;
 
 @Environment(EnvType.CLIENT)
 public class Baity implements ClientModInitializer {
@@ -84,6 +85,7 @@ public class Baity implements ClientModInitializer {
     
     private void registerCustomSounds() {
         // 静态变量已在类加载时注册
+        SoundUtils.registerSounds();
     }
 
 }

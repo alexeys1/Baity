@@ -12,6 +12,7 @@ import com.shyeuar.baity.gui.value.ValueTypeRegistry;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.utils.TimerUtils;
 import com.shyeuar.baity.utils.KeyMappingUtils;
+import com.shyeuar.baity.utils.SoundUtils;
 import net.minecraft.client.MinecraftClient;
 import org.lwjgl.glfw.GLFW;
 
@@ -346,6 +347,7 @@ public class ClickGuiInputHandler {
                     module.toggleExpanded();
                 } else {
                     module.toggle();
+                    SoundUtils.playBubble();
                     if (ConfigSynchronizer.hasModuleConfig(module.getName())) {
                         ConfigSynchronizer.handleModuleToggle(module.getName(), module.isEnabled());
                     }
@@ -484,6 +486,7 @@ public class ClickGuiInputHandler {
                                            coords.mouseX, coords.mouseY)) {
                     if (value.getValue() instanceof Boolean) {
                         value.setValue(!((Boolean)value.getValue()));
+                        SoundUtils.playBubble();
                         if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
                             ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), value.getValue());
                         }

@@ -21,8 +21,8 @@ public class ConfigManager {
     public static boolean customHandHoldingEnabled = false;
     public static double swingDuration = 6;
     
-    public static boolean testEnabled = true;
-    public static int testKeybind = 4;
+    public static boolean radialMenuEnabled = true;
+    public static int radialMenuKeybind = 4;
     
     private static final String CONFIG_FILE = "baity_config.txt";
 
@@ -74,12 +74,12 @@ public class ConfigManager {
         registerField("SwingDuration", Double.class,
             c -> ConfigManager.swingDuration,
             (c, v) -> ConfigManager.swingDuration = (Double) v);
-        registerField("Test", Boolean.class,
-            c -> ConfigManager.testEnabled,
-            (c, v) -> ConfigManager.testEnabled = (Boolean) v);
-        registerField("TestKeybind", Integer.class,
-            c -> ConfigManager.testKeybind,
-            (c, v) -> ConfigManager.testKeybind = (Integer) v);
+        registerField("RadialMenu", Boolean.class,
+            c -> ConfigManager.radialMenuEnabled,
+            (c, v) -> ConfigManager.radialMenuEnabled = (Boolean) v);
+        registerField("RadialMenuKeybind", Integer.class,
+            c -> ConfigManager.radialMenuKeybind,
+            (c, v) -> ConfigManager.radialMenuKeybind = (Integer) v);
     }
     
     private static void registerField(String key, Class<?> type,

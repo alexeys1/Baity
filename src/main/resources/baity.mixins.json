@@ -15,7 +15,8 @@
     "PlayerListHudAccessor",
     "CustomHandHoldingMixin$SwingDurationMixin",
     "CustomHandHoldingMixin$AttackCooldownMixin",
-    "CustomHandHoldingMixin$HeldItemOffsetMixin"
+    "CustomHandHoldingMixin$HeldItemOffsetMixin",
+    "RadialMenuMouseMixin"
   ],
   "client": [
     "SmolPeopleMixin$SmolNameTagMixin",
@@ -30,7 +31,8 @@
     "PlayerListHudAccessor",
     "CustomHandHoldingMixin$SwingDurationMixin",
     "CustomHandHoldingMixin$AttackCooldownMixin",
-    "CustomHandHoldingMixin$HeldItemOffsetMixin"
+    "CustomHandHoldingMixin$HeldItemOffsetMixin",
+    "RadialMenuMouseMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -99,17 +99,17 @@ public class ModuleManager {
         );
         
         ModuleRegistry.registerModuleWithValues(
-            "Test", "Test", ModuleCategory.QOL,
-            () -> ConfigManager.testEnabled,
-            val -> ConfigManager.testEnabled = val,
+            "RadialMenu", "RadialMenu", ModuleCategory.QOL,
+            () -> ConfigManager.radialMenuEnabled,
+            val -> ConfigManager.radialMenuEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
                 new ButtonValue("keybind", "Keybind", 4, ModuleCategory.QOL, ButtonValue.ButtonValueType.KEYBIND, false)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
                     "keybind",
-                    () -> ConfigManager.testKeybind,
-                    val -> ConfigManager.testKeybind = ((Number) val).intValue()
+                    () -> ConfigManager.radialMenuKeybind,
+                    val -> ConfigManager.radialMenuKeybind = ((Number) val).intValue()
                 )
             }
         );

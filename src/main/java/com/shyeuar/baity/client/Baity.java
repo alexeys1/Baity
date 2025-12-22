@@ -14,7 +14,9 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
+import com.shyeuar.baity.features.RadialMenu;
 
 @Environment(EnvType.CLIENT)
 public class Baity implements ClientModInitializer {
@@ -56,6 +58,8 @@ public class Baity implements ClientModInitializer {
             }
             
             KeybindManager.handleModuleKeybinds(client, windowHandle);
+            
+            RadialMenu.tick(client);
         });
         
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(ClientCommandManager.literal("baity")
@@ -64,8 +68,11 @@ public class Baity implements ClientModInitializer {
                 return 1;
             })));
 
-        // Register PlayerESP renderer using new Fabric API (1.21.10+)
         WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.PlayerESPRenderer());
+        
+        HudRenderCallback.EVENT.register((context, tickDelta) -> {
+            RadialMenu.render(context, MinecraftClient.getInstance());
+        });
     }
     
     public static final net.minecraft.sound.SoundEvent LAUGHTER_SOUND = registerSoundEvent("sounds.laughter");

@@ -28,18 +28,20 @@ public class RadialMenu {
     private static final List<RadialSection> sections = new ArrayList<>();
 
     static {
-        sections.add(new RadialSection("warpmenu", "\u2690"));
-        sections.add(new RadialSection("bz", "\u2696"));
-        sections.add(new RadialSection("ah", "\u2692"));
+        sections.add(new RadialSection("warpmenu", "\u2690", "WarpMenu"));
+        sections.add(new RadialSection("bz", "\u2696", "BZ"));
+        sections.add(new RadialSection("ah", "\u2692", "AH"));
     }
 
     public static class RadialSection {
         public final String id;
         public final String icon;
+        public final String displayName;
 
-        public RadialSection(String id, String icon) {
+        public RadialSection(String id, String icon, String displayName) {
             this.id = id;
             this.icon = icon;
+            this.displayName = displayName;
         }
     }
 
@@ -199,6 +201,23 @@ public class RadialMenu {
         }
 
         drawFilledCircle(context, centerX, centerY, INNER_RADIUS + 2, CENTER_COLOR);
+
+        // 绘制悬停时的外侧文本标签
+        if (hoveredSection >= 0 && hoveredSection < sectionCount) {
+            RadialSection hoveredSec = sections.get(hoveredSection);
+            String labelText = hoveredSec.displayName;
+            int labelWidth = client.textRenderer.getWidth(labelText);
+
+            double sectionStartAngle = startAngle + hoveredSection * anglePerSection;
+            double sectionEndAngle = sectionStartAngle + anglePerSection;
+            double midAngle = Math.toRadians((sectionStartAngle + sectionEndAngle) / 2);
+
+            int labelRadius = OUTER_RADIUS + 15;
+            int labelX = centerX + (int) (Math.cos(midAngle) * labelRadius) - labelWidth / 2;
+            int labelY = centerY + (int) (Math.sin(midAngle) * labelRadius) - 4;
+
+            context.drawText(client.textRenderer, labelText, labelX, labelY, 0xFFFFFF00, true);
+        }
 
         String centerIcon = "\u2726";
         int centerTextWidth = client.textRenderer.getWidth(centerIcon);

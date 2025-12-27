@@ -7,6 +7,7 @@ import net.fabricmc.api.Environment;
 public enum ValueStyle {
     DEFAULT,
     BUTTON_LIKE,
-    SLIDER
+    SLIDER,
+    COLOR_PALETTE
 }
 

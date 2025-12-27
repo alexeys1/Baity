@@ -32,14 +32,12 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
         
         if (mc.world == null || mc.player == null) return;
         
-        // 从 CameraRenderState 获取相机位置，从 Camera 获取旋转信息
         Vec3d cameraPos = context.worldState().cameraRenderState.pos;
         Camera camera = mc.gameRenderer.getCamera();
         float tickDelta = mc.getRenderTickCounter().getTickProgress(false);
         float cameraYaw = camera.getYaw();
         float cameraPitch = camera.getPitch();
         
-        // 使用 context 提供的 matrices
         MatrixStack matrices = context.matrices();
         if (matrices == null) {
             matrices = new MatrixStack();
@@ -89,6 +87,13 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
         try {
             float heightOffset = player.getHeight() + 0.5f;
             
+            Module antiSwimModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("AntiSwim");
+            if (antiSwimModule != null && antiSwimModule.isEnabled()) {
+                if (player == mc.player && player.getPose() == net.minecraft.entity.EntityPose.SWIMMING) {
+                    heightOffset = 1.8f + 0.5f;
+                }
+            }
+            
             Module smolPeopleModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("SmolPeople");
             if (smolPeopleModule != null && smolPeopleModule.isEnabled()) {
                 boolean showOwnNametag = ModuleUtils.getOptionBoolean(module, "show own nametag", false);
@@ -112,8 +117,6 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
         boolean showDistance = ModuleUtils.getOptionBoolean(module, "show distance", true);
         
         TextRenderer textRenderer = mc.textRenderer;
-        int nameColor = 0xFF69B4;
-        int distanceColor = 0x00FFFF;
         
         int totalWidth = textRenderer.getWidth(baseName);
         if (isDeveloper) {
@@ -131,7 +134,6 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
         
         VertexConsumerProvider.Immediate immediate = mc.getBufferBuilders().getEntityVertexConsumers();
         
-        // 添加 alpha 通道到颜色
         int nameColorWithAlpha = 0xFFFF69B4;
         int distanceColorWithAlpha = 0xFF00FFFF;
         int devColorWithAlpha = DevConfig.DEV_PREFIX_COLOR | 0xFF000000;

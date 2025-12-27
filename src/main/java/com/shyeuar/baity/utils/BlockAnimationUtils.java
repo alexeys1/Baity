@@ -1,6 +1,5 @@
 package com.shyeuar.baity.utils;
 
-import com.shyeuar.baity.config.ConfigManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;

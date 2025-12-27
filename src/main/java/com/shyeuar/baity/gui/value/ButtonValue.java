@@ -8,7 +8,8 @@ public class ButtonValue implements Value {
 
     public enum ButtonValueType {
         KEYBIND,
-        TRIGGER
+        TRIGGER,
+        FONT_SELECTOR
     }
 
     private final String name;

@@ -145,6 +145,91 @@ public class ModuleManager {
                 )
             }
         );
+        
+        ModuleRegistry.registerModuleWithValues(
+            "FancyDmgSplash", "FancyDmgSplash", ModuleCategory.RENDER,
+            () -> ConfigManager.fancyDmgSplashEnabled,
+            val -> ConfigManager.fancyDmgSplashEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new Option("genshin elemental reaction", "genshin elemental reaction", false, ModuleCategory.RENDER),
+                new com.shyeuar.baity.gui.value.ColorPaletteValue("color palette", "Color Palette", ModuleCategory.RENDER)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "genshin elemental reaction",
+                    () -> ConfigManager.fancyDmgSplashGenshinReaction,
+                    val -> ConfigManager.fancyDmgSplashGenshinReaction = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "color palette",
+                    () -> ConfigManager.fancyDmgSplashColorPalette,
+                    val -> ConfigManager.fancyDmgSplashColorPalette = ((Number) val).intValue()
+                )
+            }
+        );
+        
+        Module antiSwimModule = ModuleRegistry.registerSimpleModule(
+            "AntiSwim", "AntiSwim", ModuleCategory.QOL,
+            () -> ConfigManager.antiSwimEnabled,
+            val -> ConfigManager.antiSwimEnabled = val
+        );
+        antiSwimModule.setEnabled(true);
+        
+        ModuleRegistry.registerModuleWithValues(
+            "Culling", "Culling", ModuleCategory.RENDER,
+            () -> ConfigManager.cullingEnabled,
+            val -> ConfigManager.cullingEnabled = val,
+            new Option[]{
+                new Option("hide dying mob", "hide dying mob", false, ModuleCategory.RENDER),
+                new Option("hide non-starred mob nametag", "hide non-starred mob nametag", false, ModuleCategory.RENDER),
+                new Option("remove underwater fog", "remove underwater fog", false, ModuleCategory.RENDER)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "hide dying mob",
+                    () -> ConfigManager.cullingHideDyingMob,
+                    val -> ConfigManager.cullingHideDyingMob = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "hide non-starred mob nametag",
+                    () -> ConfigManager.cullingHideNonStarredNametag,
+                    val -> ConfigManager.cullingHideNonStarredNametag = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "remove underwater fog",
+                    () -> ConfigManager.cullingRemoveUnderwaterFog,
+                    val -> ConfigManager.cullingRemoveUnderwaterFog = (Boolean) val
+                )
+            }
+        );
+        
+        ModuleRegistry.registerSimpleModule(
+            "3DSkins", "3DSkins", ModuleCategory.RENDER,
+            () -> ConfigManager.skinLayer3DEnabled,
+            val -> ConfigManager.skinLayer3DEnabled = val
+        );
+        
+        ModuleRegistry.registerSimpleModule(
+            "NoHurtCam", "NoHurtCam", ModuleCategory.RENDER,
+            () -> ConfigManager.noHurtCamEnabled,
+            val -> ConfigManager.noHurtCamEnabled = val
+        );
+        
+        ModuleRegistry.registerModuleWithValues(
+            "Muffler", "Muffler", ModuleCategory.QOL,
+            () -> ConfigManager.mufflerEnabled,
+            val -> ConfigManager.mufflerEnabled = val,
+            new Option[]{
+                new Option("mute enderman scream", "mute enderman scream", true, ModuleCategory.QOL)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "mute enderman scream",
+                    () -> ConfigManager.mufflerMuteEndermanScream,
+                    val -> ConfigManager.mufflerMuteEndermanScream = (Boolean) val
+                )
+            }
+        );
     }
     
     private static void initTooltips() {
@@ -152,11 +237,13 @@ public class ModuleManager {
         TooltipManager.registerTooltip("BlockAnimation", "Restored the blocking animation of version 1.8", 0xFFFFFF);
         TooltipManager.registerTooltip("PepCat", "Play an animation and give pep talk when you died. It's a skill issue!", 0xFFFFFF);
         TooltipManager.registerTooltip("RadialMenu", "A roulette tool that invokes a shortcut command", 0xFFFFFF);
+        TooltipManager.registerTooltip("AntiSwim", "Only disables the swimming pose and eye height change on your client.", 0xFFFFFF);
         TooltipManager.registerTooltip("meowalert", 
             MessageUtils.createColoredText("play a ", 0xFFFFFF)
                 .append(MessageUtils.createColoredText("ᯠ₋ ̫ ₋.ᯄ ੭", 0xFFC0CB))
                 .append(MessageUtils.createColoredText("meow~", 0xFFC0CB))
                 .append(MessageUtils.createColoredText(" when you are mentioned in chat", 0xFFFFFF)));
+        TooltipManager.registerTooltip("Muffler", "Disable certain annoying sounds", 0xFFFFFF);
     }
     
     public static List<Module> getModules() {

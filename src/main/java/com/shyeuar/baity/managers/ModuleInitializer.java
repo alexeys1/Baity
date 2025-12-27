@@ -11,6 +11,7 @@ public class ModuleInitializer {
     private static final Set<String> SMOLPEOPLE_OPTIONS = Set.of("crosshair");
     private static final Set<String> PLAYERESP_OPTIONS = Set.of("show distance", "show own nametag");
     private static final Set<String> REMINDER_OPTIONS = Set.of("cookie buff reminder", "god potion reminder", "meowalert");
+    private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of("genshin elemental reaction");
     
     public static void initializeModules() {
         initializeSmolPeople();
@@ -18,6 +19,7 @@ public class ModuleInitializer {
         initializePepCat();
         initializeReminder();
         initializePlayerESP();
+        initializeFancyDmgSplash();
         
         com.shyeuar.baity.gui.sync.ConfigSynchronizer.syncModuleStates();
         
@@ -81,6 +83,20 @@ public class ModuleInitializer {
                     switch (v.getName()) {
                         case "show distance" -> v.setValue(ConfigManager.playerEspShowDistance);
                         case "show own nametag" -> v.setValue(ConfigManager.playerEspShowOwnNametag);
+                    }
+                }
+            }
+        }
+    }
+    
+    private static void initializeFancyDmgSplash() {
+        Module fancyDmgSplash = ModuleManager.getModuleByName("FancyDmgSplash");
+        if (fancyDmgSplash != null) {
+            fancyDmgSplash.setEnabled(ConfigManager.fancyDmgSplashEnabled);
+            for (Value v : fancyDmgSplash.getValues()) {
+                if (FANCYDMGSPLASH_OPTIONS.contains(v.getName())) {
+                    switch (v.getName()) {
+                        case "genshin elemental reaction" -> v.setValue(ConfigManager.fancyDmgSplashGenshinReaction);
                     }
                 }
             }

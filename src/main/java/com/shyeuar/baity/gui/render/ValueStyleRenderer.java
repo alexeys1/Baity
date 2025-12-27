@@ -46,6 +46,10 @@ public class ValueStyleRenderer {
            renderSliderValue(context, client, module, (SliderValue) value, theme,
                             x1, y, x2, subOptionHeight,
                             mouseX, mouseY, localAlpha, editingSlider, sliderInputText);
+       } else if (style == ValueStyle.COLOR_PALETTE && value instanceof com.shyeuar.baity.gui.value.ColorPaletteValue) {
+           renderColorPaletteValue(context, client, module, (com.shyeuar.baity.gui.value.ColorPaletteValue) value, theme,
+                                   x1, y, x2, subOptionHeight,
+                                   mouseX, mouseY, localAlpha);
        } else {
            renderDefaultValue(context, client, module, value, theme,
                           x1, y, x2, subOptionHeight,
@@ -53,6 +57,7 @@ public class ValueStyleRenderer {
                           getTooltipText, getTooltipTextWithColors, hoveredTooltipInfo);
        }
    }
+
    
    public static void renderDefaultValue(DrawContext context, MinecraftClient client, Module module, Value value, Theme theme,
                                        float x1, float y, float x2, float subOptionHeight,
@@ -135,6 +140,7 @@ public class ValueStyleRenderer {
        
        ModuleStyleRenderer.renderKeybindBoxContent(context, client, theme, x2, y, subOptionHeight, mouseX, mouseY, isListeningThis, boxText);
    }
+
    
    public static void renderSliderValue(DrawContext context, MinecraftClient client, Module module, SliderValue sliderValue, Theme theme,
                                         float x1, float y, float x2, float subOptionHeight,
@@ -218,5 +224,81 @@ public class ValueStyleRenderer {
        int handleColor = (new java.awt.Color(255, 255, 255, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        GuiRenderUtil.drawCircle(context, handleX, handleY, handleRadius, handleColor);
    }
-}
 
+   public static void renderColorPaletteValue(DrawContext context, MinecraftClient client, Module module,
+                                              com.shyeuar.baity.gui.value.ColorPaletteValue paletteValue, Theme theme,
+                                              float x1, float y, float x2, float subOptionHeight,
+                                              float mouseX, float mouseY, int localAlpha) {
+       float paletteHeight = subOptionHeight * 2;
+       
+       int baseValueColor = new java.awt.Color(40, 40, 40, 50).getRGB();
+       int valueColor = (baseValueColor & 0x00FFFFFF) | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + paletteHeight, 6, valueColor);
+       
+       int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       String displayText = paletteValue.getDisplayName();
+       float textY = y + 6;
+       context.drawText(client.textRenderer, displayText, (int)(x1 + 8), (int) textY, textColor, false);
+       
+       int colorCount = paletteValue.getColorCount();
+       float colorAreaY = y + subOptionHeight; 
+       float colorAreaHeight = subOptionHeight - 8; 
+       
+       float totalWidth = x2 - x1 - 16;
+       float boxSize = Math.min(colorAreaHeight - 2, (totalWidth - (colorCount - 1) * 3) / colorCount);
+       float spacing = (totalWidth - boxSize * colorCount) / (colorCount - 1);
+       float startX = x1 + 8;
+       float boxY = colorAreaY + (colorAreaHeight - boxSize) / 2;
+       
+       int themeDarkBorder = new java.awt.Color(50, 50, 50, 255).getRGB();
+       int themePurpleBorder = theme.BG_3.getRGB();
+       
+       for (int i = 0; i < colorCount; i++) {
+           float boxX = startX + i * (boxSize + spacing);
+           int color = paletteValue.getColor(i);
+           boolean isSelected = paletteValue.isColorSelected(i);
+           boolean isHovered = GuiRenderUtil.isHovered(boxX, boxY, boxX + boxSize, boxY + boxSize, mouseX, mouseY);
+           
+           int fillColor = (color & 0x00FFFFFF) | (localAlpha << 24);
+           GuiRenderUtil.drawRoundedRect(context, boxX + 1, boxY + 1, boxX + boxSize - 1, boxY + boxSize - 1, 2, fillColor);
+           
+           int borderColor;
+           if (isSelected || isHovered) {
+               borderColor = (themePurpleBorder & 0x00FFFFFF) | (localAlpha << 24);
+           } else {
+               borderColor = (themeDarkBorder & 0x00FFFFFF) | (localAlpha << 24);
+           }
+           GuiRenderUtil.drawRoundedRectOutline(context, boxX, boxY, boxX + boxSize, boxY + boxSize, 2, borderColor);
+           
+           if (isSelected) {
+               GuiRenderUtil.drawRoundedRectOutline(context, boxX - 1, boxY - 1, boxX + boxSize + 1, boxY + boxSize + 1, 3, borderColor);
+           }
+       }
+   }
+   
+   public static float getColorPaletteHeight(float subOptionHeight) {
+       return subOptionHeight * 2;
+   }
+   
+   public static int getHoveredColorIndex(com.shyeuar.baity.gui.value.ColorPaletteValue paletteValue,
+                                          float x1, float y, float x2, float subOptionHeight,
+                                          float mouseX, float mouseY) {
+       int colorCount = paletteValue.getColorCount();
+       float colorAreaY = y + subOptionHeight;
+       float colorAreaHeight = subOptionHeight - 8;
+       
+       float totalWidth = x2 - x1 - 16;
+       float boxSize = Math.min(colorAreaHeight - 2, (totalWidth - (colorCount - 1) * 3) / colorCount);
+       float spacing = (totalWidth - boxSize * colorCount) / (colorCount - 1);
+       float startX = x1 + 8;
+       float boxY = colorAreaY + (colorAreaHeight - boxSize) / 2;
+       
+       for (int i = 0; i < colorCount; i++) {
+           float boxX = startX + i * (boxSize + spacing);
+           if (GuiRenderUtil.isHovered(boxX, boxY, boxX + boxSize, boxY + boxSize, mouseX, mouseY)) {
+               return i;
+           }
+       }
+       return -1;
+   }
+}

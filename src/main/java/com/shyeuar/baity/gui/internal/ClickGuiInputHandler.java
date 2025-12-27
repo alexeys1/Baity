@@ -373,9 +373,10 @@ public class ClickGuiInputHandler {
         
         if (subOptionCount == 0) return false;
         
+        int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
         ClickGuiLayout.ContainerDimensions dims = 
             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, 
-            ClickGuiState.HEIGHT - 20 - ClickGuiState.LIST_TOP_PADDING);
+            ClickGuiState.HEIGHT - 20 - ClickGuiState.LIST_TOP_PADDING, extraHeight);
         
         int containerX1 = 30;
         int containerX2 = (int)(ClickGuiState.WIDTH - 30);
@@ -419,7 +420,8 @@ public class ClickGuiInputHandler {
                         state.setListeningButtonValue(module.getName(), value.getName());
                         timer.reset();
                         return true;
-                    } else if (buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.TRIGGER) {
+                    } else if (buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.TRIGGER ||
+                               buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.FONT_SELECTOR) {
                         if (onTriggerValueClick != null) {
                             onTriggerValueClick.accept(module, buttonValue);
                         }
@@ -480,6 +482,25 @@ public class ClickGuiInputHandler {
                     timer.reset();
                     return true;
                 }
+            } else if (style == ValueStyle.COLOR_PALETTE && value instanceof com.shyeuar.baity.gui.value.ColorPaletteValue) {
+                com.shyeuar.baity.gui.value.ColorPaletteValue paletteValue = (com.shyeuar.baity.gui.value.ColorPaletteValue) value;
+                int containerX1Local = 30;
+                int containerX2Local = (int)(ClickGuiState.WIDTH - 30);
+                
+                int hoveredIndex = com.shyeuar.baity.gui.render.ValueStyleRenderer.getHoveredColorIndex(
+                    paletteValue, containerX1Local + 4, subModY, containerX2Local - 4, dims.subOptionHeight,
+                    coords.mouseX, coords.mouseY);
+                
+                if (hoveredIndex >= 0) {
+                    paletteValue.toggleColor(hoveredIndex);
+                    SoundUtils.playBubble();
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), paletteValue.getValue());
+                    }
+                    timer.reset();
+                    return true;
+                }
+                subModY += dims.subOptionHeight;
             } else {
                 if (GuiRenderUtil.isHovered(containerX1 + 4, (int)subModY, 
                                            containerX2 - 4, (int)(subModY + dims.subOptionHeight), 
@@ -496,7 +517,11 @@ public class ClickGuiInputHandler {
                 }
             }
             
-            subModY += dims.subOptionHeight;
+            float currentHeight = dims.subOptionHeight;
+            if (style == ValueStyle.COLOR_PALETTE) {
+                currentHeight = dims.subOptionHeight * 2;
+            }
+            subModY += currentHeight;
             renderedCount++;
         }
         
@@ -513,9 +538,10 @@ public class ClickGuiInputHandler {
         
         if (subOptionCount == 0) return false;
         
+        int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
         ClickGuiLayout.ContainerDimensions dims = 
             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, 
-            ClickGuiState.HEIGHT - 20 - ClickGuiState.LIST_TOP_PADDING);
+            ClickGuiState.HEIGHT - 20 - ClickGuiState.LIST_TOP_PADDING, extraHeight);
         
         int containerX1 = 30;
         int containerX2 = (int)(ClickGuiState.WIDTH - 30);
@@ -633,8 +659,14 @@ public class ClickGuiInputHandler {
     
     private int getSubOptionContainerHeight(Module module) {
         int subOptionCount = 0;
+        int extraHeight = 0;
         for (Value value : module.getValues()) {
-            if (!"enabled".equals(value.getName())) subOptionCount++;
+            if (!"enabled".equals(value.getName())) {
+                subOptionCount++;
+                if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
+                    extraHeight += 20; 
+                }
+            }
         }
         
         if (subOptionCount == 0) return 0;
@@ -642,7 +674,7 @@ public class ClickGuiInputHandler {
         ClickGuiLayout.ContainerDimensions dims = 
             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, 
             ClickGuiState.HEIGHT - 20 - ClickGuiState.LIST_TOP_PADDING);
-        return dims.height + 5;
+        return dims.height + 5 + extraHeight;
     }
     
     private void updateKeyDisplay() {

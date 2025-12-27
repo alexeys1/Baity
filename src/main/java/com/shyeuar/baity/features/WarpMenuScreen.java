@@ -9,6 +9,8 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.Click;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
+import net.minecraft.client.gl.RenderPipelines;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -34,61 +36,61 @@ public class WarpMenuScreen extends Screen {
         MAIN(null, "Warp Menu", "\u2302", List.of()),
 
         BASIC("Basic", "Basic", "\u2302", List.of(
-            new WarpDestination("Hub", "hub"),
-            new WarpDestination("Community Center", "warp elizabeth"),
-            new WarpDestination("Museum", "warp museum"),
-            new WarpDestination("Wizard Tower", "warp tower"),
-            new WarpDestination("Private Island", "is"),
-            new WarpDestination("Castle", "warp castle"),
-            new WarpDestination("Sirius' Shack", "warp da"),
-            new WarpDestination("Crypts", "warp crypt")
+            new WarpDestination("Hub", "hub", "hub"),
+            new WarpDestination("Community Center", "warp elizabeth", "community_center"),
+            new WarpDestination("Museum", "warp museum", "museum"),
+            new WarpDestination("Wizard Tower", "warp tower", "wizard_tower"),
+            new WarpDestination("Private Island", "is", "private_island"),
+            new WarpDestination("Castle", "warp castle", "castle"),
+            new WarpDestination("Sirius' Shack", "warp da", "sirius_shack"),
+            new WarpDestination("Crypts", "warp crypt", "crypts")
         )),
 
         PARK_BARN("Park & Barn", "Park & Barn", "\u2618", List.of(
-            new WarpDestination("The Park", "warp park"),
-            new WarpDestination("Jungle", "warp jungle"),
-            new WarpDestination("Howling Cave", "warp howl"),
-            new WarpDestination("Murkwater Loch", "warp murkwater"),
-            new WarpDestination("Galatea", "warp galatea"),
-            new WarpDestination("The Barn", "warp barn"),
-            new WarpDestination("Mushroom Desert", "warp desert"),
-            new WarpDestination("Trapper's Den", "warp trap")
+            new WarpDestination("The Park", "warp park", "the_park"),
+            new WarpDestination("Jungle", "warp jungle", "jungle"),
+            new WarpDestination("Howling Cave", "warp howl", "howling_cave"),
+            new WarpDestination("Murkwater Loch", "warp murkwater", "murkwater_loch"),
+            new WarpDestination("Galatea", "warp galatea", "galatea"),
+            new WarpDestination("The Barn", "warp barn", "the_barn"),
+            new WarpDestination("Mushroom Desert", "warp desert", "mushroom_desert"),
+            new WarpDestination("Trapper's Den", "warp trap", "trappers_den")
         )),
 
         MINING("Mining", "Mining", "\u26CF", List.of(
-            new WarpDestination("Gold Mine", "warp gold"),
-            new WarpDestination("Dwarven Mines", "warp mines"),
-            new WarpDestination("The Forge", "warp forge"),
-            new WarpDestination("Dwarven Base Camp", "warp gt"),
-            new WarpDestination("Crystal Hollows", "warp ch"),
-            new WarpDestination("Crystal Nucleus", "warp cn"),
-            new WarpDestination("Deep Caverns", "warp deep")
+            new WarpDestination("Gold Mine", "warp gold", "gold_mine"),
+            new WarpDestination("Dwarven Mines", "warp mines", "dwarven_mines"),
+            new WarpDestination("The Forge", "warp forge", "the_forge"),
+            new WarpDestination("Dwarven Base Camp", "warp gt", "dwarven_base_camp"),
+            new WarpDestination("Crystal Hollows", "warp ch", "crystal_hollows"),
+            new WarpDestination("Crystal Nucleus", "warp cn", "crystal_nucleus"),
+            new WarpDestination("Deep Caverns", "warp deep", "deep_caverns")
         )),
 
         COMBAT("Combat", "Combat", "\u2694", List.of(
-            new WarpDestination("Spider's Den", "warp spider"),
-            new WarpDestination("Spider Mound", "warp top"),
-            new WarpDestination("Arachne's Sanctuary", "warp arachne"),
-            new WarpDestination("The End", "warp end"),
-            new WarpDestination("Dragon's Nest", "warp drag"),
-            new WarpDestination("Void Sepulture", "warp void")
+            new WarpDestination("Spider's Den", "warp spider", "spiders_den"),
+            new WarpDestination("Spider Mound", "warp top", "spider_mound"),
+            new WarpDestination("Arachne's Sanctuary", "warp arachne", "arachnes_sanctuary"),
+            new WarpDestination("The End", "warp end", "the_end"),
+            new WarpDestination("Dragon's Nest", "warp drag", "dragons_nest"),
+            new WarpDestination("Void Sepulture", "warp void", "void_sepulture")
         )),
 
         CRIMSON("Crimson", "Crimson Isle", "\u2620", List.of(
-            new WarpDestination("Crimson Isle", "warp isle"),
-            new WarpDestination("Forgotten Skull", "warp kuudra"),
-            new WarpDestination("The Wasteland", "warp wasteland"),
-            new WarpDestination("Dragontail", "warp dragontail"),
-            new WarpDestination("Scarleton", "warp scarleton"),
-            new WarpDestination("Smoldering Tomb", "warp smold")
+            new WarpDestination("Crimson Isle", "warp isle", "crimson_isle"),
+            new WarpDestination("Forgotten Skull", "warp kuudra", "forgotten_skull"),
+            new WarpDestination("The Wasteland", "warp wasteland", "the_wasteland"),
+            new WarpDestination("Dragontail", "warp dragontail", "dragontail"),
+            new WarpDestination("Scarleton", "warp scarleton", "scarleton"),
+            new WarpDestination("Smoldering Tomb", "warp smold", "smoldering_tomb")
         )),
 
         OTHERS("Others", "Others", "\u2605", List.of(
-            new WarpDestination("Dungeon Hub", "warp dh"),
-            new WarpDestination("Wizard Tower (Rift)", "warp rift"),
-            new WarpDestination("Jerry's Workshop", "warp jerry"),
-            new WarpDestination("Backwater Bayou", "warp bayou"),
-            new WarpDestination("Garden", "warp garden")
+            new WarpDestination("Dungeon Hub", "warp dh", "dungeon_hub"),
+            new WarpDestination("Wizard Tower (Rift)", "warp rift", "wizard_tower_rift"),
+            new WarpDestination("Jerry's Workshop", "warp jerry", "jerrys_workshop"),
+            new WarpDestination("Backwater Bayou", "warp bayou", "backwater_bayou"),
+            new WarpDestination("Garden", "warp garden", "garden")
         ));
 
         final String id;
@@ -107,10 +109,16 @@ public class WarpMenuScreen extends Screen {
     public static class WarpDestination {
         final String name;
         final String command;
+        final String iconId;
 
-        WarpDestination(String name, String command) {
+        WarpDestination(String name, String command, String iconId) {
             this.name = name;
             this.command = command;
+            this.iconId = iconId;
+        }
+        
+        public Identifier getIconTexture() {
+            return Identifier.of("baity", "textures/gui/warp/" + iconId + ".png");
         }
     }
 
@@ -119,8 +127,8 @@ public class WarpMenuScreen extends Screen {
         WarpCategory.PARK_BARN,
         WarpCategory.MINING,
         WarpCategory.OTHERS,
-        WarpCategory.COMBAT,
-        WarpCategory.CRIMSON
+        WarpCategory.CRIMSON,
+        WarpCategory.COMBAT
     };
 
     public WarpMenuScreen() {
@@ -205,10 +213,26 @@ public class WarpMenuScreen extends Screen {
 
                 int textColor = isHovered ? 0xFFFFFF00 : 0xFFFFFFFF;
                 String icon = getIcon(sections[i]);
-                int textWidth = this.textRenderer.getWidth(icon);
-                context.drawText(this.textRenderer, icon, iconX - textWidth / 2, iconY - 4, textColor, true);
+                
+                float scale = 3.0f;
+                var matrices = context.getMatrices();
+                matrices.pushMatrix();
+                matrices.translate(iconX, iconY);
+                matrices.scale(scale, scale);
+                context.drawText(this.textRenderer, icon, -this.textRenderer.getWidth(icon) / 2, -this.textRenderer.fontHeight / 2, textColor, true);
+                matrices.popMatrix();
             } else {
                 WarpDestination dest = (WarpDestination) sections[i];
+                
+                int iconRadius = (INNER_RADIUS + OUTER_RADIUS) / 2;
+                int iconX = centerX + (int) (Math.cos(midAngle) * iconRadius);
+                int iconY = centerY + (int) (Math.sin(midAngle) * iconRadius);
+                
+                int iconSize = 24;
+                context.drawTexture(RenderPipelines.GUI_TEXTURED, dest.getIconTexture(), 
+                    iconX - iconSize / 2, iconY - iconSize / 2, 
+                    0.0f, 0.0f, iconSize, iconSize, iconSize, iconSize);
+                
                 String labelText = dest.name;
                 int labelWidth = this.textRenderer.getWidth(labelText);
 
@@ -216,8 +240,8 @@ public class WarpMenuScreen extends Screen {
                 int labelX = centerX + (int) (Math.cos(midAngle) * labelRadius) - labelWidth / 2;
                 int labelY = centerY + (int) (Math.sin(midAngle) * labelRadius) - 4;
 
-                int textColor = isHovered ? 0xFFFFFF00 : 0xFFFFFFFF;
-                context.drawText(this.textRenderer, labelText, labelX, labelY, textColor, true);
+                int labelColor = isHovered ? 0xFFFFFF00 : 0xFFFFFFFF;
+                context.drawText(this.textRenderer, labelText, labelX, labelY, labelColor, true);
             }
         }
 
@@ -241,15 +265,24 @@ public class WarpMenuScreen extends Screen {
 
         String centerIcon;
         int centerColor;
+        float centerScale;
         if (currentCategory == null) {
             centerIcon = "\u274C";
             centerColor = hoveringExit ? 0xFFFF4444 : 0xFFFFFFFF;
+            centerScale = 2.0f; 
         } else {
-            centerIcon = "\u2190";
+            centerIcon = "\u21A9"; 
             centerColor = hoveringExit ? 0xFFFFFF00 : 0xFFFFFFFF;
+            centerScale = 2.0f;
         }
+        
+        var matrices = context.getMatrices();
+        matrices.pushMatrix();
+        matrices.translate(centerX, centerY);
+        matrices.scale(centerScale, centerScale);
         int centerTextWidth = this.textRenderer.getWidth(centerIcon);
-        context.drawText(this.textRenderer, centerIcon, centerX - centerTextWidth / 2, centerY - 4, centerColor, true);
+        context.drawText(this.textRenderer, centerIcon, -centerTextWidth / 2, -this.textRenderer.fontHeight / 2, centerColor, true);
+        matrices.popMatrix();
 
         String title = currentCategory == null ? "Warp Menu" : currentCategory.displayName;
         int titleWidth = this.textRenderer.getWidth(title);

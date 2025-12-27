@@ -1,6 +1,5 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.config.ConfigManager;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import net.minecraft.client.gui.hud.InGameHud;
 import net.minecraft.client.option.Perspective;

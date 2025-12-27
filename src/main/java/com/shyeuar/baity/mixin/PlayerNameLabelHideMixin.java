@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
 @Mixin(PlayerEntityRenderer.class)
 public class PlayerNameLabelHideMixin {
 
@@ -36,21 +37,18 @@ public class PlayerNameLabelHideMixin {
         }
         if (player == null) return;
 
-        // 假人保留原版名牌，不隐藏
         if (com.shyeuar.baity.utils.AntiBotUtils.isBot(player)) {
             return;
         }
 
-        // 自己的名牌处理
         boolean showOwnNametag = ModuleUtils.getOptionBoolean(m, "show own nametag", false);
         if (player == mc.player) {
             if (showOwnNametag) {
-                ci.cancel();  // 显示自定义名牌时隐藏原版
+                ci.cancel();  
             }
             return;
         }
 
-        // 其他真人玩家：隐藏原版名牌，由 PlayerESPRenderer 渲染自定义名牌
         ci.cancel();
     }
 

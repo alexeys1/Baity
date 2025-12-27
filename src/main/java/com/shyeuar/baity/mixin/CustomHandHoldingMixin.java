@@ -5,7 +5,6 @@ import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.render.item.HeldItemRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
@@ -65,9 +64,7 @@ public class CustomHandHoldingMixin {
         @Unique
         private static final float OFFSET_Z = -1.0f;
 
-        private static final String RENDER_METHOD = "renderFirstPersonItem(Lnet/minecraft/client/network/AbstractClientPlayerEntity;FFLnet/minecraft/util/Hand;FLnet/minecraft/item/ItemStack;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;I)V";
-
-        @Inject(method = RENDER_METHOD, at = @At("HEAD"))
+        @Inject(method = "renderFirstPersonItem", at = @At("HEAD"))
         private void baity$adjustHeldItemOffset(AbstractClientPlayerEntity player, float tickDelta, float pitch, Hand hand, float swingProgress, ItemStack item, float equipProgress, MatrixStack matrices, net.minecraft.client.render.command.OrderedRenderCommandQueue queue, int light, CallbackInfo ci) {
             Module customHandHoldingModule = ModuleManager.getModuleByName("CustomHandHolding");
             if (customHandHoldingModule == null || !customHandHoldingModule.isEnabled()) return;

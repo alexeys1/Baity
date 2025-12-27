@@ -1,6 +1,5 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.config.ConfigManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.Perspective;
 import net.minecraft.client.render.Camera;
@@ -65,6 +64,16 @@ public class SmolPeopleMixin {
                 
                 PlayerEntityModel model = (PlayerEntityModel) (Object) this;
                 
+                try {
+                    org.joml.Vector3f s = new org.joml.Vector3f(1.0f, 1.0f, 1.0f);
+                    model.head.scale(s);
+                } catch (Throwable ignored) {
+                }
+                
+                if (mc.player.isSwimming() || mc.player.isSubmergedInWater()) {
+                    return;
+                }
+                
                 if (playerEntityRenderState.limbSwingAmplitude > 0) {
                     float speedMultiplier = 2.5f;
                     float enhancedLimbAngle = playerEntityRenderState.limbSwingAnimationProgress * speedMultiplier;
@@ -80,13 +89,6 @@ public class SmolPeopleMixin {
                     
                     model.rightArm.pitch += armSwingDelta;
                     model.leftArm.pitch -= armSwingDelta;
-                }
-                
-                try {
-                    org.joml.Vector3f s = new org.joml.Vector3f(1.0f, 1.0f, 1.0f);
-                    model.head.scale(s);
-                } catch (Throwable ignored) {
-                    // 忽略潜在的模型实现差异
                 }
             }
         }

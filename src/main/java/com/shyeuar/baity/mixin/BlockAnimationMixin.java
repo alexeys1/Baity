@@ -78,10 +78,6 @@ public abstract class BlockAnimationMixin {
         }
     }
     
-    /**
-     * 第三人称防砍动画 - 修改玩家模型手臂姿势
-     * 当玩家在第三人称视角下触发防砍时，让手臂呈现格挡姿势
-     */
     @Mixin(PlayerEntityModel.class)
     public static abstract class ThirdPersonBlockAnimationMixin {
         
@@ -89,32 +85,26 @@ public abstract class BlockAnimationMixin {
         private void baity$applyBlockingPose(PlayerEntityRenderState state, CallbackInfo ci) {
             MinecraftClient mc = MinecraftClient.getInstance();
             
-            // 只对本地玩家生效
             if (mc.player == null || state.id != mc.player.getId()) return;
             
-            // 检测是否正在防砍
             if (!BlockAnimationUtils.isEntityBlocking(mc.player)) return;
             
             PlayerEntityModel model = (PlayerEntityModel) (Object) this;
             Hand blockingHand = BlockAnimationUtils.getBlockingHand(mc.player);
             
-            // 计算行走时的手臂摆动（1/8 原版速度）
             float armSwing = 0f;
             if (state.limbSwingAmplitude > 0) {
                 float limbAngle = state.limbSwingAnimationProgress;
-                // 原版摆动公式，乘以 0.125 得到 1/8 速度
                 armSwing = (float) (Math.cos(limbAngle * 0.6662f + Math.PI) * 1.4f * state.limbSwingAmplitude * 0.125f);
             }
             
             if (blockingHand == Hand.MAIN_HAND) {
-                // 主手持剑防砍
                 if (mc.player.getMainArm() == net.minecraft.util.Arm.RIGHT) {
                     applyBlockingPoseToArm(model.rightArm, armSwing, true);
                 } else {
                     applyBlockingPoseToArm(model.leftArm, armSwing, false);
                 }
             } else if (blockingHand == Hand.OFF_HAND) {
-                // 副手持剑防砍
                 if (mc.player.getMainArm() == net.minecraft.util.Arm.RIGHT) {
                     applyBlockingPoseToArm(model.leftArm, armSwing, false);
                 } else {
@@ -123,18 +113,9 @@ public abstract class BlockAnimationMixin {
             }
         }
         
-        /**
-         * 应用格挡姿势到指定手臂
-         * @param arm 手臂模型部件
-         * @param armSwing 行走摆动值
-         * @param isRightArm 是否是右臂（用于镜像yaw）
-         */
         private void applyBlockingPoseToArm(net.minecraft.client.model.ModelPart arm, float armSwing, boolean isRightArm) {
-            // pitch: 负值 = 手臂向前抬起
             arm.pitch = -0.9F + armSwing;
-            // yaw: 右臂负值向内收，左臂正值向内收
             arm.yaw = isRightArm ? -0.5F : 0.5F;
-            // roll: 不翻转
             arm.roll = 0.0F;
         }
     }

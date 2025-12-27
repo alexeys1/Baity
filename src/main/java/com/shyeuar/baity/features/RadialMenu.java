@@ -4,7 +4,6 @@ import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.utils.KeyMappingUtils;
-import com.shyeuar.baity.utils.RadialMenuRendererUtils;
 import com.shyeuar.baity.utils.SoundUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -29,8 +28,8 @@ public class RadialMenu {
 
     static {
         sections.add(new RadialSection("warpmenu", "\u2690", "WarpMenu"));
-        sections.add(new RadialSection("bz", "\u2696", "BZ"));
         sections.add(new RadialSection("ah", "\u2692", "AH"));
+        sections.add(new RadialSection("bz", "\u2696", "BZ"));
     }
 
     public static class RadialSection {
@@ -83,7 +82,6 @@ public class RadialMenu {
         }
         wasKeyPressed = isKeyPressed;
 
-        // 处理鼠标点击选择
         if (isOpen) {
             boolean isMousePressed = GLFW.glfwGetMouseButton(windowHandle, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
             if (isMousePressed && !wasMousePressed && hoveredSection >= 0) {
@@ -98,7 +96,6 @@ public class RadialMenu {
         isOpen = true;
         long windowHandle = client.getWindow().getHandle();
         GLFW.glfwSetInputMode(windowHandle, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
-        // 将鼠标移到屏幕中心
         double centerX = client.getWindow().getWidth() / 2.0;
         double centerY = client.getWindow().getHeight() / 2.0;
         GLFW.glfwSetCursorPos(windowHandle, centerX, centerY);
@@ -196,13 +193,18 @@ public class RadialMenu {
 
             int textColor = isHovered ? 0xFFFFFF00 : 0xFFFFFFFF;
             String icon = section.icon;
-            int textWidth = client.textRenderer.getWidth(icon);
-            context.drawText(client.textRenderer, icon, iconX - textWidth / 2, iconY - 4, textColor, true);
+            
+            float scale = 3.0f;
+            var matrices = context.getMatrices();
+            matrices.pushMatrix();
+            matrices.translate(iconX, iconY);
+            matrices.scale(scale, scale);
+            context.drawText(client.textRenderer, icon, -client.textRenderer.getWidth(icon) / 2, -client.textRenderer.fontHeight / 2, textColor, true);
+            matrices.popMatrix();
         }
 
         drawFilledCircle(context, centerX, centerY, INNER_RADIUS + 2, CENTER_COLOR);
 
-        // 绘制悬停时的外侧文本标签
         if (hoveredSection >= 0 && hoveredSection < sectionCount) {
             RadialSection hoveredSec = sections.get(hoveredSection);
             String labelText = hoveredSec.displayName;

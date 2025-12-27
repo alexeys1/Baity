@@ -172,8 +172,9 @@ public class ClickGuiRenderer {
         float expandProgress = getModuleExpandProgress(state, module.getName());
         if (expandProgress <= 0.0f) return 0;
         
+        int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
         ClickGuiLayout.ContainerDimensions dims = 
-            ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight);
+            ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
         int containerHeight = (int)(dims.height * expandProgress);
 
         int containerBg = new java.awt.Color(30, 30, 30, 200).getRGB();
@@ -195,6 +196,11 @@ public class ClickGuiRenderer {
             for (Value value : module.getValues()) {
                 if ("enabled".equals(value.getName())) continue;
                 if (renderedCount >= maxVisibleOptions) break;
+                
+                float currentHeight = dims.subOptionHeight;
+                if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.COLOR_PALETTE) {
+                    currentHeight = dims.subOptionHeight * 2;
+                }
                 
                 float localAlphaF = Math.min(1f, Math.max(0f, 
                     (innerVisible - renderedCount * dims.subOptionHeight) / (float)dims.subOptionHeight));
@@ -220,7 +226,7 @@ public class ClickGuiRenderer {
                     state.setTooltipY(tooltipInfo.y);
                 }
                 
-                subModY += dims.subOptionHeight;
+                subModY += currentHeight;
                 renderedCount++;
             }
         }

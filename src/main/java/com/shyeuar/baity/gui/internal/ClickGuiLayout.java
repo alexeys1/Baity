@@ -3,6 +3,7 @@ package com.shyeuar.baity.gui.internal;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.gui.value.Value;
+import com.shyeuar.baity.gui.value.ValueStyle;
 
 import java.util.List;
 
@@ -16,14 +17,20 @@ public class ClickGuiLayout {
             contentHeight += ClickGuiState.ITEM_HEIGHT;
             if (module.isExpanded()) {
                 int childCount = 0;
+                int extraHeight = 0;
                 for (Value value : module.getValues()) {
-                    if (!"enabled".equals(value.getName())) childCount++;
+                    if (!"enabled".equals(value.getName())) {
+                        childCount++;
+                        if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
+                            extraHeight += 20;
+                        }
+                    }
                 }
                 if (childCount > 0) {
                     int containerPadding = 8;
                     int subOptionHeight = 20;
                     int maxContainerHeight = (int)(visibleHeight - 80);
-                    int fullContainerHeight = childCount * subOptionHeight + containerPadding * 2;
+                    int fullContainerHeight = childCount * subOptionHeight + containerPadding * 2 + extraHeight;
                     int containerHeight = Math.min(fullContainerHeight, maxContainerHeight);
                     contentHeight += containerHeight + 5;
                 }
@@ -34,10 +41,14 @@ public class ClickGuiLayout {
     }
    
     public static ContainerDimensions calculateSubOptionContainer(int subOptionCount, float visibleHeight) {
+        return calculateSubOptionContainer(subOptionCount, visibleHeight, 0);
+    }
+    
+    public static ContainerDimensions calculateSubOptionContainer(int subOptionCount, float visibleHeight, int extraHeight) {
         int containerPadding = 8;
         int subOptionHeight = 20;
         int maxContainerHeight = (int)(visibleHeight - 80);
-        int fullContainerHeight = subOptionCount * subOptionHeight + containerPadding * 2;
+        int fullContainerHeight = subOptionCount * subOptionHeight + containerPadding * 2 + extraHeight;
         int containerHeight = Math.min(fullContainerHeight, maxContainerHeight);
         
         return new ContainerDimensions(
@@ -46,6 +57,18 @@ public class ClickGuiLayout {
             containerHeight,
             maxContainerHeight
         );
+    }
+    
+    public static int calculateExtraHeight(Module module) {
+        int extraHeight = 0;
+        for (Value value : module.getValues()) {
+            if (!"enabled".equals(value.getName())) {
+                if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
+                    extraHeight += 20; 
+                }
+            }
+        }
+        return extraHeight;
     }
     
     public static ScrollbarInfo calculateScrollbar(ClickGuiState state, float contentHeight, float visibleHeight) {

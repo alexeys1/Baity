@@ -24,7 +24,26 @@ public class ConfigManager {
     public static boolean radialMenuEnabled = true;
     public static int radialMenuKeybind = 4;
     
-    private static final String CONFIG_FILE = "baity_config.txt";
+    public static boolean fancyDmgSplashEnabled = true;
+    public static boolean fancyDmgSplashGenshinReaction = false;
+    public static int fancyDmgSplashColorPalette = 0;
+    
+    public static boolean antiSwimEnabled = true; 
+    
+    public static boolean cullingEnabled = false;
+    public static boolean cullingHideDyingMob = false;
+    public static boolean cullingHideNonStarredNametag = false;
+    public static boolean cullingRemoveUnderwaterFog = false;
+    
+    public static boolean skinLayer3DEnabled = false;
+    
+    public static boolean noHurtCamEnabled = false;
+    
+    public static boolean mufflerEnabled = false;
+    public static boolean mufflerMuteEndermanScream = true;
+    
+    private static final String BAITY_DIR = "baity";
+    private static final String CONFIG_FILE = "baity/config.txt";
 
     private static final Map<String, SettingField> CONFIG_FIELDS = new HashMap<>();
     
@@ -80,6 +99,42 @@ public class ConfigManager {
         registerField("RadialMenuKeybind", Integer.class,
             c -> ConfigManager.radialMenuKeybind,
             (c, v) -> ConfigManager.radialMenuKeybind = (Integer) v);
+        registerField("FancyDmgSplash", Boolean.class,
+            c -> ConfigManager.fancyDmgSplashEnabled,
+            (c, v) -> ConfigManager.fancyDmgSplashEnabled = (Boolean) v);
+        registerField("FancyDmgSplashGenshinReaction", Boolean.class,
+            c -> ConfigManager.fancyDmgSplashGenshinReaction,
+            (c, v) -> ConfigManager.fancyDmgSplashGenshinReaction = (Boolean) v);
+        registerField("FancyDmgSplashColorPalette", Integer.class,
+            c -> ConfigManager.fancyDmgSplashColorPalette,
+            (c, v) -> ConfigManager.fancyDmgSplashColorPalette = (Integer) v);
+        registerField("AntiSwim", Boolean.class,
+            c -> ConfigManager.antiSwimEnabled,
+            (c, v) -> ConfigManager.antiSwimEnabled = (Boolean) v);
+        registerField("Culling", Boolean.class,
+            c -> ConfigManager.cullingEnabled,
+            (c, v) -> ConfigManager.cullingEnabled = (Boolean) v);
+        registerField("CullingHideDyingMob", Boolean.class,
+            c -> ConfigManager.cullingHideDyingMob,
+            (c, v) -> ConfigManager.cullingHideDyingMob = (Boolean) v);
+        registerField("CullingHideNonStarredNametag", Boolean.class,
+            c -> ConfigManager.cullingHideNonStarredNametag,
+            (c, v) -> ConfigManager.cullingHideNonStarredNametag = (Boolean) v);
+        registerField("CullingRemoveUnderwaterFog", Boolean.class,
+            c -> ConfigManager.cullingRemoveUnderwaterFog,
+            (c, v) -> ConfigManager.cullingRemoveUnderwaterFog = (Boolean) v);
+        registerField("3DSkins", Boolean.class,
+            c -> ConfigManager.skinLayer3DEnabled,
+            (c, v) -> ConfigManager.skinLayer3DEnabled = (Boolean) v);
+        registerField("NoHurtCam", Boolean.class,
+            c -> ConfigManager.noHurtCamEnabled,
+            (c, v) -> ConfigManager.noHurtCamEnabled = (Boolean) v);
+        registerField("Muffler", Boolean.class,
+            c -> ConfigManager.mufflerEnabled,
+            (c, v) -> ConfigManager.mufflerEnabled = (Boolean) v);
+        registerField("MufflerMuteEndermanScream", Boolean.class,
+            c -> ConfigManager.mufflerMuteEndermanScream,
+            (c, v) -> ConfigManager.mufflerMuteEndermanScream = (Boolean) v);
     }
     
     private static void registerField(String key, Class<?> type,
@@ -90,6 +145,11 @@ public class ConfigManager {
 
     public static void saveConfig() {
         try {
+            java.nio.file.Path baityDir = java.nio.file.Paths.get(BAITY_DIR);
+            if (!java.nio.file.Files.exists(baityDir)) {
+                java.nio.file.Files.createDirectories(baityDir);
+            }
+            
             java.nio.file.Path configPath = java.nio.file.Paths.get(CONFIG_FILE);
             StringBuilder config = new StringBuilder();
             
@@ -109,9 +169,20 @@ public class ConfigManager {
 
     public static void loadConfig() {
         try {
-            java.nio.file.Path configPath = java.nio.file.Paths.get(CONFIG_FILE);
-            if (java.nio.file.Files.exists(configPath)) {
-                String content = java.nio.file.Files.readString(configPath).trim();
+            java.nio.file.Path baityDir = java.nio.file.Paths.get(BAITY_DIR);
+            if (!java.nio.file.Files.exists(baityDir)) {
+                java.nio.file.Files.createDirectories(baityDir);
+            }
+            
+            java.nio.file.Path oldConfigPath = java.nio.file.Paths.get("baity_config.txt");
+            java.nio.file.Path newConfigPath = java.nio.file.Paths.get(CONFIG_FILE);
+            if (java.nio.file.Files.exists(oldConfigPath) && !java.nio.file.Files.exists(newConfigPath)) {
+                java.nio.file.Files.move(oldConfigPath, newConfigPath);
+                System.out.println("[Baity] Migrated config to new location: " + CONFIG_FILE);
+            }
+            
+            if (java.nio.file.Files.exists(newConfigPath)) {
+                String content = java.nio.file.Files.readString(newConfigPath).trim();
                 String[] lines = content.split("\n");
                 
                 for (String line : lines) {

@@ -25,6 +25,7 @@ public class Baity implements ClientModInitializer {
     private static long lastKeyPressTime = 0;
     public static boolean openGuiNextTick = false;
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onInitializeClient() {
         CustomTotemItem.register();
@@ -70,6 +71,7 @@ public class Baity implements ClientModInitializer {
             })));
 
         WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.PlayerESPRenderer());
+        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.FancyDmgSplash());
         
         HudRenderCallback.EVENT.register((context, tickDelta) -> {
             RadialMenu.render(context, MinecraftClient.getInstance());
@@ -84,7 +86,6 @@ public class Baity implements ClientModInitializer {
     }
     
     private void registerCustomSounds() {
-        // 静态变量已在类加载时注册
         SoundUtils.registerSounds();
     }
 

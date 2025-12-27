@@ -159,6 +159,9 @@ public class ClickGui extends Screen {
             int keyCode = (Integer) value;
             return com.shyeuar.baity.utils.KeyMappingUtils.formatKeyDisplay(keyCode, "");
         }
+        if (value instanceof String) {
+            return (String) value;
+        }
         return value != null ? value.toString() : "☄ NOTSET";
     }
     

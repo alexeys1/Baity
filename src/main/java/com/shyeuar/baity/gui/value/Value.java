@@ -18,4 +18,8 @@ public interface Value {
     default boolean isIndependentOfParentModule() {
         return false;
     }
+
+    default boolean needsSeparatorBefore(Value previousValue) {
+        return false;
+    }
 }

@@ -1,6 +1,6 @@
 package com.shyeuar.baity.utils;
 
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphics;
 
 public class RadialMenuRendererUtils {
 
@@ -11,7 +11,7 @@ public class RadialMenuRendererUtils {
     public static final int SECTION_HOVER_COLOR = 0xC0362A96;
     public static final int CENTER_COLOR = 0xA0202020;
 
-    public static void drawFilledCircle(DrawContext context, int centerX, int centerY, int radius, int color) {
+    public static void drawFilledCircle(GuiGraphics context, int centerX, int centerY, int radius, int color) {
         int radiusSq = radius * radius;
         for (int y = -radius; y <= radius; y++) {
             int halfWidth = (int) Math.sqrt(radiusSq - y * y);
@@ -21,7 +21,7 @@ public class RadialMenuRendererUtils {
         }
     }
 
-    public static void drawRadialLine(DrawContext context, int centerX, int centerY,
+    public static void drawRadialLine(GuiGraphics context, int centerX, int centerY,
                                       int innerRadius, int outerRadius, double angle, int color) {
         double cos = Math.cos(angle);
         double sin = Math.sin(angle);
@@ -32,7 +32,7 @@ public class RadialMenuRendererUtils {
         }
     }
 
-    public static void drawArcSection(DrawContext context, int centerX, int centerY,
+    public static void drawArcSection(GuiGraphics context, int centerX, int centerY,
                                       int innerRadius, int outerRadius,
                                       double startAngleDeg, double endAngleDeg, int color) {
         int outerRadiusSq = outerRadius * outerRadius;

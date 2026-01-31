@@ -6,6 +6,9 @@ import java.util.Map;
 public class ConfigManager {
     public static boolean smolpeopleMode = false;
     public static boolean blockAnimationMode = false;
+    public static boolean blockAnimationInteractAnimations = true;
+    public static boolean blockAnimationNoReequipWhenUsing = true;
+    public static boolean blockAnimationSlowdown = false;
     public static boolean crosshairMode = true;
     public static boolean guiEnabled = true;
     public static int guiKeyCode = 345;
@@ -20,6 +23,14 @@ public class ConfigManager {
     
     public static boolean customHandHoldingEnabled = false;
     public static double swingDuration = 6;
+    public static double customHandHoldingPosX = 0;
+    public static double customHandHoldingPosY = 0;
+    public static double customHandHoldingPosZ = 0;
+    public static double customHandHoldingRotX = 0;
+    public static double customHandHoldingRotY = 0;
+    public static double customHandHoldingRotZ = 0;
+    public static double customHandHoldingScale = 1.0; 
+    public static boolean customHandHoldingNoSwing = false;
     
     public static boolean radialMenuEnabled = true;
     public static int radialMenuKeybind = 4;
@@ -28,7 +39,9 @@ public class ConfigManager {
     public static boolean fancyDmgSplashGenshinReaction = false;
     public static int fancyDmgSplashColorPalette = 0;
     
-    public static boolean antiSwimEnabled = true; 
+    public static boolean antiSwimEnabled = true;
+    public static boolean antiSwimDisablePose = true;
+    public static boolean antiSwimDisableEyeHeight = true; 
     
     public static boolean cullingEnabled = false;
     public static boolean cullingHideDyingMob = false;
@@ -54,6 +67,15 @@ public class ConfigManager {
         registerField("BlockAnimation", Boolean.class,
             c -> ConfigManager.blockAnimationMode,
             (c, v) -> ConfigManager.blockAnimationMode = (Boolean) v);
+        registerField("BlockAnimationInteractAnimations", Boolean.class,
+            c -> ConfigManager.blockAnimationInteractAnimations,
+            (c, v) -> ConfigManager.blockAnimationInteractAnimations = (Boolean) v);
+        registerField("BlockAnimationNoReequipWhenUsing", Boolean.class,
+            c -> ConfigManager.blockAnimationNoReequipWhenUsing,
+            (c, v) -> ConfigManager.blockAnimationNoReequipWhenUsing = (Boolean) v);
+        registerField("BlockAnimationSlowdown", Boolean.class,
+            c -> ConfigManager.blockAnimationSlowdown,
+            (c, v) -> ConfigManager.blockAnimationSlowdown = (Boolean) v);
         registerField("Crosshair", Boolean.class,
             c -> ConfigManager.crosshairMode,
             (c, v) -> ConfigManager.crosshairMode = (Boolean) v);
@@ -93,6 +115,30 @@ public class ConfigManager {
         registerField("SwingDuration", Double.class,
             c -> ConfigManager.swingDuration,
             (c, v) -> ConfigManager.swingDuration = (Double) v);
+        registerField("CustomHandHoldingPosX", Double.class,
+            c -> ConfigManager.customHandHoldingPosX,
+            (c, v) -> ConfigManager.customHandHoldingPosX = (Double) v);
+        registerField("CustomHandHoldingPosY", Double.class,
+            c -> ConfigManager.customHandHoldingPosY,
+            (c, v) -> ConfigManager.customHandHoldingPosY = (Double) v);
+        registerField("CustomHandHoldingPosZ", Double.class,
+            c -> ConfigManager.customHandHoldingPosZ,
+            (c, v) -> ConfigManager.customHandHoldingPosZ = (Double) v);
+        registerField("CustomHandHoldingRotX", Double.class,
+            c -> ConfigManager.customHandHoldingRotX,
+            (c, v) -> ConfigManager.customHandHoldingRotX = (Double) v);
+        registerField("CustomHandHoldingRotY", Double.class,
+            c -> ConfigManager.customHandHoldingRotY,
+            (c, v) -> ConfigManager.customHandHoldingRotY = (Double) v);
+        registerField("CustomHandHoldingRotZ", Double.class,
+            c -> ConfigManager.customHandHoldingRotZ,
+            (c, v) -> ConfigManager.customHandHoldingRotZ = (Double) v);
+        registerField("CustomHandHoldingScale", Double.class,
+            c -> ConfigManager.customHandHoldingScale,
+            (c, v) -> ConfigManager.customHandHoldingScale = (Double) v);
+        registerField("CustomHandHoldingNoSwing", Boolean.class,
+            c -> ConfigManager.customHandHoldingNoSwing,
+            (c, v) -> ConfigManager.customHandHoldingNoSwing = (Boolean) v);
         registerField("RadialMenu", Boolean.class,
             c -> ConfigManager.radialMenuEnabled,
             (c, v) -> ConfigManager.radialMenuEnabled = (Boolean) v);
@@ -111,6 +157,12 @@ public class ConfigManager {
         registerField("AntiSwim", Boolean.class,
             c -> ConfigManager.antiSwimEnabled,
             (c, v) -> ConfigManager.antiSwimEnabled = (Boolean) v);
+        registerField("DisablePose", Boolean.class,
+            c -> ConfigManager.antiSwimDisablePose,
+            (c, v) -> ConfigManager.antiSwimDisablePose = (Boolean) v);
+        registerField("DisableEyeHeight", Boolean.class,
+            c -> ConfigManager.antiSwimDisableEyeHeight,
+            (c, v) -> ConfigManager.antiSwimDisableEyeHeight = (Boolean) v);
         registerField("Culling", Boolean.class,
             c -> ConfigManager.cullingEnabled,
             (c, v) -> ConfigManager.cullingEnabled = (Boolean) v);

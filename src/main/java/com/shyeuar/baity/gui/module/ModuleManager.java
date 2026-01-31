@@ -25,25 +25,83 @@ public class ModuleManager {
         initTooltips();
         
         ModuleRegistry.registerModuleWithValues(
-            "SmolPeople", "SmolPeople", ModuleCategory.FUN,
-            () -> ConfigManager.smolpeopleMode,
-            val -> ConfigManager.smolpeopleMode = val,
+            "BlockAnimation", "BlockAnimation", ModuleCategory.FUN,
+            () -> ConfigManager.blockAnimationMode,
+            val -> ConfigManager.blockAnimationMode = val,
             new Option[]{
-                new Option("crosshair", "render third-person-back crosshair", true, ModuleCategory.FUN)
+                new Option("slowdown", "slowdown", false, ModuleCategory.FUN)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
-                    "crosshair",
-                    () -> ConfigManager.crosshairMode,
-                    val -> ConfigManager.crosshairMode = (Boolean) val
+                    "slowdown",
+                    () -> ConfigManager.blockAnimationSlowdown,
+                    val -> ConfigManager.blockAnimationSlowdown = (Boolean) val
                 )
             }
         );
         
-        ModuleRegistry.registerSimpleModule(
-            "BlockAnimation", "BlockAnimation", ModuleCategory.FUN,
-            () -> ConfigManager.blockAnimationMode,
-            val -> ConfigManager.blockAnimationMode = val
+        ModuleRegistry.registerModuleWithValues(
+            "CustomHandHolding", "CustomHandHolding", ModuleCategory.FUN,
+            () -> ConfigManager.customHandHoldingEnabled,
+            val -> ConfigManager.customHandHoldingEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new com.shyeuar.baity.gui.value.SliderValue("position x", "position x", 0, -2.5, 1.5, 0.05, ModuleCategory.FUN),
+                new com.shyeuar.baity.gui.value.SliderValue("position y", "position y", 0, -1.5, 1.5, 0.05, ModuleCategory.FUN),
+                new com.shyeuar.baity.gui.value.SliderValue("position z", "position z", 0, -1.5, 3.0, 0.05, ModuleCategory.FUN),
+                ((com.shyeuar.baity.gui.value.SliderValue) new com.shyeuar.baity.gui.value.SliderValue("rotation x", "rotation x", 0, -180, 180, 1, ModuleCategory.FUN)).setNeedsSeparator(true),
+                new com.shyeuar.baity.gui.value.SliderValue("rotation y", "rotation y", 0, -180, 180, 1, ModuleCategory.FUN),
+                new com.shyeuar.baity.gui.value.SliderValue("rotation z", "rotation z", 0, -180, 180, 1, ModuleCategory.FUN),
+                ((com.shyeuar.baity.gui.value.SliderValue) new com.shyeuar.baity.gui.value.SliderValue("scale", "size", 1, 0.1, 3.0, 0.05, ModuleCategory.FUN)).setNeedsSeparator(true),
+                new com.shyeuar.baity.gui.value.SliderValue("swing duration", "swing duration", 6, 1, 20, 1, ModuleCategory.FUN),
+                new com.shyeuar.baity.gui.value.Option("no swing", "no swing", false, ModuleCategory.FUN)
+            },
+                new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "position x",
+                    () -> ConfigManager.customHandHoldingPosX,
+                    val -> ConfigManager.customHandHoldingPosX = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "position y",
+                    () -> ConfigManager.customHandHoldingPosY,
+                    val -> ConfigManager.customHandHoldingPosY = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "position z",
+                    () -> ConfigManager.customHandHoldingPosZ,
+                    val -> ConfigManager.customHandHoldingPosZ = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "rotation x",
+                    () -> ConfigManager.customHandHoldingRotX,
+                    val -> ConfigManager.customHandHoldingRotX = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "rotation y",
+                    () -> ConfigManager.customHandHoldingRotY,
+                    val -> ConfigManager.customHandHoldingRotY = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "rotation z",
+                    () -> ConfigManager.customHandHoldingRotZ,
+                    val -> ConfigManager.customHandHoldingRotZ = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "scale",
+                    () -> ConfigManager.customHandHoldingScale,
+                    val -> ConfigManager.customHandHoldingScale = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "swing duration",
+                    () -> ConfigManager.swingDuration,
+                    val -> ConfigManager.swingDuration = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "no swing",
+                    () -> ConfigManager.customHandHoldingNoSwing,
+                    val -> ConfigManager.customHandHoldingNoSwing = (Boolean) val
+                )
+            }
         );
         
         Module pepCatModule = ModuleRegistry.registerSimpleModule(
@@ -54,17 +112,72 @@ public class ModuleManager {
         pepCatModule.setEnabled(true);
         
         ModuleRegistry.registerModuleWithValues(
-            "CustomHandHolding", "CustomHandHolding", ModuleCategory.FUN,
-            () -> ConfigManager.customHandHoldingEnabled,
-            val -> ConfigManager.customHandHoldingEnabled = val,
-            new com.shyeuar.baity.gui.value.Value[]{
-                new com.shyeuar.baity.gui.value.SliderValue("swing duration", "Swing Duration", 6, 1, 20, 1, ModuleCategory.FUN)
+            "SmolPeople", "SmolPeople", ModuleCategory.FUN,
+            () -> ConfigManager.smolpeopleMode,
+            val -> ConfigManager.smolpeopleMode = val,
+            new Option[]{
+                new Option("crosshair", "crosshair", true, ModuleCategory.FUN)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
-                    "swing duration",
-                    () -> ConfigManager.swingDuration,
-                    val -> ConfigManager.swingDuration = ((Number) val).doubleValue()
+                    "crosshair",
+                    () -> ConfigManager.crosshairMode,
+                    val -> ConfigManager.crosshairMode = (Boolean) val
+                )
+            }
+        );
+        
+        Module antiSwimModule = ModuleRegistry.registerModuleWithValues(
+            "AntiSwim", "AntiSwim", ModuleCategory.QOL,
+            () -> ConfigManager.antiSwimEnabled,
+            val -> ConfigManager.antiSwimEnabled = val,
+            new Option[]{
+                new Option("disable swim pose", "disable swim pose", true, ModuleCategory.QOL),
+                new Option("disable swim eye height", "disable swim eye height", true, ModuleCategory.QOL)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "disable swim pose",
+                    () -> ConfigManager.antiSwimDisablePose,
+                    val -> ConfigManager.antiSwimDisablePose = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "disable swim eye height",
+                    () -> ConfigManager.antiSwimDisableEyeHeight,
+                    val -> ConfigManager.antiSwimDisableEyeHeight = (Boolean) val
+                )
+            }
+        );
+        antiSwimModule.setEnabled(true);
+        
+        ModuleRegistry.registerModuleWithValues(
+            "Muffler", "Muffler", ModuleCategory.QOL,
+            () -> ConfigManager.mufflerEnabled,
+            val -> ConfigManager.mufflerEnabled = val,
+            new Option[]{
+                new Option("mute enderman scream", "mute enderman scream", true, ModuleCategory.QOL)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "mute enderman scream",
+                    () -> ConfigManager.mufflerMuteEndermanScream,
+                    val -> ConfigManager.mufflerMuteEndermanScream = (Boolean) val
+                )
+            }
+        );
+        
+        ModuleRegistry.registerModuleWithValues(
+            "RadialMenu", "RadialMenu", ModuleCategory.QOL,
+            () -> ConfigManager.radialMenuEnabled,
+            val -> ConfigManager.radialMenuEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new ButtonValue("keybind", "keybind", 4, ModuleCategory.QOL, ButtonValue.ButtonValueType.KEYBIND, false)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "keybind",
+                    () -> ConfigManager.radialMenuKeybind,
+                    val -> ConfigManager.radialMenuKeybind = ((Number) val).intValue()
                 )
             }
         );
@@ -98,22 +211,6 @@ public class ModuleManager {
             }
         );
         
-        ModuleRegistry.registerModuleWithValues(
-            "RadialMenu", "RadialMenu", ModuleCategory.QOL,
-            () -> ConfigManager.radialMenuEnabled,
-            val -> ConfigManager.radialMenuEnabled = val,
-            new com.shyeuar.baity.gui.value.Value[]{
-                new ButtonValue("keybind", "Keybind", 4, ModuleCategory.QOL, ButtonValue.ButtonValueType.KEYBIND, false)
-            },
-            new ModuleRegistry.ValueConfigInfo[]{
-                new ModuleRegistry.ValueConfigInfo(
-                    "keybind",
-                    () -> ConfigManager.radialMenuKeybind,
-                    val -> ConfigManager.radialMenuKeybind = ((Number) val).intValue()
-                )
-            }
-        );
-        
         Module clickGUI = new Module("ClickGUI", "ClickGUI", ModuleCategory.HUD);
         clickGUI.setEnabled(true);
         registerModule(clickGUI);
@@ -124,56 +221,11 @@ public class ModuleManager {
         );
         
 
-        ModuleRegistry.registerModuleWithValues(
-            "PlayerESP", "PlayerESP", ModuleCategory.RENDER,
-            () -> ConfigManager.playerEspEnabled,
-            val -> ConfigManager.playerEspEnabled = val,
-            new Option[]{
-                new Option("show distance", "show distance", true, ModuleCategory.RENDER),
-                new Option("show own nametag", "show own nametag", false, ModuleCategory.RENDER)
-            },
-            new ModuleRegistry.ValueConfigInfo[]{
-                new ModuleRegistry.ValueConfigInfo(
-                    "show distance",
-                    () -> ConfigManager.playerEspShowDistance,
-                    val -> ConfigManager.playerEspShowDistance = (Boolean) val
-                ),
-                new ModuleRegistry.ValueConfigInfo(
-                    "show own nametag",
-                    () -> ConfigManager.playerEspShowOwnNametag,
-                    val -> ConfigManager.playerEspShowOwnNametag = (Boolean) val
-                )
-            }
+        ModuleRegistry.registerSimpleModule(
+            "3DSkins", "3DSkins", ModuleCategory.RENDER,
+            () -> ConfigManager.skinLayer3DEnabled,
+            val -> ConfigManager.skinLayer3DEnabled = val
         );
-        
-        ModuleRegistry.registerModuleWithValues(
-            "FancyDmgSplash", "FancyDmgSplash", ModuleCategory.RENDER,
-            () -> ConfigManager.fancyDmgSplashEnabled,
-            val -> ConfigManager.fancyDmgSplashEnabled = val,
-            new com.shyeuar.baity.gui.value.Value[]{
-                new Option("genshin elemental reaction", "genshin elemental reaction", false, ModuleCategory.RENDER),
-                new com.shyeuar.baity.gui.value.ColorPaletteValue("color palette", "Color Palette", ModuleCategory.RENDER)
-            },
-            new ModuleRegistry.ValueConfigInfo[]{
-                new ModuleRegistry.ValueConfigInfo(
-                    "genshin elemental reaction",
-                    () -> ConfigManager.fancyDmgSplashGenshinReaction,
-                    val -> ConfigManager.fancyDmgSplashGenshinReaction = (Boolean) val
-                ),
-                new ModuleRegistry.ValueConfigInfo(
-                    "color palette",
-                    () -> ConfigManager.fancyDmgSplashColorPalette,
-                    val -> ConfigManager.fancyDmgSplashColorPalette = ((Number) val).intValue()
-                )
-            }
-        );
-        
-        Module antiSwimModule = ModuleRegistry.registerSimpleModule(
-            "AntiSwim", "AntiSwim", ModuleCategory.QOL,
-            () -> ConfigManager.antiSwimEnabled,
-            val -> ConfigManager.antiSwimEnabled = val
-        );
-        antiSwimModule.setEnabled(true);
         
         ModuleRegistry.registerModuleWithValues(
             "Culling", "Culling", ModuleCategory.RENDER,
@@ -203,10 +255,26 @@ public class ModuleManager {
             }
         );
         
-        ModuleRegistry.registerSimpleModule(
-            "3DSkins", "3DSkins", ModuleCategory.RENDER,
-            () -> ConfigManager.skinLayer3DEnabled,
-            val -> ConfigManager.skinLayer3DEnabled = val
+        ModuleRegistry.registerModuleWithValues(
+            "FancyDmgSplash", "FancyDmgSplash", ModuleCategory.RENDER,
+            () -> ConfigManager.fancyDmgSplashEnabled,
+            val -> ConfigManager.fancyDmgSplashEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new Option("genshin elemental reaction", "genshin elemental reaction", false, ModuleCategory.RENDER),
+                new com.shyeuar.baity.gui.value.ColorPaletteValue("color palette", "color palette", ModuleCategory.RENDER)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "genshin elemental reaction",
+                    () -> ConfigManager.fancyDmgSplashGenshinReaction,
+                    val -> ConfigManager.fancyDmgSplashGenshinReaction = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "color palette",
+                    () -> ConfigManager.fancyDmgSplashColorPalette,
+                    val -> ConfigManager.fancyDmgSplashColorPalette = ((Number) val).intValue()
+                )
+            }
         );
         
         ModuleRegistry.registerSimpleModule(
@@ -216,17 +284,23 @@ public class ModuleManager {
         );
         
         ModuleRegistry.registerModuleWithValues(
-            "Muffler", "Muffler", ModuleCategory.QOL,
-            () -> ConfigManager.mufflerEnabled,
-            val -> ConfigManager.mufflerEnabled = val,
+            "PlayerESP", "PlayerESP", ModuleCategory.RENDER,
+            () -> ConfigManager.playerEspEnabled,
+            val -> ConfigManager.playerEspEnabled = val,
             new Option[]{
-                new Option("mute enderman scream", "mute enderman scream", true, ModuleCategory.QOL)
+                new Option("show distance", "show distance", true, ModuleCategory.RENDER),
+                new Option("show own nametag", "show own nametag", false, ModuleCategory.RENDER)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
-                    "mute enderman scream",
-                    () -> ConfigManager.mufflerMuteEndermanScream,
-                    val -> ConfigManager.mufflerMuteEndermanScream = (Boolean) val
+                    "show distance",
+                    () -> ConfigManager.playerEspShowDistance,
+                    val -> ConfigManager.playerEspShowDistance = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "show own nametag",
+                    () -> ConfigManager.playerEspShowOwnNametag,
+                    val -> ConfigManager.playerEspShowOwnNametag = (Boolean) val
                 )
             }
         );

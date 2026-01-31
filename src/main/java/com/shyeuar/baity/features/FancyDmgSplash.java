@@ -1,23 +1,23 @@
 package com.shyeuar.baity.features;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextColor;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 
 import java.util.ArrayList;
@@ -27,7 +27,7 @@ import java.util.Random;
 
 @Environment(EnvType.CLIENT)
 public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
-    private static final MinecraftClient mc = MinecraftClient.getInstance();
+    private static final Minecraft mc = Minecraft.getInstance();
     private static final List<DamageNumber> damageNumbers = new ArrayList<>();
     private static final List<ReactionText> reactionTexts = new ArrayList<>();
     private static final Random random = new Random();
@@ -41,7 +41,7 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
     private static long lastWetHealCheckTime = 0;
     private static final long WET_HEAL_CHECK_INTERVAL_MS = 500; 
     
-    public static void addDamageNumber(double damage, Vec3d targetPos, Text originalText) {
+    public static void addDamageNumber(double damage, Vec3 targetPos, Component originalText) {
         Module m = ModuleManager.getModuleByName("FancyDmgSplash");
         if (m == null || !m.isEnabled()) return;
         if (mc.player == null || mc.gameRenderer == null) return;
@@ -49,11 +49,11 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         float targetRandomX = (random.nextFloat() - 0.5f) * 1.8f;
         float targetRandomY = (random.nextFloat() - 0.2f) * 1.4f;
         float targetRandomZ = (random.nextFloat() - 0.5f) * 1.8f;
-        Vec3d finalTargetPos = targetPos.add(targetRandomX, targetRandomY, targetRandomZ);
+        Vec3 finalTargetPos = targetPos.add(targetRandomX, targetRandomY, targetRandomZ);
         
         int colorMask = com.shyeuar.baity.config.ConfigManager.fancyDmgSplashColorPalette;
         int color;
-        Text textToUse;
+        Component textToUse;
         
         if (colorMask != 0) {
             color = generateDamageColor(damage);
@@ -68,29 +68,29 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         if (com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction && colorMask != 0) {
             ElementalReactionDetector.ReactionResult reaction = ElementalReactionDetector.recordDamageAndCheckReaction(color, targetPos);
             if (reaction != null) {
-                Vec3d reactionPos = finalTargetPos.add(0.3, 0.15, 0);
+                Vec3 reactionPos = finalTargetPos.add(0.3, 0.15, 0);
                 reactionTexts.add(new ReactionText(reaction.name, reactionPos, reaction.color, System.currentTimeMillis()));
             }
         }
     }
    
-    private static int extractColorFromText(Text text) {
+    private static int extractColorFromText(Component text) {
         if (text == null) return 0xFFFFFF;
         
         Style style = text.getStyle();
         if (style != null) {
             TextColor textColor = style.getColor();
             if (textColor != null) {
-                return textColor.getRgb();
+                return textColor.getValue();
             }
         }
         
-        for (Text sibling : text.getSiblings()) {
+        for (Component sibling : text.getSiblings()) {
             Style siblingStyle = sibling.getStyle();
             if (siblingStyle != null) {
                 TextColor textColor = siblingStyle.getColor();
                 if (textColor != null) {
-                    return textColor.getRgb();
+                    return textColor.getValue();
                 }
             }
         }
@@ -120,12 +120,12 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         return selectedColors.get(random.nextInt(selectedColors.size()));
     }
     
-    public static void addTestDamageNumber(Vec3d targetPos) {
+    public static void addTestDamageNumber(Vec3 targetPos) {
         double damage = random.nextDouble() * 1999999 + 1; 
         addDamageNumber(damage, targetPos, null);
     }
     
-    public static void addImmuneReaction(Vec3d targetPos) {
+    public static void addImmuneReaction(Vec3 targetPos) {
         Module m = ModuleManager.getModuleByName("FancyDmgSplash");
         if (m == null || !m.isEnabled()) return;
         if (!com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction) return;
@@ -143,7 +143,7 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         if (mc.player == null) return;
         if (!com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction) return;
         
-        Vec3d playerPos = new Vec3d(mc.player.getX(), mc.player.getY() + mc.player.getHeight() * 0.5, mc.player.getZ());
+        Vec3 playerPos = new Vec3(mc.player.getX(), mc.player.getY() + mc.player.getBbHeight() * 0.5, mc.player.getZ());
         ElementalReactionDetector.ReactionResult result = 
             ElementalReactionDetector.checkPlayerImmuneItem(playerPos);
         if (result != null) {
@@ -163,17 +163,17 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
     public void afterEntities(WorldRenderContext context) {
         Module m = ModuleManager.getModuleByName("FancyDmgSplash");
         if (m == null || !m.isEnabled()) return;
-        if (mc.world == null || mc.player == null) return;
+        if (mc.level == null || mc.player == null) return;
         
         long currentTime = System.currentTimeMillis();
-        Vec3d cameraPos = context.worldState().cameraRenderState.pos;
-        Camera camera = mc.gameRenderer.getCamera();
-        float cameraYaw = camera.getYaw();
-        float cameraPitch = camera.getPitch();
+        Vec3 cameraPos = context.worldState().cameraRenderState.pos;
+        Camera camera = mc.gameRenderer.getMainCamera();
+        float cameraYaw = camera.getYRot();
+        float cameraPitch = camera.getXRot();
         
-        MatrixStack matrices = context.matrices();
+        PoseStack matrices = context.matrices();
         if (matrices == null) {
-            matrices = new MatrixStack();
+            matrices = new PoseStack();
         }
         
         if (currentTime - lastWetHealCheckTime >= WET_HEAL_CHECK_INTERVAL_MS) {
@@ -207,18 +207,18 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
     }
     
     private static void checkWetAndHealReactions() {
-        if (mc.world == null || mc.player == null) return;
+        if (mc.level == null || mc.player == null) return;
         if (!com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction) return;
         
-        Vec3d playerPos = new Vec3d(mc.player.getX(), mc.player.getY(), mc.player.getZ());
+        Vec3 playerPos = new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ());
         double range = 32.0;
         
-        Box searchBox = new Box(
+        AABB searchBox = new AABB(
             playerPos.x - range, playerPos.y - range, playerPos.z - range,
             playerPos.x + range, playerPos.y + range, playerPos.z + range
         );
         
-        List<Entity> entities = mc.world.getOtherEntities(null, searchBox);
+        List<Entity> entities = mc.level.getEntities(null, searchBox);
         
         checkEntityReactions(mc.player, playerPos);
         
@@ -229,7 +229,7 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         }
     }
     
-    private static void checkEntityReactions(LivingEntity entity, Vec3d playerPos) {
+    private static void checkEntityReactions(LivingEntity entity, Vec3 playerPos) {
         ElementalReactionDetector.ReactionResult wetResult = 
             ElementalReactionDetector.checkEntityWetState(entity, playerPos);
         if (wetResult != null && wetResult.position != null) {
@@ -252,12 +252,12 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         }
     }
     
-    private void renderDamageNumber(MatrixStack matrices, DamageNumber dn, Vec3d cameraPos, 
+    private void renderDamageNumber(PoseStack matrices, DamageNumber dn, Vec3 cameraPos, 
                                      float cameraYaw, float cameraPitch, long currentTime) {
         float totalProgress = (float)(currentTime - dn.startTime) / ANIMATION_DURATION_MS;
         totalProgress = Math.min(1.0f, Math.max(0.0f, totalProgress));
         
-        Vec3d currentPos;
+        Vec3 currentPos;
         float alpha = 1.0f;
         float scaleAnimation = 1.0f;
         
@@ -315,42 +315,42 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         
         float finalScale = BASE_SCALE * scaleAnimation * damageScale;
         
-        matrices.push();
+        matrices.pushPose();
         try {
             matrices.translate(x, y, z);
             
-            matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(-cameraYaw)));
-            matrices.multiply(new Quaternionf().rotationX((float) Math.toRadians(cameraPitch)));
+            matrices.mulPose(new Quaternionf().rotationY((float) Math.toRadians(-cameraYaw)));
+            matrices.mulPose(new Quaternionf().rotationX((float) Math.toRadians(cameraPitch)));
             
             matrices.scale(-finalScale, -finalScale, finalScale);
             
             String damageText = formatDamage(dn.damage);
             
-            Text styledText;
+            Component styledText;
             int color;
             
             if (dn.originalText != null) {
                 styledText = dn.originalText;
                 color = dn.color; 
             } else {
-                styledText = Text.literal(damageText);
+                styledText = Component.literal(damageText);
                 color = dn.color;
             }
             
             int alphaInt = (int)(alpha * 255) << 24;
             int finalColor = (color & 0x00FFFFFF) | alphaInt;
             
-            TextRenderer textRenderer = mc.textRenderer;
-            int textWidth = textRenderer.getWidth(styledText);
+            Font textRenderer = mc.font;
+            int textWidth = textRenderer.width(styledText);
             
-            VertexConsumerProvider.Immediate immediate = mc.getBufferBuilders().getEntityVertexConsumers();
+            MultiBufferSource.BufferSource immediate = mc.renderBuffers().bufferSource();
             
-            textRenderer.draw(styledText, -textWidth / 2.0f, 0, finalColor, false, 
-                matrices.peek().getPositionMatrix(), immediate, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
+            textRenderer.drawInBatch(styledText, -textWidth / 2.0f, 0, finalColor, false, 
+                matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
             
-            immediate.draw();
+            immediate.endBatch();
         } finally {
-            matrices.pop();
+            matrices.popPose();
         }
     }
     
@@ -364,12 +364,12 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         }
     }
     
-    private void renderReactionText(MatrixStack matrices, ReactionText rt, Vec3d cameraPos,
+    private void renderReactionText(PoseStack matrices, ReactionText rt, Vec3 cameraPos,
                                     float cameraYaw, float cameraPitch, long currentTime) {
         float totalProgress = (float)(currentTime - rt.startTime) / ANIMATION_DURATION_MS;
         totalProgress = Math.min(1.0f, Math.max(0.0f, totalProgress));
         
-        Vec3d currentPos;
+        Vec3 currentPos;
         float alpha = 1.0f;
         float scaleAnimation = 1.0f;
         
@@ -408,44 +408,44 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         
         float finalScale = BASE_SCALE * scaleAnimation * 1.15f * 0.5f;
         
-        matrices.push();
+        matrices.pushPose();
         try {
             matrices.translate(x, y, z);
             
-            matrices.multiply(new Quaternionf().rotationY((float) Math.toRadians(-cameraYaw)));
-            matrices.multiply(new Quaternionf().rotationX((float) Math.toRadians(cameraPitch)));
+            matrices.mulPose(new Quaternionf().rotationY((float) Math.toRadians(-cameraYaw)));
+            matrices.mulPose(new Quaternionf().rotationX((float) Math.toRadians(cameraPitch)));
             
             matrices.scale(-finalScale, -finalScale, finalScale);
             
-            Text styledText = Text.literal(rt.text);
+            Component styledText = Component.literal(rt.text);
             
             int alphaInt = (int)(alpha * 255) << 24;
             int finalColor = (rt.color & 0x00FFFFFF) | alphaInt;
             
-            TextRenderer textRenderer = mc.textRenderer;
-            int textWidth = textRenderer.getWidth(styledText);
+            Font textRenderer = mc.font;
+            int textWidth = textRenderer.width(styledText);
             
-            VertexConsumerProvider.Immediate immediate = mc.getBufferBuilders().getEntityVertexConsumers();
+            MultiBufferSource.BufferSource immediate = mc.renderBuffers().bufferSource();
             
-            textRenderer.draw(styledText, -textWidth / 2.0f, 0, finalColor, false, 
-                matrices.peek().getPositionMatrix(), immediate, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
+            textRenderer.drawInBatch(styledText, -textWidth / 2.0f, 0, finalColor, false, 
+                matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
             
-            immediate.draw();
+            immediate.endBatch();
         } finally {
-            matrices.pop();
+            matrices.popPose();
         }
     }
     
     @SuppressWarnings("unused")
     private static class DamageNumber {
         final double damage;
-        final Vec3d spawnPos;   
-        final Vec3d targetPos;  
-        final Text originalText; 
+        final Vec3 spawnPos;   
+        final Vec3 targetPos;  
+        final Component originalText; 
         final int color;
         final long startTime;
         
-        DamageNumber(double damage, Vec3d spawnPos, Vec3d targetPos, Text originalText, int color, long startTime) {
+        DamageNumber(double damage, Vec3 spawnPos, Vec3 targetPos, Component originalText, int color, long startTime) {
             this.damage = damage;
             this.spawnPos = spawnPos;
             this.targetPos = targetPos;
@@ -457,11 +457,11 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
     
     private static class ReactionText {
         final String text;
-        final Vec3d pos;
+        final Vec3 pos;
         final int color;
         final long startTime;
         
-        ReactionText(String text, Vec3d pos, int color, long startTime) {
+        ReactionText(String text, Vec3 pos, int color, long startTime) {
             this.text = text;
             this.pos = pos;
             this.color = color;

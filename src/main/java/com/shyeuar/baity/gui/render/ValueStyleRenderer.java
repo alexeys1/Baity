@@ -7,16 +7,16 @@ import com.shyeuar.baity.gui.value.ValueStyle;
 import com.shyeuar.baity.gui.value.ButtonValue;
 import com.shyeuar.baity.gui.value.SliderValue;
 import com.shyeuar.baity.gui.value.ValueTypeRegistry;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 
 public class ValueStyleRenderer {
    
-   public static void renderValue(DrawContext context, MinecraftClient client, Module module, Value value, Theme theme,
+   public static void renderValue(GuiGraphics context, Minecraft client, Module module, Value value, Theme theme,
                                  float x1, float y, float x2, float subOptionHeight,
                                  float mouseX, float mouseY, int localAlpha,
                                  java.util.function.Function<String, String> getTooltipText,
-                                 java.util.function.Function<String, net.minecraft.text.Text> getTooltipTextWithColors,
+                                 java.util.function.Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
                                  java.util.function.Function<Object, String> getDisplayTextFormatter,
                                  String listeningButtonValueName,
                                  ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
@@ -24,11 +24,11 @@ public class ValueStyleRenderer {
                   getTooltipText, getTooltipTextWithColors, getDisplayTextFormatter, listeningButtonValueName, hoveredTooltipInfo, null, "");
    }
    
-   public static void renderValue(DrawContext context, MinecraftClient client, Module module, Value value, Theme theme,
+   public static void renderValue(GuiGraphics context, Minecraft client, Module module, Value value, Theme theme,
                                  float x1, float y, float x2, float subOptionHeight,
                                  float mouseX, float mouseY, int localAlpha,
                                  java.util.function.Function<String, String> getTooltipText,
-                                 java.util.function.Function<String, net.minecraft.text.Text> getTooltipTextWithColors,
+                                 java.util.function.Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
                                  java.util.function.Function<Object, String> getDisplayTextFormatter,
                                  String listeningButtonValueName,
                                  ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo,
@@ -59,11 +59,11 @@ public class ValueStyleRenderer {
    }
 
    
-   public static void renderDefaultValue(DrawContext context, MinecraftClient client, Module module, Value value, Theme theme,
+   public static void renderDefaultValue(GuiGraphics context, Minecraft client, Module module, Value value, Theme theme,
                                        float x1, float y, float x2, float subOptionHeight,
                                        float mouseX, float mouseY, int localAlpha,
                                        java.util.function.Function<String, String> getTooltipText,
-                                       java.util.function.Function<String, net.minecraft.text.Text> getTooltipTextWithColors,
+                                       java.util.function.Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
                                        ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
        
        boolean subHovered = GuiRenderUtil.isHovered(x1, y, x2, y + subOptionHeight, mouseX, mouseY);
@@ -85,7 +85,7 @@ public class ValueStyleRenderer {
        
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        String displayText = value.getDisplayName();
-       context.drawText(client.textRenderer, displayText, (int)(x1 + 8), (int)(y + 6), textColor, false);
+       context.drawString(client.font, displayText, (int)(x1 + 8), (int)(y + 6), textColor, false);
        
        String status;
        int statusColor;
@@ -114,10 +114,10 @@ public class ValueStyleRenderer {
        } else if (val instanceof String) {
            statusX = (int)(x2 - 80);
        }
-       context.drawText(client.textRenderer, status, statusX, (int)(y + 6), statusColor, false);
+       context.drawString(client.font, status, statusX, (int)(y + 6), statusColor, false);
    }
    
-   public static void renderButtonLikeValue(DrawContext context, MinecraftClient client, Module module, ButtonValue buttonValue, Theme theme,
+   public static void renderButtonLikeValue(GuiGraphics context, Minecraft client, Module module, ButtonValue buttonValue, Theme theme,
                                              float x1, float y, float x2, float subOptionHeight,
                                              float mouseX, float mouseY, int localAlpha,
                                              java.util.function.Function<Object, String> getDisplayTextFormatter,
@@ -128,7 +128,7 @@ public class ValueStyleRenderer {
        GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + subOptionHeight, 6, valueColor);
        
        int textColor = (theme.FONT_C.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       context.drawText(client.textRenderer, buttonValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
+       context.drawString(client.font, buttonValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
        
        boolean isListeningThis = listeningButtonValueName != null && listeningButtonValueName.equals(buttonValue.getName());
        String boxText;
@@ -142,13 +142,13 @@ public class ValueStyleRenderer {
    }
 
    
-   public static void renderSliderValue(DrawContext context, MinecraftClient client, Module module, SliderValue sliderValue, Theme theme,
+   public static void renderSliderValue(GuiGraphics context, Minecraft client, Module module, SliderValue sliderValue, Theme theme,
                                         float x1, float y, float x2, float subOptionHeight,
                                         float mouseX, float mouseY, int localAlpha) {
        renderSliderValue(context, client, module, sliderValue, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, null, "");
    }
    
-   public static void renderSliderValue(DrawContext context, MinecraftClient client, Module module, SliderValue sliderValue, Theme theme,
+   public static void renderSliderValue(GuiGraphics context, Minecraft client, Module module, SliderValue sliderValue, Theme theme,
                                         float x1, float y, float x2, float subOptionHeight,
                                         float mouseX, float mouseY, int localAlpha,
                                         com.shyeuar.baity.gui.internal.ClickGuiState.SliderInputInfo editingSlider, String inputText) {
@@ -158,7 +158,7 @@ public class ValueStyleRenderer {
        GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + subOptionHeight, 6, valueColor);
        
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       context.drawText(client.textRenderer, sliderValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
+       context.drawString(client.font, sliderValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
        
        int subX2 = (int)(x2 - 4);
        
@@ -177,15 +177,15 @@ public class ValueStyleRenderer {
        
        int resetTextColor = (theme.FONT_C.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        String resetText = "Reset";
-       int resetTextWidth = client.textRenderer.getWidth(resetText);
-       context.drawText(client.textRenderer, resetText, resetBoxX + (resetBoxWidth - resetTextWidth) / 2, resetBoxY + 2, resetTextColor, false);
+       int resetTextWidth = client.font.width(resetText);
+       context.drawString(client.font, resetText, resetBoxX + (resetBoxWidth - resetTextWidth) / 2, resetBoxY + 2, resetTextColor, false);
        
        boolean isEditing = editingSlider != null && 
                           editingSlider.moduleName.equals(module.getName()) && 
                           editingSlider.valueName.equals(sliderValue.getName());
        
        String valueText = isEditing ? inputText + "_" : sliderValue.getFormattedValue();
-       int valueTextWidth = client.textRenderer.getWidth(valueText);
+       int valueTextWidth = client.font.width(valueText);
        int valueDisplayWidth = Math.max(valueTextWidth + 8, 35);
        int valueDisplayX = resetBoxX - valueDisplayWidth - 8;
        int valueDisplayY = (int)(y + 4);
@@ -197,8 +197,8 @@ public class ValueStyleRenderer {
        int valueTextColor = isEditing ? 
            (new java.awt.Color(255, 255, 100, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24) :
            (theme.FONT_C.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       int textX = valueDisplayX + (valueDisplayWidth - client.textRenderer.getWidth(valueText)) / 2;
-       context.drawText(client.textRenderer, valueText, textX, valueDisplayY, valueTextColor, false);
+       int textX = valueDisplayX + (valueDisplayWidth - client.font.width(valueText)) / 2;
+       context.drawString(client.font, valueText, textX, valueDisplayY, valueTextColor, false);
        
        int sliderWidth = 80;
        int sliderHeight = 4;
@@ -225,7 +225,7 @@ public class ValueStyleRenderer {
        GuiRenderUtil.drawCircle(context, handleX, handleY, handleRadius, handleColor);
    }
 
-   public static void renderColorPaletteValue(DrawContext context, MinecraftClient client, Module module,
+   public static void renderColorPaletteValue(GuiGraphics context, Minecraft client, Module module,
                                               com.shyeuar.baity.gui.value.ColorPaletteValue paletteValue, Theme theme,
                                               float x1, float y, float x2, float subOptionHeight,
                                               float mouseX, float mouseY, int localAlpha) {
@@ -238,7 +238,7 @@ public class ValueStyleRenderer {
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        String displayText = paletteValue.getDisplayName();
        float textY = y + 6;
-       context.drawText(client.textRenderer, displayText, (int)(x1 + 8), (int) textY, textColor, false);
+       context.drawString(client.font, displayText, (int)(x1 + 8), (int) textY, textColor, false);
        
        int colorCount = paletteValue.getColorCount();
        float colorAreaY = y + subOptionHeight; 

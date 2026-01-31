@@ -1,19 +1,21 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.config.ConfigManager;
+import com.shyeuar.baity.features.customhandholding.CustomHandHoldingManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.item.HeldItemRenderer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Arm;
-import net.minecraft.util.Hand;
+import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.api.EnvType;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import com.shyeuar.baity.mixin.accessor.ItemInHandRendererAccessor;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -24,57 +26,120 @@ public class CustomHandHoldingMixin {
     @Mixin(LivingEntity.class)
     public static abstract class SwingDurationMixin {
 
-        @Inject(method = "getHandSwingDuration", at = @At("HEAD"), cancellable = true)
+        @Inject(method = "getCurrentSwingDuration", at = @At("HEAD"), cancellable = true)
         private void baity$customSwingDuration(CallbackInfoReturnable<Integer> cir) {
+            if (FabricLoader.getInstance().getEnvironmentType() != EnvType.CLIENT) return;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null) return;
+            
             Module customHandHoldingModule = ModuleManager.getModuleByName("CustomHandHolding");
             if (customHandHoldingModule == null || !customHandHoldingModule.isEnabled()) return;
 
             LivingEntity self = (LivingEntity) (Object) this;
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.player == null || self != mc.player) return;
+            if (self != mc.player) return;
 
-            int duration = (int) ConfigManager.swingDuration;
+            int duration = CustomHandHoldingManager.getInstance().getSwingDuration();
             cir.setReturnValue(duration);
         }
     }
 
-    @Mixin(PlayerEntity.class)
+    @Mixin(Player.class)
     public static abstract class AttackCooldownMixin {
 
-        @Inject(method = "getAttackCooldownProgress", at = @At("HEAD"), cancellable = true)
+        @Inject(method = "getAttackStrengthScale", at = @At("HEAD"), cancellable = true)
         private void baity$removeAttackCooldownAnimation(float tickDelta, CallbackInfoReturnable<Float> cir) {
+            if (FabricLoader.getInstance().getEnvironmentType() != EnvType.CLIENT) return;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null) return;
+            
             Module customHandHoldingModule = ModuleManager.getModuleByName("CustomHandHolding");
             if (customHandHoldingModule == null || !customHandHoldingModule.isEnabled()) return;
 
-            PlayerEntity self = (PlayerEntity) (Object) this;
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.player == null || self != mc.player) return;
+            Player self = (Player) (Object) this;
+            if (self != mc.player) return;
 
             cir.setReturnValue(1.0f);
         }
     }
 
-    @Mixin(HeldItemRenderer.class)
-    public static abstract class HeldItemOffsetMixin {
+    @Mixin(value = ItemInHandRenderer.class, priority = 300)
+    public static abstract class HeldItemTransformMixin {
 
-        @Unique
-        private static final float OFFSET_X = 1.0f;
-        @Unique
-        private static final float OFFSET_Y = -0.4f;
-        @Unique
-        private static final float OFFSET_Z = -1.0f;
-
-        @Inject(method = "renderFirstPersonItem", at = @At("HEAD"))
-        private void baity$adjustHeldItemOffset(AbstractClientPlayerEntity player, float tickDelta, float pitch, Hand hand, float swingProgress, ItemStack item, float equipProgress, MatrixStack matrices, net.minecraft.client.render.command.OrderedRenderCommandQueue queue, int light, CallbackInfo ci) {
+        @Inject(
+            method = "renderArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+            at = @At(
+                value = "INVOKE",
+                target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V"
+            )
+        )
+        private void baity$applyTransform(AbstractClientPlayer player, float tickDelta, float pitch,
+                InteractionHand hand, float swingProgress, ItemStack item, float equipProgress,
+                com.mojang.blaze3d.vertex.PoseStack matrices, net.minecraft.client.renderer.SubmitNodeCollector queue,
+                int light, CallbackInfo ci) {
             Module customHandHoldingModule = ModuleManager.getModuleByName("CustomHandHolding");
             if (customHandHoldingModule == null || !customHandHoldingModule.isEnabled()) return;
 
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || player != mc.player) return;
             if (item.isEmpty()) return;
 
-            int handSide = (hand == Hand.MAIN_HAND) == (player.getMainArm() == Arm.RIGHT) ? 1 : -1;
-            matrices.translate(OFFSET_X * handSide, OFFSET_Y, OFFSET_Z);
+            if (com.shyeuar.baity.utils.BlockAnimationUtils.isFeatureActive() 
+                    && com.shyeuar.baity.utils.BlockAnimationUtils.isPlayerBlockingWithSword(player)) {
+                InteractionHand blockingHand = com.shyeuar.baity.utils.BlockAnimationUtils.getBlockingHand(player);
+                if (blockingHand == hand) {
+                    return;
+                }
+            }
+
+            HumanoidArm arm = hand == InteractionHand.MAIN_HAND ? player.getMainArm() : player.getMainArm().getOpposite();
+            
+            CustomHandHoldingManager.getInstance().applyTransform(matrices, arm);
+        }
+
+
+        @Inject(
+            method = "swingArm",
+            at = @At("HEAD"),
+            cancellable = true
+        )
+        private void baity$handleNoSwing(float swingProgress, float equipProgress, 
+                com.mojang.blaze3d.vertex.PoseStack poseStack, int handSide, HumanoidArm arm, CallbackInfo ci) {
+            Module customHandHoldingModule = ModuleManager.getModuleByName("CustomHandHolding");
+            if (customHandHoldingModule == null || !customHandHoldingModule.isEnabled()) {
+                return;
+            }
+
+            if (!CustomHandHoldingManager.getInstance().isNoSwingEnabled()) {
+                return;
+            }
+
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player == null) {
+                return;
+            }
+
+            if (com.shyeuar.baity.utils.BlockAnimationUtils.isFeatureActive() 
+                    && com.shyeuar.baity.utils.BlockAnimationUtils.isPlayerBlockingWithSword(mc.player)) {
+                return;
+            }
+
+            ci.cancel();
+            
+            ItemInHandRendererAccessor accessor = (ItemInHandRendererAccessor) this;
+            accessor.baity$callApplyItemArmTransform(poseStack, arm, equipProgress);
+            accessor.baity$callApplyItemArmAttackTransform(poseStack, arm, swingProgress);
+        }
+    }
+
+
+    @Mixin(LevelRenderer.class)
+    public static abstract class LevelRendererTickMixin {
+        @Inject(method = "tick", at = @At("TAIL"))
+        private void baity$updateCustomHandHoldingAnimations(net.minecraft.client.Camera camera, CallbackInfo ci) {
+            Module customHandHoldingModule = ModuleManager.getModuleByName("CustomHandHolding");
+            if (customHandHoldingModule != null && customHandHoldingModule.isEnabled()) {
+                CustomHandHoldingManager.getInstance().update();
+            }
         }
     }
 }

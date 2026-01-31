@@ -1,35 +1,35 @@
 package com.shyeuar.baity.mixin;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.utils.ModuleUtils;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.command.OrderedRenderCommandQueue;
-import net.minecraft.client.render.entity.PlayerEntityRenderer;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.render.state.CameraRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.player.AvatarRenderer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(PlayerEntityRenderer.class)
+@Mixin(AvatarRenderer.class)
 public class PlayerNameLabelHideMixin {
 
-    @Inject(method = "renderLabelIfPresent(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/client/render/state/CameraRenderState;)V", at = @At("HEAD"), cancellable = true)
-    private void baity$hideOriginalNameTag(PlayerEntityRenderState state, MatrixStack matrices, OrderedRenderCommandQueue queue, CameraRenderState cameraState, CallbackInfo ci) {
+    @Inject(method = "submitNameTag(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V", at = @At("HEAD"), cancellable = true)
+    private void baity$hideOriginalNameTag(AvatarRenderState state, PoseStack matrices, SubmitNodeCollector queue, CameraRenderState cameraState, CallbackInfo ci) {
         Module m = ModuleManager.getModuleByName("PlayerESP");
         if (m == null || !m.isEnabled()) {
             return; 
         }
 
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.world == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
         
-        PlayerEntity player = null;
-        for (PlayerEntity p : mc.world.getPlayers()) {
+        Player player = null;
+        for (Player p : mc.level.players()) {
             if (p.getId() == state.id) {
                 player = p;
                 break;

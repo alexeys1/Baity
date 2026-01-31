@@ -13,11 +13,11 @@ import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.utils.TimerUtils;
 import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.utils.SoundUtils;
-import net.minecraft.client.MinecraftClient;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 import java.util.function.BiConsumer;
+import net.minecraft.client.Minecraft;
 
 public class ClickGuiInputHandler {
     
@@ -39,6 +39,66 @@ public class ClickGuiInputHandler {
         
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
         
+        if (state.isEditingSlider() && button == 0) {
+            ClickGuiState.SliderInputInfo editInfo = state.getEditingSlider();
+            if (editInfo != null) {
+                boolean clickedOnValueDisplay = false;
+                float modY = 60 - state.getScrollOffset();
+                List<Module> modules = ModuleManager.getModulesByCategory(state.getSelectedCategory());
+                for (Module module : modules) {
+                    if (!module.getName().equals(editInfo.moduleName)) {
+                        if (module.isExpanded()) {
+                            modY += getSubOptionContainerHeight(module);
+                        }
+                        modY += 30;
+                        continue;
+                    }
+                    if (module.isExpanded()) {
+                        int subOptionCount = 0;
+                        for (Value v : module.getValues()) {
+                            if (!"enabled".equals(v.getName())) subOptionCount++;
+                        }
+                        if (subOptionCount == 0) break;
+                        
+                        int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
+                        ClickGuiLayout.ContainerDimensions dims = 
+                            ClickGuiLayout.calculateSubOptionContainer(subOptionCount, 
+                            ClickGuiState.HEIGHT - 20 - ClickGuiState.LIST_TOP_PADDING, extraHeight);
+                        int containerX2 = (int)(ClickGuiState.WIDTH - 30);
+                        float subModY = modY + dims.padding;
+                        
+                        for (Value v : module.getValues()) {
+                            if ("enabled".equals(v.getName())) continue;
+                            if (v instanceof SliderValue && v.getName().equals(editInfo.valueName)) {
+                                SliderValue sv = (SliderValue) v;
+                                int resetBoxWidth = 30;
+                                int resetBoxX = containerX2 - 4 - resetBoxWidth - 6;
+                                String valueText = sv.getFormattedValue();
+                                int valueTextWidth = Minecraft.getInstance().font.width(valueText);
+                                int valueDisplayWidth = Math.max(valueTextWidth + 8, 35);
+                                int valueDisplayX = resetBoxX - valueDisplayWidth - 8;
+                                int valueDisplayY = (int)(subModY + 2);
+                                int valueDisplayHeight = dims.subOptionHeight - 4;
+                                
+                                if (GuiRenderUtil.isHovered(valueDisplayX, valueDisplayY, 
+                                    valueDisplayX + valueDisplayWidth, valueDisplayY + valueDisplayHeight, 
+                                    coords.mouseX, coords.mouseY)) {
+                                    clickedOnValueDisplay = true;
+                                }
+                                break;
+                            }
+                            subModY += dims.subOptionHeight;
+                        }
+                    }
+                    break;
+                }
+                
+                if (!clickedOnValueDisplay) {
+                    cancelSliderInput();
+                }
+            }
+        }
+        
         if (button == 0 && handleWindowDrag(coords, mouseX, mouseY)) {
             return true;
         }
@@ -48,6 +108,25 @@ public class ClickGuiInputHandler {
         }
         
         return handleModuleAndSubOptionClick(coords, button);
+    }
+    
+    private void cancelSliderInput() {
+        if (state.isEditingSlider()) {
+            ClickGuiState.SliderInputInfo editInfo = state.getEditingSlider();
+            if (editInfo != null && state.getOriginalSliderValue() != null) {
+                for (Module module : ModuleManager.getModules()) {
+                    if (!module.getName().equals(editInfo.moduleName)) continue;
+                    for (Value value : module.getValues()) {
+                        if (value instanceof SliderValue && value.getName().equals(editInfo.valueName)) {
+                            SliderValue sliderValue = (SliderValue) value;
+                            sliderValue.setValue(state.getOriginalSliderValue());
+                            break;
+                        }
+                    }
+                }
+            }
+            state.setEditingSlider(null);
+        }
     }
     
     public boolean handleMouseScroll(double mouseX, double mouseY, double verticalAmount) {
@@ -61,9 +140,7 @@ public class ClickGuiInputHandler {
             
             for (Module module : modules) {
                 if (module.isExpanded()) {
-                    if (handleSubOptionScroll(module, modY, coords, verticalAmount)) {
-                        return true;
-                    }
+                    handleSubOptionScroll(module, modY, coords, verticalAmount);
                     modY += getSubOptionContainerHeight(module);
                 }
                 modY += 30;
@@ -96,7 +173,7 @@ public class ClickGuiInputHandler {
                 state.setListeningButtonValueName(null);
                 return true;
             }
-            MinecraftClient.getInstance().setScreen(null);
+            Minecraft.getInstance().setScreen(null);
             return true;
         }
         
@@ -118,8 +195,7 @@ public class ClickGuiInputHandler {
     
     private boolean handleSliderInput(int keyCode) {
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            state.setEditingSlider(null);
-            state.setSliderInputText("");
+            cancelSliderInput();
             return true;
         }
         
@@ -253,7 +329,7 @@ public class ClickGuiInputHandler {
     }
     
     private boolean handleCategoryClick(ClickGuiLayout.ScaledCoordinates coords) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null) return false;
         
         float cateX = 20;
@@ -262,7 +338,7 @@ public class ClickGuiInputHandler {
         for (com.shyeuar.baity.gui.value.ModuleCategory category : 
              com.shyeuar.baity.gui.value.ModuleCategory.values()) {
             String label = category.getDisplayName();
-            int textWidth = client.textRenderer.getWidth(label);
+            int textWidth = client.font.width(label);
             
             if (GuiRenderUtil.isHovered(cateX, cateY, cateX + textWidth, cateY + 12, 
                                        coords.mouseX, coords.mouseY) && 
@@ -307,13 +383,13 @@ public class ClickGuiInputHandler {
     
     private boolean handleModuleClick(Module module, float modY, 
                                      ClickGuiLayout.ScaledCoordinates coords, int button) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null) return false;
         
         if ("ClickGUI".equals(module.getName())) {
             String keyText = state.isListeningForKey() ? "Press a key..." : state.getCurrentKeyDisplay();
             String plainText = keyText.replaceAll("§[0-9a-fklmnor]", "");
-            int keyTextWidth = client.textRenderer.getWidth(plainText);
+            int keyTextWidth = client.font.width(plainText);
             int keyBoxWidth = keyTextWidth + 16;
             float boxCenterY = modY + 25 / 2f;
             int boxHeight = 12;
@@ -382,13 +458,19 @@ public class ClickGuiInputHandler {
         int containerX2 = (int)(ClickGuiState.WIDTH - 30);
         float subModY = modY + dims.padding;
         
-        int innerVisible = Math.max(0, dims.height - dims.padding * 2);
-        int maxVisibleOptions = Math.max(0, innerVisible / dims.subOptionHeight);
-        int renderedCount = 0;
+        int containerHeight = dims.height;
+        Value previousValue = null;
         
         for (Value value : module.getValues()) {
             if ("enabled".equals(value.getName())) continue;
-            if (renderedCount >= maxVisibleOptions) break;
+            
+            if (subModY > modY + containerHeight - dims.padding) {
+                break;
+            }
+            
+            if (value.needsSeparatorBefore(previousValue)) {
+                subModY += 12;
+            }
             
             ValueStyle style = value.getStyle();
             if (style == ValueStyle.BUTTON_LIKE && value instanceof ButtonValue) {
@@ -402,10 +484,10 @@ public class ClickGuiInputHandler {
                     return val != null ? val.toString() : "☄ NOTSET";
                 });
                 String plainText = boxText.replaceAll("§[0-9a-fklmnor]", "");
-                MinecraftClient client = MinecraftClient.getInstance();
+                Minecraft client = Minecraft.getInstance();
                 if (client == null) return false;
                 
-                int boxTextWidth = client.textRenderer.getWidth(plainText);
+                int boxTextWidth = client.font.width(plainText);
                 int boxWidth = boxTextWidth + 16;
                 float boxCenterY = subModY + dims.subOptionHeight / 2f;
                 int boxHeight = 12;
@@ -431,7 +513,7 @@ public class ClickGuiInputHandler {
                 }
             } else if (style == ValueStyle.SLIDER && value instanceof SliderValue) {
                 SliderValue sliderValue = (SliderValue) value;
-                MinecraftClient client = MinecraftClient.getInstance();
+                Minecraft client = Minecraft.getInstance();
                 if (client == null) return false;
                 
                 int subX2 = containerX2 - 4;
@@ -441,7 +523,13 @@ public class ClickGuiInputHandler {
                 int resetBoxX = subX2 - resetBoxWidth - 6;
                 int resetBoxY = (int)(subModY + (dims.subOptionHeight - resetBoxHeight) / 2);
                 
-                if (GuiRenderUtil.isHovered(resetBoxX, resetBoxY, resetBoxX + resetBoxWidth, resetBoxY + resetBoxHeight, coords.mouseX, coords.mouseY)) {
+                int resetClickMargin = 2;
+                if (GuiRenderUtil.isHovered(
+                    resetBoxX - resetClickMargin, 
+                    resetBoxY - resetClickMargin, 
+                    resetBoxX + resetBoxWidth + resetClickMargin, 
+                    resetBoxY + resetBoxHeight + resetClickMargin, 
+                    coords.mouseX, coords.mouseY)) {
                     sliderValue.resetToDefault();
                     if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
                         ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), sliderValue.getValue());
@@ -451,7 +539,7 @@ public class ClickGuiInputHandler {
                 }
                 
                 String valueText = sliderValue.getFormattedValue();
-                int valueTextWidth = client.textRenderer.getWidth(valueText);
+                int valueTextWidth = client.font.width(valueText);
                 int valueDisplayWidth = Math.max(valueTextWidth + 8, 35);
                 int valueDisplayX = resetBoxX - valueDisplayWidth - 8;
                 int valueDisplayY = (int)(subModY + 2);
@@ -460,6 +548,7 @@ public class ClickGuiInputHandler {
                 if (GuiRenderUtil.isHovered(valueDisplayX, valueDisplayY, valueDisplayX + valueDisplayWidth, valueDisplayY + valueDisplayHeight, coords.mouseX, coords.mouseY)) {
                     state.setEditingSlider(new ClickGuiState.SliderInputInfo(module.getName(), value.getName()));
                     state.setSliderInputText(sliderValue.getFormattedValue());
+                    state.setOriginalSliderValue(sliderValue.getDoubleValue());
                     timer.reset();
                     return true;
                 }
@@ -522,7 +611,7 @@ public class ClickGuiInputHandler {
                 currentHeight = dims.subOptionHeight * 2;
             }
             subModY += currentHeight;
-            renderedCount++;
+            previousValue = value;
         }
         
         return false;
@@ -546,9 +635,23 @@ public class ClickGuiInputHandler {
         int containerX1 = 30;
         int containerX2 = (int)(ClickGuiState.WIDTH - 30);
         float subModY = modY + dims.padding;
+        int containerHeight = dims.height;
         
+        if (state.getDraggingSlider() != null) {
+            return false;
+        }
+        
+        Value previousValue = null;
         for (Value value : module.getValues()) {
             if ("enabled".equals(value.getName())) continue;
+            
+            if (subModY > modY + containerHeight - dims.padding) {
+                break;
+            }
+            
+            if (value.needsSeparatorBefore(previousValue)) {
+                subModY += 12;
+            }
             
             Object currentVal = value.getValue();
             var handler = ValueTypeRegistry.getHandlerForValue(currentVal);
@@ -557,25 +660,14 @@ public class ClickGuiInputHandler {
                 GuiRenderUtil.isHovered(containerX1 + 4, (int)subModY, 
                                        containerX2 - 4, (int)(subModY + dims.subOptionHeight), 
                                        coords.mouseX, coords.mouseY)) {
-                Object newValue = handler.updateValue(currentVal, verticalAmount);
-                if (newValue != currentVal) {
-                    value.setValue(newValue);
-                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
-                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), newValue);
-                    }
-                    return true;
-                }
             }
             
-            if (GuiRenderUtil.isHovered(containerX1, (int)subModY, containerX2, 
-                                       (int)(subModY + dims.subOptionHeight), 
-                                       coords.mouseX, coords.mouseY)) {
-                float delta = (float)(-verticalAmount * 20);
-                state.setScrollOffset(state.getScrollOffset() + delta);
-                return true;
+            float currentHeight = dims.subOptionHeight;
+            if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
+                currentHeight = dims.subOptionHeight * 2;
             }
-            
-            subModY += dims.subOptionHeight;
+            subModY += currentHeight;
+            previousValue = value;
         }
         
         return false;

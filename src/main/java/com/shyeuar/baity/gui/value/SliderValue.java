@@ -106,4 +106,16 @@ public class SliderValue implements Value {
         }
         return String.format("%." + decimalPlaces + "f", value);
     }
+    
+    private boolean needsSeparator = false;
+
+    public SliderValue setNeedsSeparator(boolean needsSeparator) {
+        this.needsSeparator = needsSeparator;
+        return this;
+    }
+    
+    @Override
+    public boolean needsSeparatorBefore(Value previousValue) {
+        return needsSeparator;
+    }
 }

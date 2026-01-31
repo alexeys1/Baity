@@ -4,14 +4,13 @@ import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.value.ColorPaletteValue;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.decoration.ArmorStandEntity;
-import net.minecraft.entity.vehicle.AbstractMinecartEntity;
-import net.minecraft.entity.vehicle.BoatEntity;
-import net.minecraft.util.math.Vec3d;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.vehicle.AbstractMinecart;
+import net.minecraft.world.entity.vehicle.Boat;
+import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,13 +37,13 @@ public class ElementalReactionDetector {
     private static final Map<String, Integer> reactionCounters = new HashMap<>();
     
     private static boolean frozenState = false;
-    private static Vec3d frozenTargetPos = null;
+    private static Vec3 frozenTargetPos = null;
     
     private static boolean quickenState = false;
-    private static Vec3d quickenTargetPos = null;
+    private static Vec3 quickenTargetPos = null;
     
     private static boolean bloomState = false;
-    private static Vec3d bloomTargetPos = null;
+    private static Vec3 bloomTargetPos = null;
     
     private static long lastWetReactionTime = 0;
     private static final long WET_COOLDOWN_MS = 3000; 
@@ -70,7 +69,7 @@ public class ElementalReactionDetector {
     private static final long WITHER_CLOAK_COOLDOWN_MS = 2500; // 2.5秒冷却
     private static boolean witherCloakActive = false; // 通过聊天栏消息设置 
     
-    public static ReactionResult recordDamageAndCheckReaction(int color, Vec3d targetPos) {
+    public static ReactionResult recordDamageAndCheckReaction(int color, Vec3 targetPos) {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) {
             return null;
         }
@@ -126,12 +125,12 @@ public class ElementalReactionDetector {
         return false;
     }
     
-    private static boolean isSameTarget(Vec3d pos1, Vec3d pos2) {
+    private static boolean isSameTarget(Vec3 pos1, Vec3 pos2) {
         if (pos1 == null || pos2 == null) return false;
-        return pos1.squaredDistanceTo(pos2) < 4.0; 
+        return pos1.distanceToSqr(pos2) < 4.0; 
     }
     
-    private static boolean hasRecentColor(int color, Vec3d targetPos) {
+    private static boolean hasRecentColor(int color, Vec3 targetPos) {
         for (int i = 0; i < recentDamages.size() - 1; i++) {
             DamageRecord record = recentDamages.get(i);
             if (record.color == color && isSameTarget(record.pos, targetPos)) {
@@ -141,7 +140,7 @@ public class ElementalReactionDetector {
         return false;
     }
     
-    private static boolean hasConsecutiveSequence(int color1, int color2, int color3, Vec3d targetPos) {
+    private static boolean hasConsecutiveSequence(int color1, int color2, int color3, Vec3 targetPos) {
         if (recentDamages.size() < 3) return false;
         
         int size = recentDamages.size();
@@ -163,7 +162,7 @@ public class ElementalReactionDetector {
         return null;
     }
     
-    private static ReactionResult detectReaction(int currentColor, Vec3d targetPos) {
+    private static ReactionResult detectReaction(int currentColor, Vec3 targetPos) {
         ReactionResult wetResult = checkWetReaction(currentColor, targetPos);
         if (wetResult != null) return wetResult;
         
@@ -260,7 +259,7 @@ public class ElementalReactionDetector {
         return null;
     }
     
-    private static boolean hasAnyElementRecent(Vec3d targetPos) {
+    private static boolean hasAnyElementRecent(Vec3 targetPos) {
         for (int i = 0; i < recentDamages.size() - 1; i++) {
             DamageRecord record = recentDamages.get(i);
             int c = record.color;
@@ -272,7 +271,7 @@ public class ElementalReactionDetector {
         return false;
     }
     
-    private static ReactionResult checkWetReaction(int currentColor, Vec3d targetPos) {
+    private static ReactionResult checkWetReaction(int currentColor, Vec3 targetPos) {
         if (currentColor != HYDRO) return null;
         
         if (recentDamages.size() >= 3) {
@@ -297,31 +296,31 @@ public class ElementalReactionDetector {
         if (entity == null) return false;
         
         // 玩家始终可以触发
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && entity == mc.player) return true;
         
         // 过滤非生物实体
-        if (entity instanceof ArmorStandEntity) return false;
-        if (entity instanceof BoatEntity) return false;
-        if (entity instanceof AbstractMinecartEntity) return false;
+        if (entity instanceof ArmorStand) return false;
+        if (entity instanceof Boat) return false;
+        if (entity instanceof AbstractMinecart) return false;
         
         // 只有 LivingEntity 才能触发反应
         return entity instanceof LivingEntity;
     }
     
-    public static ReactionResult checkEntityWetState(Entity entity, Vec3d playerPos) {
+    public static ReactionResult checkEntityWetState(Entity entity, Vec3 playerPos) {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
         if (entity == null) return null;
         
         // 过滤非生物实体（盔甲架、船、矿车等）
         if (!shouldTriggerReaction(entity)) return null;
         
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return null;
         
         long currentTime = System.currentTimeMillis();
-        UUID entityId = entity.getUuid();
-        Vec3d entityPos = new Vec3d(entity.getX(), entity.getY() + entity.getHeight() * 0.5, entity.getZ());
+        UUID entityId = entity.getUUID();
+        Vec3 entityPos = new Vec3(entity.getX(), entity.getY() + entity.getBbHeight() * 0.5, entity.getZ());
         
         boolean isPlayer = entity == mc.player;
         if (!isPlayer) {
@@ -332,7 +331,7 @@ public class ElementalReactionDetector {
             }
         }
         
-        boolean isInWater = entity.isSubmergedInWater() || entity.isTouchingWater();
+        boolean isInWater = entity.isUnderWater() || entity.isInWater();
         Boolean wasInWater = entityWasInWater.get(entityId);
         Boolean wasInRange = entityInRange.get(entityId);
         
@@ -353,8 +352,8 @@ public class ElementalReactionDetector {
             return new ReactionResult("潮湿", ColorPaletteValue.COLOR_REACTION_WET, entityPos);
         }
         
-        if (!isInWater && mc.world != null && mc.world.isRaining()) {
-            if (mc.world.isSkyVisible(entity.getBlockPos())) {
+        if (!isInWater && mc.level != null && mc.level.isRaining()) {
+            if (mc.level.canSeeSky(entity.blockPosition())) {
                 Long lastRainTime = entityRainCooldown.get(entityId);
                 if (lastRainTime == null || currentTime - lastRainTime >= RAIN_COOLDOWN_MS) {
                     entityRainCooldown.put(entityId, currentTime);
@@ -366,19 +365,19 @@ public class ElementalReactionDetector {
         return null;
     }
     
-    public static ReactionResult checkEntityBurningState(Entity entity, Vec3d playerPos) {
+    public static ReactionResult checkEntityBurningState(Entity entity, Vec3 playerPos) {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
         if (entity == null) return null;
         
         // 过滤非生物实体（盔甲架、船、矿车等）
         if (!shouldTriggerReaction(entity)) return null;
         
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return null;
         
         long currentTime = System.currentTimeMillis();
-        UUID entityId = entity.getUuid();
-        Vec3d entityPos = new Vec3d(entity.getX(), entity.getY() + entity.getHeight() * 0.5, entity.getZ());
+        UUID entityId = entity.getUUID();
+        Vec3 entityPos = new Vec3(entity.getX(), entity.getY() + entity.getBbHeight() * 0.5, entity.getZ());
         
         boolean isPlayer = entity == mc.player;
         if (!isPlayer) {
@@ -408,7 +407,7 @@ public class ElementalReactionDetector {
         return null;
     }
     
-    public static ReactionResult checkImmuneReaction(Vec3d targetPos, boolean hasDamage) {
+    public static ReactionResult checkImmuneReaction(Vec3 targetPos, boolean hasDamage) {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
         
         long currentTime = System.currentTimeMillis();
@@ -423,7 +422,7 @@ public class ElementalReactionDetector {
         return null;
     }
     
-    public static ReactionResult checkPlayerImmuneItem(Vec3d playerPos) {
+    public static ReactionResult checkPlayerImmuneItem(Vec3 playerPos) {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
         
         long currentTime = System.currentTimeMillis();
@@ -440,7 +439,7 @@ public class ElementalReactionDetector {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
         if (entity == null) return null;
         
-        UUID entityId = entity.getUuid();
+        UUID entityId = entity.getUUID();
         float currentHealth = entity.getHealth();
         
         Float previousHealth = entityHealthMap.get(entityId);
@@ -449,7 +448,7 @@ public class ElementalReactionDetector {
         if (previousHealth != null && currentHealth > previousHealth) {
             float healAmount = currentHealth - previousHealth;
             if (healAmount >= 0.5f) { 
-                Vec3d pos = new Vec3d(entity.getX(), entity.getY() + entity.getHeight() * 0.5, entity.getZ());
+                Vec3 pos = new Vec3(entity.getX(), entity.getY() + entity.getBbHeight() * 0.5, entity.getZ());
                 return new ReactionResult("治疗", ColorPaletteValue.COLOR_REACTION_HEALING, pos);
             }
         }
@@ -459,7 +458,7 @@ public class ElementalReactionDetector {
     
     public static void updateEntityHealth(LivingEntity entity) {
         if (entity == null) return;
-        entityHealthMap.put(entity.getUuid(), entity.getHealth());
+        entityHealthMap.put(entity.getUUID(), entity.getHealth());
     }
     
     public static void cleanupEntityRecords(UUID entityId) {
@@ -493,7 +492,7 @@ public class ElementalReactionDetector {
     public static ReactionResult checkWitherCloakImmune() {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
         
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return null;
         
         long currentTime = System.currentTimeMillis();
@@ -501,7 +500,7 @@ public class ElementalReactionDetector {
         if (isUsingWitherCloak()) {
             if (currentTime - lastWitherCloakImmuneTime >= WITHER_CLOAK_COOLDOWN_MS) {
                 lastWitherCloakImmuneTime = currentTime;
-                Vec3d playerPos = new Vec3d(mc.player.getX(), mc.player.getY() + mc.player.getHeight() * 0.5, mc.player.getZ());
+                Vec3 playerPos = new Vec3(mc.player.getX(), mc.player.getY() + mc.player.getBbHeight() * 0.5, mc.player.getZ());
                 return new ReactionResult("免疫", ColorPaletteValue.COLOR_REACTION_IMMUNE, playerPos);
             }
         }
@@ -532,10 +531,10 @@ public class ElementalReactionDetector {
     
     private static class DamageRecord {
         final int color;
-        final Vec3d pos;
+        final Vec3 pos;
         final long time;
         
-        DamageRecord(int color, Vec3d pos, long time) {
+        DamageRecord(int color, Vec3 pos, long time) {
             this.color = color;
             this.pos = pos;
             this.time = time;
@@ -545,7 +544,7 @@ public class ElementalReactionDetector {
     public static class ReactionResult {
         public final String name;
         public final int color;
-        public final Vec3d position;
+        public final Vec3 position;
         
         public ReactionResult(String name, int color) {
             this.name = name;
@@ -553,7 +552,7 @@ public class ElementalReactionDetector {
             this.position = null;
         }
         
-        public ReactionResult(String name, int color, Vec3d position) {
+        public ReactionResult(String name, int color, Vec3 position) {
             this.name = name;
             this.color = color;
             this.position = position;

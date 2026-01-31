@@ -2,8 +2,9 @@ package com.shyeuar.baity.utils;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,25 +12,27 @@ import java.util.UUID;
 
 @Environment(EnvType.CLIENT)
 public class AntiBotUtils {
-    private static final MinecraftClient mc = MinecraftClient.getInstance();
+    private static final Minecraft mc = Minecraft.getInstance();
     private static Map<String, String> playerMap = new HashMap<>();
     private static int tickCount = 0;
     
     public static void updatePlayerMap() {
-        if (mc.player == null || mc.world == null || mc.player.networkHandler == null) return;
+        if (mc.player == null || mc.level == null || mc.getConnection() == null) return;
         
         tickCount++;
         if (tickCount % 40 == 0) {
             playerMap.clear();
             
-            for (UUID uuid : mc.player.networkHandler.getPlayerUuids()) {
+            for (PlayerInfo playerInfo : mc.getConnection().getOnlinePlayers()) {
                 try {
-                    var playerListEntry = mc.player.networkHandler.getPlayerListEntry(uuid);
-                    if (playerListEntry == null) continue;
+                    if (playerInfo == null) continue;
+                    
+                    UUID uuid = playerInfo.getProfile().id();
+                    if (uuid == null) continue;
                     
                     String playerName;
-                    if (playerListEntry.getDisplayName() != null) {
-                        playerName = playerListEntry.getDisplayName().getString();
+                    if (playerInfo.getTabListDisplayName() != null) {
+                        playerName = playerInfo.getTabListDisplayName().getString();
                     } else {
                         playerName = uuid.toString();
                     }
@@ -40,8 +43,8 @@ public class AntiBotUtils {
                     }
                     
                     // 检测方法2：状态效果
-                    PlayerEntity worldPlayer = mc.world.getPlayerByUuid(uuid);
-                    if (worldPlayer != null && worldPlayer.getStatusEffects().isEmpty()) {
+                    Player worldPlayer = mc.level.getPlayerByUUID(uuid);
+                    if (worldPlayer != null && worldPlayer.getActiveEffects().isEmpty()) {
                         continue;
                     }
                     
@@ -64,10 +67,10 @@ public class AntiBotUtils {
     }
     
     
-    public static boolean isRealPlayer(PlayerEntity player) {
+    public static boolean isRealPlayer(Player player) {
         if (player == null || player == mc.player) return true; 
         
-        String uuid = player.getUuid().toString();
+        String uuid = player.getUUID().toString();
         
         
         if (playerMap.isEmpty()) {
@@ -78,7 +81,7 @@ public class AntiBotUtils {
     }
     
     
-    public static boolean isBot(PlayerEntity player) {
+    public static boolean isBot(Player player) {
         return !isRealPlayer(player);
     }
     

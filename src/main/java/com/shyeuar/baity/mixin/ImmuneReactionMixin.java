@@ -4,10 +4,10 @@ import com.shyeuar.baity.features.ElementalReactionDetector;
 import com.shyeuar.baity.features.FancyDmgSplash;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,10 +19,10 @@ public class ImmuneReactionMixin {
     /**
      * 监听聊天消息，检测 Wither Cloak 激活/失效
      */
-    @Mixin(ChatHud.class)
+    @Mixin(ChatComponent.class)
     public static class ChatDetectorMixin {
-        @Inject(method = "addMessage(Lnet/minecraft/text/Text;)V", at = @At("HEAD"))
-        private void baity$onChatMessage(Text message, CallbackInfo ci) {
+        @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;)V", at = @At("HEAD"))
+        private void baity$onChatMessage(Component message, CallbackInfo ci) {
             if (message == null) return;
 
             String text = message.getString();
@@ -38,7 +38,7 @@ public class ImmuneReactionMixin {
     /**
      * 定期检测 Wither Cloak 状态并触发免疫反应
      */
-    @Mixin(ClientPlayerEntity.class)
+    @Mixin(LocalPlayer.class)
     public static class PlayerTickMixin {
         @Unique
         private long lastWitherCloakCheckTime = 0;
@@ -52,8 +52,8 @@ public class ImmuneReactionMixin {
             if (m == null || !m.isEnabled()) return;
             if (!com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction) return;
 
-            MinecraftClient mc = MinecraftClient.getInstance();
-            ClientPlayerEntity self = (ClientPlayerEntity) (Object) this;
+            Minecraft mc = Minecraft.getInstance();
+            LocalPlayer self = (LocalPlayer) (Object) this;
             if (mc.player != self) return;
 
             long currentTime = System.currentTimeMillis();

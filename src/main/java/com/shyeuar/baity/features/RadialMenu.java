@@ -7,8 +7,8 @@ import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.utils.SoundUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -48,8 +48,8 @@ public class RadialMenu {
         return isOpen;
     }
 
-    public static void tick(MinecraftClient client) {
-        if (client.currentScreen != null) {
+    public static void tick(Minecraft client) {
+        if (client.screen != null) {
             if (isOpen) close(client);
             wasKeyPressed = false;
             wasMousePressed = false;
@@ -72,7 +72,7 @@ public class RadialMenu {
             return;
         }
 
-        long windowHandle = client.getWindow().getHandle();
+        long windowHandle = client.getWindow().handle();
         boolean isKeyPressed = KeyMappingUtils.isKeyPressed(windowHandle, keybind);
 
         if (isKeyPressed && !wasKeyPressed) {
@@ -91,24 +91,24 @@ public class RadialMenu {
         }
     }
 
-    private static void open(MinecraftClient client) {
+    private static void open(Minecraft client) {
         if (isOpen) return;
         isOpen = true;
-        long windowHandle = client.getWindow().getHandle();
+        long windowHandle = client.getWindow().handle();
         GLFW.glfwSetInputMode(windowHandle, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
-        double centerX = client.getWindow().getWidth() / 2.0;
-        double centerY = client.getWindow().getHeight() / 2.0;
+        double centerX = client.getWindow().getScreenWidth() / 2.0;
+        double centerY = client.getWindow().getScreenHeight() / 2.0;
         GLFW.glfwSetCursorPos(windowHandle, centerX, centerY);
     }
 
-    private static void close(MinecraftClient client) {
+    private static void close(Minecraft client) {
         if (!isOpen) return;
         isOpen = false;
         hoveredSection = -1;
-        GLFW.glfwSetInputMode(client.getWindow().getHandle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
+        GLFW.glfwSetInputMode(client.getWindow().handle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
     }
 
-    private static void executeAndClose(MinecraftClient client) {
+    private static void executeAndClose(Minecraft client) {
         String actionId = null;
         if (hoveredSection >= 0 && hoveredSection < sections.size()) {
             actionId = sections.get(hoveredSection).id;
@@ -118,8 +118,8 @@ public class RadialMenu {
             SoundUtils.playWoodenButton();
             isOpen = false;
             hoveredSection = -1;
-            double mouseX = client.mouse.getX();
-            double mouseY = client.mouse.getY();
+            double mouseX = client.mouseHandler.xpos();
+            double mouseY = client.mouseHandler.ypos();
             WarpMenuScreen.setInitialMousePosition(mouseX, mouseY);
             client.setScreen(new WarpMenuScreen());
         } else {
@@ -131,24 +131,24 @@ public class RadialMenu {
         }
     }
 
-    private static void executeAction(MinecraftClient client, String actionId) {
+    private static void executeAction(Minecraft client, String actionId) {
         if (client.player == null) return;
         switch (actionId) {
-            case "bz" -> client.player.networkHandler.sendChatCommand("bz");
-            case "ah" -> client.player.networkHandler.sendChatCommand("ah");
+            case "bz" -> client.player.connection.sendCommand("bz");
+            case "ah" -> client.player.connection.sendCommand("ah");
         }
     }
 
-    public static void render(DrawContext context, MinecraftClient client) {
+    public static void render(GuiGraphics context, Minecraft client) {
         if (!isOpen) return;
 
-        int screenWidth = client.getWindow().getScaledWidth();
-        int screenHeight = client.getWindow().getScaledHeight();
+        int screenWidth = client.getWindow().getGuiScaledWidth();
+        int screenHeight = client.getWindow().getGuiScaledHeight();
         int centerX = screenWidth / 2;
         int centerY = screenHeight / 2;
 
-        double mouseX = client.mouse.getX() * screenWidth / client.getWindow().getWidth();
-        double mouseY = client.mouse.getY() * screenHeight / client.getWindow().getHeight();
+        double mouseX = client.mouseHandler.xpos() * screenWidth / client.getWindow().getScreenWidth();
+        double mouseY = client.mouseHandler.ypos() * screenHeight / client.getWindow().getScreenHeight();
 
         double dx = mouseX - centerX;
         double dy = mouseY - centerY;
@@ -195,11 +195,11 @@ public class RadialMenu {
             String icon = section.icon;
             
             float scale = 3.0f;
-            var matrices = context.getMatrices();
+            var matrices = context.pose();
             matrices.pushMatrix();
             matrices.translate(iconX, iconY);
             matrices.scale(scale, scale);
-            context.drawText(client.textRenderer, icon, -client.textRenderer.getWidth(icon) / 2, -client.textRenderer.fontHeight / 2, textColor, true);
+            context.drawString(client.font, icon, -client.font.width(icon) / 2, -client.font.lineHeight / 2, textColor, true);
             matrices.popMatrix();
         }
 
@@ -208,7 +208,7 @@ public class RadialMenu {
         if (hoveredSection >= 0 && hoveredSection < sectionCount) {
             RadialSection hoveredSec = sections.get(hoveredSection);
             String labelText = hoveredSec.displayName;
-            int labelWidth = client.textRenderer.getWidth(labelText);
+            int labelWidth = client.font.width(labelText);
 
             double sectionStartAngle = startAngle + hoveredSection * anglePerSection;
             double sectionEndAngle = sectionStartAngle + anglePerSection;
@@ -218,11 +218,11 @@ public class RadialMenu {
             int labelX = centerX + (int) (Math.cos(midAngle) * labelRadius) - labelWidth / 2;
             int labelY = centerY + (int) (Math.sin(midAngle) * labelRadius) - 4;
 
-            context.drawText(client.textRenderer, labelText, labelX, labelY, 0xFFFFFF00, true);
+            context.drawString(client.font, labelText, labelX, labelY, 0xFFFFFF00, true);
         }
 
         String centerIcon = "\u2726";
-        int centerTextWidth = client.textRenderer.getWidth(centerIcon);
-        context.drawText(client.textRenderer, centerIcon, centerX - centerTextWidth / 2, centerY - 4, 0xFFAAAAAA, true);
+        int centerTextWidth = client.font.width(centerIcon);
+        context.drawString(client.font, centerIcon, centerX - centerTextWidth / 2, centerY - 4, 0xFFAAAAAA, true);
     }
 }

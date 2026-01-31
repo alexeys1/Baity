@@ -36,7 +36,7 @@ public class ClickGuiState {
     private final Map<String, Float> moduleExpandAnimations = new HashMap<>();
     
     private String hoveredTooltip = null;
-    private net.minecraft.text.Text hoveredTooltipText = null;
+    private net.minecraft.network.chat.Component hoveredTooltipText = null;
     private int tooltipX = 0;
     private int tooltipY = 0;
     
@@ -95,8 +95,8 @@ public class ClickGuiState {
     public String getHoveredTooltip() { return hoveredTooltip; }
     public void setHoveredTooltip(String tooltip) { hoveredTooltip = tooltip; }
     
-    public net.minecraft.text.Text getHoveredTooltipText() { return hoveredTooltipText; }
-    public void setHoveredTooltipText(net.minecraft.text.Text text) { hoveredTooltipText = text; }
+    public net.minecraft.network.chat.Component getHoveredTooltipText() { return hoveredTooltipText; }
+    public void setHoveredTooltipText(net.minecraft.network.chat.Component text) { hoveredTooltipText = text; }
     
     public int getTooltipX() { return tooltipX; }
     public void setTooltipX(int x) { tooltipX = x; }
@@ -114,12 +114,22 @@ public class ClickGuiState {
     public void setDraggingSlider(SliderDragInfo info) { draggingSlider = info; }
     
     public SliderInputInfo getEditingSlider() { return editingSlider; }
-    public void setEditingSlider(SliderInputInfo info) { editingSlider = info; }
+    public void setEditingSlider(SliderInputInfo info) { 
+        editingSlider = info;
+        if (info == null) {
+            sliderInputText = "";
+            originalSliderValue = null;
+        }
+    }
     
     public String getSliderInputText() { return sliderInputText; }
     public void setSliderInputText(String text) { sliderInputText = text; }
     
     public boolean isEditingSlider() { return editingSlider != null; }
+    
+    private Double originalSliderValue = null;
+    public Double getOriginalSliderValue() { return originalSliderValue; }
+    public void setOriginalSliderValue(Double value) { originalSliderValue = value; }
     
     public static class SliderDragInfo {
         public final String moduleName;

@@ -4,13 +4,13 @@ import com.shyeuar.baity.utils.RadialMenuRendererUtils;
 import com.shyeuar.baity.utils.SoundUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.Click;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.client.gl.RenderPipelines;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -117,8 +117,8 @@ public class WarpMenuScreen extends Screen {
             this.iconId = iconId;
         }
         
-        public Identifier getIconTexture() {
-            return Identifier.of("baity", "textures/gui/warp/" + iconId + ".png");
+        public ResourceLocation getIconTexture() {
+            return ResourceLocation.fromNamespaceAndPath("baity", "textures/gui/warp/" + iconId + ".png");
         }
     }
 
@@ -136,32 +136,32 @@ public class WarpMenuScreen extends Screen {
     }
 
     public WarpMenuScreen(WarpCategory category, Screen parent) {
-        super(Text.literal("Warp Menu"));
+        super(Component.literal("Warp Menu"));
         this.currentCategory = category;
         this.parentScreen = parent;
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
     @Override
     protected void init() {
         super.init();
-        if (savedMouseX >= 0 && savedMouseY >= 0 && this.client != null) {
-            GLFW.glfwSetCursorPos(this.client.getWindow().getHandle(), savedMouseX, savedMouseY);
+        if (savedMouseX >= 0 && savedMouseY >= 0 && this.minecraft != null) {
+            GLFW.glfwSetCursorPos(this.minecraft.getWindow().handle(), savedMouseX, savedMouseY);
             savedMouseX = -1;
             savedMouseY = -1;
         }
     }
 
     @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void renderBackground(GuiGraphics context, int mouseX, int mouseY, float delta) {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         int centerX = this.width / 2;
         int centerY = this.height / 2;
 
@@ -215,11 +215,11 @@ public class WarpMenuScreen extends Screen {
                 String icon = getIcon(sections[i]);
                 
                 float scale = 3.0f;
-                var matrices = context.getMatrices();
+                var matrices = context.pose();
                 matrices.pushMatrix();
                 matrices.translate(iconX, iconY);
                 matrices.scale(scale, scale);
-                context.drawText(this.textRenderer, icon, -this.textRenderer.getWidth(icon) / 2, -this.textRenderer.fontHeight / 2, textColor, true);
+                context.drawString(this.font, icon, -this.font.width(icon) / 2, -this.font.lineHeight / 2, textColor, true);
                 matrices.popMatrix();
             } else {
                 WarpDestination dest = (WarpDestination) sections[i];
@@ -229,19 +229,19 @@ public class WarpMenuScreen extends Screen {
                 int iconY = centerY + (int) (Math.sin(midAngle) * iconRadius);
                 
                 int iconSize = 24;
-                context.drawTexture(RenderPipelines.GUI_TEXTURED, dest.getIconTexture(), 
+                context.blit(RenderPipelines.GUI_TEXTURED, dest.getIconTexture(), 
                     iconX - iconSize / 2, iconY - iconSize / 2, 
                     0.0f, 0.0f, iconSize, iconSize, iconSize, iconSize);
                 
                 String labelText = dest.name;
-                int labelWidth = this.textRenderer.getWidth(labelText);
+                int labelWidth = this.font.width(labelText);
 
                 int labelRadius = OUTER_RADIUS + 25;
                 int labelX = centerX + (int) (Math.cos(midAngle) * labelRadius) - labelWidth / 2;
                 int labelY = centerY + (int) (Math.sin(midAngle) * labelRadius) - 4;
 
                 int labelColor = isHovered ? 0xFFFFFF00 : 0xFFFFFFFF;
-                context.drawText(this.textRenderer, labelText, labelX, labelY, labelColor, true);
+                context.drawString(this.font, labelText, labelX, labelY, labelColor, true);
             }
         }
 
@@ -250,7 +250,7 @@ public class WarpMenuScreen extends Screen {
         if (currentCategory == null && hoveredSection >= 0 && hoveredSection < sectionCount) {
             WarpCategory hoveredCat = MAIN_CATEGORIES[hoveredSection];
             String labelText = hoveredCat.displayName;
-            int labelWidth = this.textRenderer.getWidth(labelText);
+            int labelWidth = this.font.width(labelText);
 
             double sectionStartAngle = startAngle + hoveredSection * anglePerSection;
             double sectionEndAngle = sectionStartAngle + anglePerSection;
@@ -260,7 +260,7 @@ public class WarpMenuScreen extends Screen {
             int labelX = centerX + (int) (Math.cos(midAngle) * labelRadius) - labelWidth / 2;
             int labelY = centerY + (int) (Math.sin(midAngle) * labelRadius) - 4;
 
-            context.drawText(this.textRenderer, labelText, labelX, labelY, 0xFFFFFF00, true);
+            context.drawString(this.font, labelText, labelX, labelY, 0xFFFFFF00, true);
         }
 
         String centerIcon;
@@ -276,17 +276,17 @@ public class WarpMenuScreen extends Screen {
             centerScale = 2.0f;
         }
         
-        var matrices = context.getMatrices();
+        var matrices = context.pose();
         matrices.pushMatrix();
         matrices.translate(centerX, centerY);
         matrices.scale(centerScale, centerScale);
-        int centerTextWidth = this.textRenderer.getWidth(centerIcon);
-        context.drawText(this.textRenderer, centerIcon, -centerTextWidth / 2, -this.textRenderer.fontHeight / 2, centerColor, true);
+        int centerTextWidth = this.font.width(centerIcon);
+        context.drawString(this.font, centerIcon, -centerTextWidth / 2, -this.font.lineHeight / 2, centerColor, true);
         matrices.popMatrix();
 
         String title = currentCategory == null ? "Warp Menu" : currentCategory.displayName;
-        int titleWidth = this.textRenderer.getWidth(title);
-        context.drawText(this.textRenderer, title, (this.width - titleWidth) / 2, 20, 0xFFFFFF, true);
+        int titleWidth = this.font.width(title);
+        context.drawString(this.font, title, (this.width - titleWidth) / 2, 20, 0xFFFFFF, true);
     }
 
     private Object[] getSections() {
@@ -307,7 +307,7 @@ public class WarpMenuScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean isInsideWindow) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean isInsideWindow) {
         if (click.button() == 0) {
             int centerX = this.width / 2;
             int centerY = this.height / 2;
@@ -318,9 +318,9 @@ public class WarpMenuScreen extends Screen {
             if (distance <= INNER_RADIUS + 2) {
                 SoundUtils.playWoodenButton();
                 if (parentScreen != null) {
-                    MinecraftClient.getInstance().setScreen(parentScreen);
+                    Minecraft.getInstance().setScreen(parentScreen);
                 } else {
-                    this.close();
+                    this.onClose();
                 }
                 return true;
             }
@@ -331,7 +331,7 @@ public class WarpMenuScreen extends Screen {
                     Object selected = sections[hoveredSection];
                     SoundUtils.playWoodenButton();
                     if (selected instanceof WarpCategory cat) {
-                        MinecraftClient.getInstance().setScreen(new WarpMenuScreen(cat, this));
+                        Minecraft.getInstance().setScreen(new WarpMenuScreen(cat, this));
                     } else if (selected instanceof WarpDestination dest) {
                         executeWarp(dest.command);
                     }
@@ -343,10 +343,10 @@ public class WarpMenuScreen extends Screen {
     }
 
     private void executeWarp(String command) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player != null) {
-            client.player.networkHandler.sendChatCommand(command);
+            client.player.connection.sendCommand(command);
         }
-        this.close();
+        this.onClose();
     }
 }

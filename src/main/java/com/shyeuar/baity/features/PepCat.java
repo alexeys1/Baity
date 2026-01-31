@@ -4,12 +4,12 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.item.ItemStack;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.config.ConfigManager;
@@ -26,10 +26,10 @@ public class PepCat {
             ClientTickEvents.END_CLIENT_TICK.register(client -> {
                 Module pepCatModule = ModuleManager.getModuleByName("PepCat");
                 if (pepCatModule != null && pepCatModule.isEnabled() && ConfigManager.pepCatEnabled) {
-                    ClientPlayerEntity player = client.player;
+                    LocalPlayer player = client.player;
                     if (player != null) {
                         float currentHealth = player.getHealth();
-                        boolean isInWorld = client.world != null && client.player != null;
+                        boolean isInWorld = client.level != null && client.player != null;
                         
                         if (wasInWorld && isInWorld) {
                             if (lastHealth < 0) {
@@ -60,7 +60,7 @@ public class PepCat {
                         long currentTime = System.currentTimeMillis();
                         if (currentTime - lastDeathTime > 5000) {
                             lastDeathTime = currentTime;
-                            ClientPlayerEntity player = MinecraftClient.getInstance().player;
+                            LocalPlayer player = Minecraft.getInstance().player;
                             if (player != null) {
                                 onPlayerDeath(player);
                             }
@@ -73,8 +73,8 @@ public class PepCat {
         }
     }
     
-    private static boolean isCurrentPlayerDeathMessage(Text message) {
-        MinecraftClient client = MinecraftClient.getInstance();
+    private static boolean isCurrentPlayerDeathMessage(Component message) {
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return false;
         
         String messageText = message.getString();
@@ -128,33 +128,33 @@ public class PepCat {
         return false;
     }
     
-    private static void onPlayerDeath(ClientPlayerEntity player) {
+    private static void onPlayerDeath(LocalPlayer player) {
         playTotemAnimation(player);
         sendEncouragementMessage(player);
     }
     
-    private static void playTotemAnimation(ClientPlayerEntity player) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player != null && client.world != null) {
-            if (client.world instanceof net.minecraft.client.world.ClientWorld) {
-                net.minecraft.client.world.ClientWorld clientWorld = (net.minecraft.client.world.ClientWorld) client.world;
+    private static void playTotemAnimation(LocalPlayer player) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.player != null && client.level != null) {
+            if (client.level instanceof net.minecraft.client.multiplayer.ClientLevel) {
+                net.minecraft.client.multiplayer.ClientLevel clientWorld = (net.minecraft.client.multiplayer.ClientLevel) client.level;
                 clientWorld.playSound(
                     player, 
                     player.getX(), player.getY(), player.getZ(),
                     com.shyeuar.baity.client.Baity.LAUGHTER_SOUND,
-                    net.minecraft.sound.SoundCategory.PLAYERS,
+                    net.minecraft.sounds.SoundSource.PLAYERS,
                     1.0f,
                     1.0f  
                 );
             } else {
-                net.minecraft.client.sound.PositionedSoundInstance soundInstance = net.minecraft.client.sound.PositionedSoundInstance.master(
+                net.minecraft.client.resources.sounds.SimpleSoundInstance soundInstance = net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
                     com.shyeuar.baity.client.Baity.LAUGHTER_SOUND, 1.0f, 1.0f);
                 client.getSoundManager().play(soundInstance);
             }
             
             ItemStack catItem = createCustomCatItem();
-            client.gameRenderer.showFloatingItem(catItem);
-            client.particleManager.addEmitter(client.player, ParticleTypes.OMINOUS_SPAWNING, 10);
+            client.gameRenderer.displayItemActivation(catItem);
+            client.particleEngine.createTrackingEmitter(client.player, ParticleTypes.OMINOUS_SPAWNING, 10);
         }
     }
     
@@ -163,8 +163,8 @@ public class PepCat {
     }
     
     
-    private static void sendEncouragementMessage(ClientPlayerEntity player) {
-        MutableText fullMessage = MessageUtils.createBaityPrefix()
+    private static void sendEncouragementMessage(LocalPlayer player) {
+        MutableComponent fullMessage = MessageUtils.createBaityPrefix()
             .append(MessageUtils.createColoredText("它张嘴大笑，似乎在笑你的失误，又或嘲笑死神的无能", 0x00FFFF))
             .append(MessageUtils.createColoredText("눈_눈", 0xFF80FF));
 

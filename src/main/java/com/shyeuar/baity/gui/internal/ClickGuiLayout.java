@@ -17,22 +17,17 @@ public class ClickGuiLayout {
             contentHeight += ClickGuiState.ITEM_HEIGHT;
             if (module.isExpanded()) {
                 int childCount = 0;
-                int extraHeight = 0;
+                int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
                 for (Value value : module.getValues()) {
                     if (!"enabled".equals(value.getName())) {
                         childCount++;
-                        if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
-                            extraHeight += 20;
-                        }
                     }
                 }
                 if (childCount > 0) {
-                    int containerPadding = 8;
-                    int subOptionHeight = 20;
-                    int maxContainerHeight = (int)(visibleHeight - 80);
-                    int fullContainerHeight = childCount * subOptionHeight + containerPadding * 2 + extraHeight;
-                    int containerHeight = Math.min(fullContainerHeight, maxContainerHeight);
-                    contentHeight += containerHeight + 5;
+                    ClickGuiLayout.ContainerDimensions dims = 
+                        ClickGuiLayout.calculateSubOptionContainer(childCount, visibleHeight, extraHeight);
+                    int fullContainerHeight = childCount * dims.subOptionHeight + dims.padding * 2 + extraHeight;
+                    contentHeight += fullContainerHeight + 5;
                 }
             }
         }
@@ -49,7 +44,7 @@ public class ClickGuiLayout {
         int subOptionHeight = 20;
         int maxContainerHeight = (int)(visibleHeight - 80);
         int fullContainerHeight = subOptionCount * subOptionHeight + containerPadding * 2 + extraHeight;
-        int containerHeight = Math.min(fullContainerHeight, maxContainerHeight);
+        int containerHeight = fullContainerHeight;
         
         return new ContainerDimensions(
             containerPadding,
@@ -61,11 +56,16 @@ public class ClickGuiLayout {
     
     public static int calculateExtraHeight(Module module) {
         int extraHeight = 0;
+        Value previousValue = null;
         for (Value value : module.getValues()) {
             if (!"enabled".equals(value.getName())) {
                 if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
                     extraHeight += 20; 
                 }
+                if (value.needsSeparatorBefore(previousValue)) {
+                    extraHeight += 12;
+                }
+                previousValue = value;
             }
         }
         return extraHeight;

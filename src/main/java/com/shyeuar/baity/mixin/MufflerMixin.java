@@ -3,30 +3,30 @@ package com.shyeuar.baity.mixin;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.utils.ModuleUtils;
-import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.client.sound.SoundSystem;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.client.sounds.SoundEngine;
+import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(SoundSystem.class)
+@Mixin(SoundEngine.class)
 public class MufflerMixin {
 
-    private static final Identifier ENDERMAN_SCREAM = Identifier.of("minecraft", "entity.enderman.scream");
-    private static final Identifier ENDERMAN_STARE = Identifier.of("minecraft", "entity.enderman.stare");
+    private static final ResourceLocation ENDERMAN_SCREAM = ResourceLocation.fromNamespaceAndPath("minecraft", "entity.enderman.scream");
+    private static final ResourceLocation ENDERMAN_STARE = ResourceLocation.fromNamespaceAndPath("minecraft", "entity.enderman.stare");
 
-    @Inject(method = "play(Lnet/minecraft/client/sound/SoundInstance;)Lnet/minecraft/client/sound/SoundSystem$PlayResult;", at = @At("HEAD"), cancellable = true)
-    private void baity$muteSound(SoundInstance sound, CallbackInfoReturnable<SoundSystem.PlayResult> cir) {
+    @Inject(method = "play(Lnet/minecraft/client/resources/sounds/SoundInstance;)Lnet/minecraft/client/sounds/SoundEngine$PlayResult;", at = @At("HEAD"), cancellable = true)
+    private void baity$muteSound(SoundInstance sound, CallbackInfoReturnable<SoundEngine.PlayResult> cir) {
         Module m = ModuleManager.getModuleByName("Muffler");
         if (m == null || !m.isEnabled()) return;
 
-        Identifier soundId = sound.getId();
+        ResourceLocation soundId = sound.getLocation();
         
         if (ModuleUtils.getOptionBoolean(m, "mute enderman scream", true)) {
             if (soundId.equals(ENDERMAN_SCREAM) || soundId.equals(ENDERMAN_STARE)) {
-                cir.setReturnValue(SoundSystem.PlayResult.NOT_STARTED);
+                cir.setReturnValue(SoundEngine.PlayResult.NOT_STARTED);
             }
         }
     }

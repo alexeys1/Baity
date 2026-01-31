@@ -2,17 +2,17 @@ package com.shyeuar.baity.gui.render;
 
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.theme.Theme;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 
 public class ModuleStyleRenderer {
    
-   public static void renderModule(DrawContext context, MinecraftClient client, Module module, Theme theme,
+   public static void renderModule(GuiGraphics context, Minecraft client, Module module, Theme theme,
                                   float x1, float y, float x2, float moduleHeight,
                                   float mouseX, float mouseY,
                                   boolean isListeningForKey, String currentKeyDisplay,
                                   java.util.function.Function<String, String> getTooltipText,
-                                  java.util.function.Function<String, net.minecraft.text.Text> getTooltipTextWithColors,
+                                  java.util.function.Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
                                   TooltipInfo hoveredTooltipInfo) {
 
        boolean hovered = GuiRenderUtil.isHovered(x1, y, x2, y + moduleHeight, mouseX, mouseY);
@@ -33,7 +33,7 @@ public class ModuleStyleRenderer {
        if ("ClickGUI".equals(module.getName())) {
            displayName = "ClickGUI";
        }
-       context.drawText(client.textRenderer, displayName, (int)(x1 + 10), (int)(y + 8), theme.FONT_C.getRGB(), false);
+       context.drawString(client.font, displayName, (int)(x1 + 10), (int)(y + 8), theme.FONT_C.getRGB(), false);
 
        if (hovered) {
            String tooltip = getTooltipText.apply(module.getName());
@@ -55,7 +55,7 @@ public class ModuleStyleRenderer {
        }
        if (hasChildren && !module.getName().equals("ClickGUI")) {
            String arrow = module.isExpanded() ? "▼" : "▶";
-           context.drawText(client.textRenderer, arrow, (int)(x2 - 25), (int)(y + 8), theme.FONT_C.getRGB(), false);
+           context.drawString(client.font, arrow, (int)(x2 - 25), (int)(y + 8), theme.FONT_C.getRGB(), false);
        }
 
        if (module.getName().equals("ClickGUI")) {
@@ -64,7 +64,7 @@ public class ModuleStyleRenderer {
        }
    }
 
-   public static void renderKeybindBox(DrawContext context, MinecraftClient client, Theme theme,
+   public static void renderKeybindBox(GuiGraphics context, Minecraft client, Theme theme,
                                       float containerX1, float containerY, float containerX2, float containerHeight,
                                       float mouseX, float mouseY,
                                       boolean isListening, String keyDisplay) {
@@ -72,14 +72,14 @@ public class ModuleStyleRenderer {
        renderKeybindBoxContent(context, client, theme, containerX2, containerY, containerHeight, mouseX, mouseY, isListening, keyText);
    }
 
-   public static void renderKeybindBoxContent(DrawContext context, MinecraftClient client, Theme theme,
+   public static void renderKeybindBoxContent(GuiGraphics context, Minecraft client, Theme theme,
                                               float containerX2, float containerY, float containerHeight,
                                               float mouseX, float mouseY, boolean isListening, String displayText) {
        if (displayText == null || displayText.isEmpty()) {
            displayText = "☄ NOTSET";
        }
        String plainText = displayText.replaceAll("§[0-9a-fklmnor]", "");
-       int textWidth = client.textRenderer.getWidth(plainText);
+       int textWidth = client.font.width(plainText);
        int boxWidth = textWidth + 16;
        float boxCenterY = containerY + containerHeight / 2f;
        int boxHeight = 12;
@@ -100,11 +100,11 @@ public class ModuleStyleRenderer {
        if (isListening) {
            String hintText = "Press Backspace to reset";
            int hintColor = 0xFFFFFF00;
-           int hintX = boxX1 - client.textRenderer.getWidth(hintText) - 8;
-           context.drawText(client.textRenderer, hintText, hintX, baseY, hintColor, false);
+           int hintX = boxX1 - client.font.width(hintText) - 8;
+           context.drawString(client.font, hintText, hintX, baseY, hintColor, false);
            
-           net.minecraft.text.Text textObj = net.minecraft.text.Text.literal(displayText);
-           context.drawText(client.textRenderer, textObj, baseX, baseY, theme.FONT_C.getRGB(), false);
+           net.minecraft.network.chat.Component textObj = net.minecraft.network.chat.Component.literal(displayText);
+           context.drawString(client.font, textObj, baseX, baseY, theme.FONT_C.getRGB(), false);
        } else {
            String displayPlainText = displayText.replaceAll("§[0-9a-fklmnor]", "");
 
@@ -114,12 +114,12 @@ public class ModuleStyleRenderer {
                int prefixRGB = com.shyeuar.baity.utils.KeyMappingUtils.getModuleEnabledPurpleRGB();
                int keyNameRGB = theme.FONT.getRGB();
 
-               net.minecraft.text.Text prefixText = net.minecraft.text.Text.literal(prefix);
-               context.drawText(client.textRenderer, prefixText, baseX, baseY, prefixRGB, false);
+               net.minecraft.network.chat.Component prefixText = net.minecraft.network.chat.Component.literal(prefix);
+               context.drawString(client.font, prefixText, baseX, baseY, prefixRGB, false);
 
-               int prefixWidth = client.textRenderer.getWidth(prefix);
-               net.minecraft.text.Text keyTextObj = net.minecraft.text.Text.literal(keyName);
-               context.drawText(client.textRenderer, keyTextObj, baseX + prefixWidth, baseY, keyNameRGB, false);
+               int prefixWidth = client.font.width(prefix);
+               net.minecraft.network.chat.Component keyTextObj = net.minecraft.network.chat.Component.literal(keyName);
+               context.drawString(client.font, keyTextObj, baseX + prefixWidth, baseY, keyNameRGB, false);
            } else if (displayPlainText.startsWith("☄") || 
                        displayPlainText.toUpperCase().contains("NOTSET") || 
                        displayPlainText.toUpperCase().contains("NONE") || 
@@ -129,22 +129,22 @@ public class ModuleStyleRenderer {
                int prefixRGB = 0xFFFFFF00;  // 黄色
                int notsetRGB = 0xFFAAAAAA;  // 灰色
 
-               net.minecraft.text.Text prefixText = net.minecraft.text.Text.literal(prefix);
-               context.drawText(client.textRenderer, prefixText, baseX, baseY, prefixRGB, false);
+               net.minecraft.network.chat.Component prefixText = net.minecraft.network.chat.Component.literal(prefix);
+               context.drawString(client.font, prefixText, baseX, baseY, prefixRGB, false);
 
-               int prefixWidth = client.textRenderer.getWidth(prefix);
-               net.minecraft.text.Text notsetTextObj = net.minecraft.text.Text.literal(notsetText);
-               context.drawText(client.textRenderer, notsetTextObj, baseX + prefixWidth, baseY, notsetRGB, false);
+               int prefixWidth = client.font.width(prefix);
+               net.minecraft.network.chat.Component notsetTextObj = net.minecraft.network.chat.Component.literal(notsetText);
+               context.drawString(client.font, notsetTextObj, baseX + prefixWidth, baseY, notsetRGB, false);
            } else {
-               net.minecraft.text.Text textObj = net.minecraft.text.Text.literal(displayText);
-               context.drawText(client.textRenderer, textObj, baseX, baseY, theme.FONT.getRGB(), false);
+               net.minecraft.network.chat.Component textObj = net.minecraft.network.chat.Component.literal(displayText);
+               context.drawString(client.font, textObj, baseX, baseY, theme.FONT.getRGB(), false);
            }
        }
    }
 
    public static class TooltipInfo {
        public String tooltip;
-       public net.minecraft.text.Text tooltipText;
+       public net.minecraft.network.chat.Component tooltipText;
        public int x, y;
    }
 }

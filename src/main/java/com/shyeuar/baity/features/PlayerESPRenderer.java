@@ -1,5 +1,6 @@
 package com.shyeuar.baity.features;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.config.DevConfig;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
@@ -8,17 +9,16 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 @Environment(EnvType.CLIENT)
 public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
-    private static final MinecraftClient mc = MinecraftClient.getInstance();
+    private static final Minecraft mc = Minecraft.getInstance();
     
     private static long lastTimeUpdate = 0;
     private static double cachedSinValue = 0.0;
@@ -30,18 +30,18 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
             return; 
         }
         
-        if (mc.world == null || mc.player == null) return;
+        if (mc.level == null || mc.player == null) return;
         
-        Vec3d cameraPos = context.worldState().cameraRenderState.pos;
-        Camera camera = mc.gameRenderer.getCamera();
-        float tickDelta = mc.getRenderTickCounter().getTickProgress(false);
-        float cameraYaw = camera.getYaw();
-        float cameraPitch = camera.getPitch();
+        Vec3 cameraPos = context.worldState().cameraRenderState.pos;
+        Camera camera = mc.gameRenderer.getMainCamera();
+        float tickDelta = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        float cameraYaw = camera.getYRot();
+        float cameraPitch = camera.getXRot();
         
-        MatrixStack matrices = context.matrices();
+        PoseStack matrices = context.matrices();
         if (matrices == null) {
-            matrices = new MatrixStack();
-            matrices.multiply(new org.joml.Quaternionf().rotationXYZ(
+            matrices = new PoseStack();
+            matrices.mulPose(new org.joml.Quaternionf().rotationXYZ(
                 (float) Math.toRadians(cameraPitch),
                 (float) Math.toRadians(cameraYaw + 180.0f),
                 0.0f
@@ -52,14 +52,14 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
         
         com.shyeuar.baity.utils.AntiBotUtils.updatePlayerMap();
         
-        for (PlayerEntity player : mc.world.getPlayers()) {
+        for (Player player : mc.level.players()) {
             if (com.shyeuar.baity.utils.AntiBotUtils.isBot(player)) {
                 continue;
             }
             
             boolean showOwnNametag = ModuleUtils.getOptionBoolean(m, "show own nametag", false);
             if (player == mc.player) {
-                if (mc.options.getPerspective().isFirstPerson()) {
+                if (mc.options.getCameraType().isFirstPerson()) {
                     continue;
                 }
                 if (!showOwnNametag) {
@@ -67,29 +67,29 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
                 }
             }
             
-            Vec3d lerpedPos = player.getLerpedPos(tickDelta);
+            Vec3 lerpedPos = player.getPosition(tickDelta);
             double x = lerpedPos.x - cameraPos.x;
             double y = lerpedPos.y - cameraPos.y;
             double z = lerpedPos.z - cameraPos.z;
 
-            matrices.push();
+            matrices.pushPose();
             try {
                 matrices.translate(x, y, z);
                 renderPlayerName(matrices, player, cameraYaw, cameraPitch, m);
             } finally {
-                matrices.pop();
+                matrices.popPose();
             }
         }
     }
     
-    private void renderPlayerName(MatrixStack matrices, PlayerEntity player, float cameraYaw, float cameraPitch, Module module) {
-        matrices.push();
+    private void renderPlayerName(PoseStack matrices, Player player, float cameraYaw, float cameraPitch, Module module) {
+        matrices.pushPose();
         try {
-            float heightOffset = player.getHeight() + 0.5f;
+            float heightOffset = player.getBbHeight() + 0.5f;
             
             Module antiSwimModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("AntiSwim");
             if (antiSwimModule != null && antiSwimModule.isEnabled()) {
-                if (player == mc.player && player.getPose() == net.minecraft.entity.EntityPose.SWIMMING) {
+                if (player == mc.player && player.getPose() == net.minecraft.world.entity.Pose.SWIMMING) {
                     heightOffset = 1.8f + 0.5f;
                 }
             }
@@ -103,8 +103,8 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
             }
             
             matrices.translate(0, heightOffset, 0);
-            matrices.multiply(new org.joml.Quaternionf().rotationY(-cameraYaw * 0.017453292F));
-            matrices.multiply(new org.joml.Quaternionf().rotationX(cameraPitch * 0.017453292F));
+            matrices.mulPose(new org.joml.Quaternionf().rotationY(-cameraYaw * 0.017453292F));
+            matrices.mulPose(new org.joml.Quaternionf().rotationX(cameraPitch * 0.017453292F));
 
             assert mc.player != null;
             double distance = mc.player.distanceTo(player);
@@ -116,50 +116,50 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
         boolean isDeveloper = DevConfig.isDeveloper(player);
         boolean showDistance = ModuleUtils.getOptionBoolean(module, "show distance", true);
         
-        TextRenderer textRenderer = mc.textRenderer;
+        Font textRenderer = mc.font;
         
-        int totalWidth = textRenderer.getWidth(baseName);
+        int totalWidth = textRenderer.width(baseName);
         if (isDeveloper) {
-            totalWidth += textRenderer.getWidth(DevConfig.DEV_PREFIX) + 2; 
+            totalWidth += textRenderer.width(DevConfig.DEV_PREFIX) + 2; 
         }
         
         int currentX;
         if (isDeveloper) {
-            int nameWidth = textRenderer.getWidth(baseName);
-            int prefixWidth = textRenderer.getWidth(DevConfig.DEV_PREFIX) + 2;
+            int nameWidth = textRenderer.width(baseName);
+            int prefixWidth = textRenderer.width(DevConfig.DEV_PREFIX) + 2;
             currentX = -nameWidth / 2 - prefixWidth; 
         } else {
             currentX = -totalWidth / 2;
         }
         
-        VertexConsumerProvider.Immediate immediate = mc.getBufferBuilders().getEntityVertexConsumers();
+        MultiBufferSource.BufferSource immediate = mc.renderBuffers().bufferSource();
         
         int nameColorWithAlpha = 0xFFFF69B4;
         int distanceColorWithAlpha = 0xFF00FFFF;
         int devColorWithAlpha = DevConfig.DEV_PREFIX_COLOR | 0xFF000000;
         
         if (isDeveloper) {
-            textRenderer.draw(DevConfig.DEV_PREFIX, currentX, 0, devColorWithAlpha, false, matrices.peek().getPositionMatrix(), immediate, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
-            currentX += textRenderer.getWidth(DevConfig.DEV_PREFIX) + 2;
+            textRenderer.drawInBatch(DevConfig.DEV_PREFIX, currentX, 0, devColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+            currentX += textRenderer.width(DevConfig.DEV_PREFIX) + 2;
         }
         
-        textRenderer.draw(baseName, currentX, 0, nameColorWithAlpha, false, matrices.peek().getPositionMatrix(), immediate, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
+        textRenderer.drawInBatch(baseName, currentX, 0, nameColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
         
         if (showDistance) {
             double dist = mc.player != null ? mc.player.distanceTo(player) : 0.0;
             String distanceText = " [" + (int)Math.round(dist) + "]";
             int distanceX;
             if (isDeveloper) {
-                distanceX = currentX + textRenderer.getWidth(baseName) + 2;
+                distanceX = currentX + textRenderer.width(baseName) + 2;
             } else {
                 distanceX = totalWidth / 2 + 2;
             }
-            textRenderer.draw(distanceText, distanceX, 0, distanceColorWithAlpha, false, matrices.peek().getPositionMatrix(), immediate, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
+            textRenderer.drawInBatch(distanceText, distanceX, 0, distanceColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
         }
         
-            immediate.draw();
+            immediate.endBatch();
         } finally {
-            matrices.pop();
+            matrices.popPose();
         }
     }
     

@@ -3,9 +3,9 @@ package com.shyeuar.baity.mixin;
 import com.shyeuar.baity.items.CustomTotemItem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 public class TotemAnimationMixin {
     
     @ModifyVariable(
-        method = "showFloatingItem",
+        method = "displayItemActivation",
         at = @At("HEAD"),
         argsOnly = true
     )

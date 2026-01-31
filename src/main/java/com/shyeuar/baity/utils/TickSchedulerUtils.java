@@ -2,8 +2,7 @@ package com.shyeuar.baity.utils;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.MinecraftClient;
-
+import net.minecraft.client.Minecraft;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -75,7 +74,7 @@ public final class TickSchedulerUtils {
         return task.taskId;
     }
 
-    void onTick(MinecraftClient client) {
+    void onTick(Minecraft client) {
         if (scheduledTasks.containsKey(currentTick)) {
             List<Runnable> tasks = scheduledTasks.get(currentTick);
             for (int i = 0; i < tasks.size(); i++) {
@@ -126,8 +125,8 @@ public final class TickSchedulerUtils {
             action.run();
 
             if (repeating) {
-                if (MinecraftClient.getInstance() != null && !RenderSystem.isOnRenderThread()) {
-                    MinecraftClient.getInstance().send(() -> instance.addTask(this, instance.currentTick + interval));
+                if (Minecraft.getInstance() != null && !RenderSystem.isOnRenderThread()) {
+                    Minecraft.getInstance().schedule(() -> instance.addTask(this, instance.currentTick + interval));
                 } else {
                     instance.addTask(this, instance.currentTick + interval);
                 }

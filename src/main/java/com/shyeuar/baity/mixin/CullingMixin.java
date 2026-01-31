@@ -1,20 +1,10 @@
 package com.shyeuar.baity.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import net.minecraft.block.enums.CameraSubmersionType;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.client.render.fog.FogData;
-import net.minecraft.client.render.fog.FogModifier;
-import net.minecraft.client.render.fog.FogRenderer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,9 +17,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 import java.util.Set;
+import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.fog.FogData;
+import net.minecraft.client.renderer.fog.FogRenderer;
+import net.minecraft.client.renderer.fog.environment.FogEnvironment;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.material.FogType;
 
 public class CullingMixin {
-    @Mixin(net.minecraft.client.render.entity.ArmorStandEntityRenderer.class)
+    @Mixin(net.minecraft.client.renderer.entity.ArmorStandRenderer.class)
     public static class HideNonStarredMixin {
         
         @Unique
@@ -38,20 +38,20 @@ public class CullingMixin {
             "Skeletor", "Sniper", "Super Archer", "Spider", "Fels", "Withermancer"
         );
         
-        @Inject(method = "render(Lnet/minecraft/client/render/entity/state/ArmorStandEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/client/render/state/CameraRenderState;)V",
+        @Inject(method = "submit(Lnet/minecraft/client/renderer/entity/state/ArmorStandRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
                 at = @At("HEAD"), cancellable = true)
-        private void baity$hideNonStarredNametag(net.minecraft.client.render.entity.state.ArmorStandEntityRenderState state,
-                MatrixStack matrices, net.minecraft.client.render.command.OrderedRenderCommandQueue queue,
-                net.minecraft.client.render.state.CameraRenderState cameraState, CallbackInfo ci) {
+        private void baity$hideNonStarredNametag(net.minecraft.client.renderer.entity.state.ArmorStandRenderState state,
+                PoseStack matrices, net.minecraft.client.renderer.SubmitNodeCollector queue,
+                net.minecraft.client.renderer.state.CameraRenderState cameraState, CallbackInfo ci) {
             
             Module m = ModuleManager.getModuleByName("Culling");
             if (m == null || !m.isEnabled()) return;
             if (!ConfigManager.cullingHideNonStarredNametag) return;
             if (!checkInDungeon()) return;
             
-            if (state.displayName == null) return;
+            if (state.nameTag == null) return;
             
-            String nameText = state.displayName.getString();
+            String nameText = state.nameTag.getString();
             
             if (!nameText.contains("✯ ") && nameText.contains("❤") && containsDungeonMobName(nameText)) {
                 ci.cancel();
@@ -70,11 +70,11 @@ public class CullingMixin {
         
         @Unique
         private static boolean checkInDungeon() {
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.getNetworkHandler() == null) return false;
-            for (var entry : mc.getNetworkHandler().getPlayerList()) {
-                if (entry.getDisplayName() != null) {
-                    String text = entry.getDisplayName().getString().trim();
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.getConnection() == null) return false;
+            for (var entry : mc.getConnection().getOnlinePlayers()) {
+                if (entry.getTabListDisplayName() != null) {
+                    String text = entry.getTabListDisplayName().getString().trim();
                     if (text.startsWith("Dungeon:") || (text.startsWith("Area:") && text.contains("Catacombs"))) {
                         return true;
                     }
@@ -89,25 +89,25 @@ public class CullingMixin {
         
         @Shadow
         @Final
-        private static List<FogModifier> FOG_MODIFIERS;
+        private static List<FogEnvironment> FOG_ENVIRONMENTS;
         
-        @Inject(method = "applyFog(Lnet/minecraft/client/render/Camera;IZLnet/minecraft/client/render/RenderTickCounter;FLnet/minecraft/client/world/ClientWorld;)Lorg/joml/Vector4f;",
-                at = @At(value = "FIELD", target = "Lnet/minecraft/client/render/fog/FogData;renderDistanceEnd:F", shift = At.Shift.AFTER, ordinal = 0))
+        @Inject(method = "setupFog(Lnet/minecraft/client/Camera;IZLnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lorg/joml/Vector4f;",
+                at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/fog/FogData;renderDistanceEnd:F", shift = At.Shift.AFTER, ordinal = 0))
         private void baity$removeWaterFog(Camera camera, int viewDistance, boolean thick, 
-                RenderTickCounter tickCounter, float skyDarkness, ClientWorld world, 
+                DeltaTracker tickCounter, float skyDarkness, ClientLevel world, 
                 CallbackInfoReturnable<Vector4f> cir, @Local FogData fogData) {
             
             Module m = ModuleManager.getModuleByName("Culling");
             if (m == null || !m.isEnabled()) return;
             if (!ConfigManager.cullingRemoveUnderwaterFog) return;
             
-            CameraSubmersionType submersionType = camera.getSubmersionType();
-            Entity entity = camera.getFocusedEntity();
+            FogType submersionType = camera.getFluidInCamera();
+            Entity entity = camera.getEntity();
             
-            if (submersionType != CameraSubmersionType.WATER) return;
+            if (submersionType != FogType.WATER) return;
             
-            for (FogModifier modifier : FOG_MODIFIERS) {
-                if (modifier.shouldApply(submersionType, entity)) {
+            for (FogEnvironment modifier : FOG_ENVIRONMENTS) {
+                if (modifier.isApplicable(submersionType, entity)) {
                     fogData.environmentalStart = Float.MAX_VALUE;
                     fogData.environmentalEnd = Float.MAX_VALUE;
                     fogData.renderDistanceStart = Float.MAX_VALUE;
@@ -120,14 +120,14 @@ public class CullingMixin {
         }
     }
     
-    @Mixin(net.minecraft.client.render.entity.LivingEntityRenderer.class)
+    @Mixin(net.minecraft.client.renderer.entity.LivingEntityRenderer.class)
     public static class HideDyingMobMixin {
         
-        @Inject(method = "render(Lnet/minecraft/client/render/entity/state/LivingEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/client/render/state/CameraRenderState;)V",
+        @Inject(method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
                 at = @At("HEAD"), cancellable = true)
-        private void baity$hideDyingMob(net.minecraft.client.render.entity.state.LivingEntityRenderState state,
-                MatrixStack matrices, net.minecraft.client.render.command.OrderedRenderCommandQueue queue,
-                net.minecraft.client.render.state.CameraRenderState cameraState, CallbackInfo ci) {
+        private void baity$hideDyingMob(net.minecraft.client.renderer.entity.state.LivingEntityRenderState state,
+                PoseStack matrices, net.minecraft.client.renderer.SubmitNodeCollector queue,
+                net.minecraft.client.renderer.state.CameraRenderState cameraState, CallbackInfo ci) {
             Module m = ModuleManager.getModuleByName("Culling");
             if (m == null || !m.isEnabled()) return;
             if (!ConfigManager.cullingHideDyingMob) return;
@@ -141,8 +141,8 @@ public class CullingMixin {
     @Mixin(GameRenderer.class)
     public static class NoHurtCamMixin {
         
-        @Inject(method = "tiltViewWhenHurt", at = @At("HEAD"), cancellable = true)
-        private void baity$cancelHurtCam(MatrixStack matrices, float tickProgress, CallbackInfo ci) {
+        @Inject(method = "bobHurt", at = @At("HEAD"), cancellable = true)
+        private void baity$cancelHurtCam(PoseStack matrices, float tickProgress, CallbackInfo ci) {
             Module m = ModuleManager.getModuleByName("NoHurtCam");
             if (m != null && m.isEnabled()) {
                 ci.cancel();

@@ -15,13 +15,13 @@ import com.shyeuar.baity.gui.render.ModuleStyleRenderer;
 import com.shyeuar.baity.utils.TimerUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
 
 @Environment(EnvType.CLIENT)
 public class ClickGui extends Screen {
@@ -40,7 +40,7 @@ public class ClickGui extends Screen {
     }
     
     public ClickGui() {
-        super(Text.literal("Baity ClickGui"));
+        super(Component.literal("Baity ClickGui"));
         this.state = new ClickGuiState();
         this.valuetimer = new TimerUtils();
         this.inputHandler = new ClickGuiInputHandler(state, valuetimer, this::handleTriggerValueClick);
@@ -56,24 +56,24 @@ public class ClickGui extends Screen {
             ModuleManager.init();
         }
 
-        if (this.client != null) {
-            state.setGuiScale(this.client.options.getGuiScale().getValue());
+        if (this.minecraft != null) {
+            state.setGuiScale(this.minecraft.options.guiScale().get());
         }
         
         ConfigSynchronizer.syncModuleStates();
         updateKeyDisplay();
         
-        if (this.client != null && this.client.getWindow() != null) {
-            int screenW = this.client.getWindow().getScaledWidth();
-            int screenH = this.client.getWindow().getScaledHeight();
+        if (this.minecraft != null && this.minecraft.getWindow() != null) {
+            int screenW = this.minecraft.getWindow().getGuiScaledWidth();
+            int screenH = this.minecraft.getWindow().getGuiScaledHeight();
             ClickGuiLayout.initializeWindowPosition(state, screenW, screenH);
         }
     }
     
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
 
         ClickGuiRenderer.render(context, client, state, theme,
             this::getTooltipText,
@@ -92,7 +92,7 @@ public class ClickGui extends Screen {
     }
     
     @Override
-    public boolean mouseClicked(Click click, boolean isInsideWindow) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean isInsideWindow) {
         if (inputHandler.handleMouseClick(click.x(), click.y(), click.button())) {
             return true;
         }
@@ -100,7 +100,7 @@ public class ClickGui extends Screen {
     }
     
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(MouseButtonEvent click) {
         inputHandler.handleMouseRelease(click.button());
         return super.mouseReleased(click);
     }
@@ -112,8 +112,8 @@ public class ClickGui extends Screen {
     }
     
     @Override
-    public boolean keyPressed(KeyInput input) {
-        int keyCode = input.getKeycode();
+    public boolean keyPressed(KeyEvent input) {
+        int keyCode = input.input();
         int scanCode = input.scancode();
         int modifiers = input.modifiers();
         if (inputHandler.handleKeyPress(keyCode, scanCode, modifiers)) {
@@ -123,7 +123,7 @@ public class ClickGui extends Screen {
     }
     
     @Override
-    public boolean charTyped(CharInput input) {
+    public boolean charTyped(CharacterEvent input) {
         char chr = (char) input.codepoint();
         if (inputHandler.handleCharTyped(chr, input.modifiers())) {
             return true;
@@ -132,25 +132,46 @@ public class ClickGui extends Screen {
     }
     
     @Override
-    public void resize(MinecraftClient client, int width, int height) {
+    public void resize(Minecraft client, int width, int height) {
         super.resize(client, width, height);
-        if (this.client != null && this.client.getWindow() != null) {
-            int screenW = this.client.getWindow().getScaledWidth();
-            int screenH = this.client.getWindow().getScaledHeight();
+        if (this.minecraft != null && this.minecraft.getWindow() != null) {
+            int screenW = this.minecraft.getWindow().getGuiScaledWidth();
+            int screenH = this.minecraft.getWindow().getGuiScaledHeight();
             ClickGuiLayout.initializeWindowPosition(state, screenW, screenH);
         }
     }
     
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
+    }
+    
+    @Override
+    public void onClose() {
+        if (state.isEditingSlider()) {
+            ClickGuiState.SliderInputInfo editInfo = state.getEditingSlider();
+            if (editInfo != null && state.getOriginalSliderValue() != null) {
+                for (Module module : ModuleManager.getModules()) {
+                    if (!module.getName().equals(editInfo.moduleName)) continue;
+                    for (com.shyeuar.baity.gui.value.Value value : module.getValues()) {
+                        if (value instanceof com.shyeuar.baity.gui.value.SliderValue && value.getName().equals(editInfo.valueName)) {
+                            com.shyeuar.baity.gui.value.SliderValue sliderValue = (com.shyeuar.baity.gui.value.SliderValue) value;
+                            sliderValue.setValue(state.getOriginalSliderValue());
+                            break;
+                        }
+                    }
+                }
+            }
+            state.setEditingSlider(null);
+        }
+        super.onClose();
     }
     
     private String getTooltipText(String name) {
         return TooltipManager.getTooltipText(name);
     }
     
-    private net.minecraft.text.Text getTooltipTextWithColors(String name) {
+    private net.minecraft.network.chat.Component getTooltipTextWithColors(String name) {
         return TooltipManager.getTooltipTextWithColors(name);
     }
     

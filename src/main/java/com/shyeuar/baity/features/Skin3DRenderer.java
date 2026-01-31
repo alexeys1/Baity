@@ -1,19 +1,10 @@
 package com.shyeuar.baity.features;
 
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.SkinTextures;
-import net.minecraft.util.Identifier;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -22,6 +13,15 @@ import org.joml.Vector4f;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.PlayerSkin;
 
 public class Skin3DRenderer {
 
@@ -31,7 +31,7 @@ public class Skin3DRenderer {
     public static final boolean FAST_RENDER = false; 
 
     private static final double MAX_RENDER_DIST_SQ = 64.0 * 64.0;
-    private static final Map<Identifier, CachedSkinData> skinCache = new ConcurrentHashMap<>();
+    private static final Map<ResourceLocation, CachedSkinData> skinCache = new ConcurrentHashMap<>();
     private static final long CACHE_EXPIRE_MS = 60000;
 
     private static final Set<Object> registeredMainModels = Collections.newSetFromMap(new WeakHashMap<>());
@@ -77,25 +77,25 @@ public class Skin3DRenderer {
         }
     }
 
-    public static boolean inRange(PlayerEntityRenderState state) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+    public static boolean inRange(AvatarRenderState state) {
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return false;
-        double dx = state.x - mc.gameRenderer.getCamera().getPos().x;
-        double dy = state.y - mc.gameRenderer.getCamera().getPos().y;
-        double dz = state.z - mc.gameRenderer.getCamera().getPos().z;
+        double dx = state.x - mc.gameRenderer.getMainCamera().getPosition().x;
+        double dy = state.y - mc.gameRenderer.getMainCamera().getPosition().y;
+        double dz = state.z - mc.gameRenderer.getMainCamera().getPosition().z;
         return dx * dx + dy * dy + dz * dz <= MAX_RENDER_DIST_SQ;
     }
 
-    public static SkinData getOrCreateSkinData(PlayerEntityRenderState state) {
+    public static SkinData getOrCreateSkinData(AvatarRenderState state) {
         if (!isEnabled()) return null;
 
-        SkinTextures skinTextures = state.skinTextures;
+        PlayerSkin skinTextures = state.skin;
         if (skinTextures == null || skinTextures.body() == null) return null;
 
-        Identifier skinId = skinTextures.body().texturePath();
+        ResourceLocation skinId = skinTextures.body().texturePath();
         if (skinId == null) return null;
 
-        boolean slim = skinTextures.model() == net.minecraft.entity.player.PlayerSkinType.SLIM;
+        boolean slim = skinTextures.model() == net.minecraft.world.entity.player.PlayerModelType.SLIM;
 
         CachedSkinData cached = skinCache.get(skinId);
         if (cached != null && !cached.isExpired() && cached.slim == slim) {
@@ -140,38 +140,38 @@ public class Skin3DRenderer {
         skinCache.clear();
     }
 
-    private static NativeImage getSkinImage(Identifier id) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+    private static NativeImage getSkinImage(ResourceLocation id) {
+        Minecraft mc = Minecraft.getInstance();
         AbstractTexture tex = mc.getTextureManager().getTexture(id);
 
-        if (tex instanceof NativeImageBackedTexture nativeTexture) {
-            return nativeTexture.getImage();
+        if (tex instanceof DynamicTexture nativeTexture) {
+            return nativeTexture.getPixels();
         }
 
         return null;
     }
 
-    public static AbstractClientPlayerEntity findPlayerById(int entityId) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.world == null) return null;
+    public static AbstractClientPlayer findPlayerById(int entityId) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return null;
 
-        Entity entity = mc.world.getEntityById(entityId);
-        if (entity instanceof AbstractClientPlayerEntity player) {
+        Entity entity = mc.level.getEntity(entityId);
+        if (entity instanceof AbstractClientPlayer player) {
             return player;
         }
         return null;
     }
 
-    public static SkinData getOrCreateSkinDataForPlayer(AbstractClientPlayerEntity player) {
+    public static SkinData getOrCreateSkinDataForPlayer(AbstractClientPlayer player) {
         if (!isEnabled()) return null;
 
-        SkinTextures skinTextures = player.getSkin();
+        PlayerSkin skinTextures = player.getSkin();
         if (skinTextures == null || skinTextures.body() == null) return null;
 
-        Identifier skinId = skinTextures.body().texturePath();
+        ResourceLocation skinId = skinTextures.body().texturePath();
         if (skinId == null) return null;
 
-        boolean slim = skinTextures.model() == net.minecraft.entity.player.PlayerSkinType.SLIM;
+        boolean slim = skinTextures.model() == net.minecraft.world.entity.player.PlayerModelType.SLIM;
 
         CachedSkinData cached = skinCache.get(skinId);
         if (cached != null && !cached.isExpired() && cached.slim == slim) {
@@ -215,7 +215,7 @@ public class Skin3DRenderer {
     public enum OffsetProvider {
         HEAD {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.translate(0, -0.25, 0);
                 stack.scale(HEAD_VOXEL_SIZE, HEAD_VOXEL_SIZE, HEAD_VOXEL_SIZE);
                 stack.translate(0, 0.25, 0);
@@ -225,87 +225,87 @@ public class Skin3DRenderer {
         },
         BODY {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.scale(BODY_VOXEL_WIDTH, 1.035f, BASE_VOXEL_SIZE);
                 mesh.setPosition(0, -0.7f, 0);
             }
         },
         LEFT_ARM {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.scale(BASE_VOXEL_SIZE, 1.035f, BASE_VOXEL_SIZE);
                 mesh.setPosition(0.998f, -0.1f, 0);
             }
         },
         LEFT_ARM_SLIM {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.scale(BASE_VOXEL_SIZE, 1.035f, BASE_VOXEL_SIZE);
                 mesh.setPosition(0.499f, -0.1f, 0);
             }
         },
         RIGHT_ARM {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.scale(BASE_VOXEL_SIZE, 1.035f, BASE_VOXEL_SIZE);
                 mesh.setPosition(-0.998f, -0.1f, 0);
             }
         },
         RIGHT_ARM_SLIM {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.scale(BASE_VOXEL_SIZE, 1.035f, BASE_VOXEL_SIZE);
                 mesh.setPosition(-0.499f, -0.1f, 0);
             }
         },
         LEFT_LEG {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.scale(BASE_VOXEL_SIZE, 1.035f, BASE_VOXEL_SIZE);
                 mesh.setPosition(0, -0.1f, 0);
             }
         },
         RIGHT_LEG {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.scale(BASE_VOXEL_SIZE, 1.035f, BASE_VOXEL_SIZE);
                 mesh.setPosition(0, -0.1f, 0);
             }
         },
         FIRSTPERSON_LEFT_ARM {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.scale(BASE_VOXEL_SIZE, 1.035f, BASE_VOXEL_SIZE);
                 mesh.setPosition(0.998f, -0.1f, 0);
             }
         },
         FIRSTPERSON_LEFT_ARM_SLIM {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.scale(BASE_VOXEL_SIZE, 1.035f, BASE_VOXEL_SIZE);
                 mesh.setPosition(0.499f, -0.1f, 0);
             }
         },
         FIRSTPERSON_RIGHT_ARM {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.scale(BASE_VOXEL_SIZE, 1.035f, BASE_VOXEL_SIZE);
                 mesh.setPosition(-0.998f, -0.1f, 0);
             }
         },
         FIRSTPERSON_RIGHT_ARM_SLIM {
             @Override
-            public void applyOffset(MatrixStack stack, VoxelMesh mesh) {
+            public void applyOffset(PoseStack stack, VoxelMesh mesh) {
                 stack.scale(BASE_VOXEL_SIZE, 1.035f, BASE_VOXEL_SIZE);
                 mesh.setPosition(-0.499f, -0.1f, 0);
             }
         };
 
-        public abstract void applyOffset(MatrixStack stack, VoxelMesh mesh);
+        public abstract void applyOffset(PoseStack stack, VoxelMesh mesh);
     }
 
     public static class SkinData {
-        public Identifier skinId;
+        public ResourceLocation skinId;
         public boolean slim;
         public VoxelMesh head, body, leftArm, rightArm, leftLeg, rightLeg;
     }
@@ -367,21 +367,21 @@ public class Skin3DRenderer {
             this.zRot = 0;
         }
 
-        public void render(MatrixStack matrices, VertexConsumer vc, int light, int overlay, int color) {
+        public void render(PoseStack matrices, VertexConsumer vc, int light, int overlay, int color) {
             if (!visible || polygonCount == 0) return;
 
-            matrices.push();
+            matrices.pushPose();
             translateAndRotate(matrices);
-            compile(matrices.peek(), vc, light, overlay, color);
-            matrices.pop();
+            compile(matrices.last(), vc, light, overlay, color);
+            matrices.popPose();
         }
 
-        private void translateAndRotate(MatrixStack matrices) {
+        private void translateAndRotate(PoseStack matrices) {
             if (x != 0 || y != 0 || z != 0) {
                 matrices.translate(x / 16.0f, y / 16.0f, z / 16.0f);
             }
             if (xRot != 0 || yRot != 0 || zRot != 0) {
-                matrices.multiply(new Quaternionf().rotationZYX(zRot, yRot, xRot));
+                matrices.mulPose(new Quaternionf().rotationZYX(zRot, yRot, xRot));
             }
         }
 
@@ -390,9 +390,9 @@ public class Skin3DRenderer {
         };
         private final Vector3f tempNormal = new Vector3f();
 
-        private void compile(MatrixStack.Entry entry, VertexConsumer vc, int light, int overlay, int color) {
-            Matrix4f posMatrix = entry.getPositionMatrix();
-            Matrix3f normMatrix = entry.getNormalMatrix();
+        private void compile(PoseStack.Pose entry, VertexConsumer vc, int light, int overlay, int color) {
+            Matrix4f posMatrix = entry.pose();
+            Matrix3f normMatrix = entry.normal();
 
             for (int i = 0; i < polygonCount; i++) {
                 int base = i * FLOATS_PER_POLYGON;
@@ -405,12 +405,12 @@ public class Skin3DRenderer {
                     tempVec4[v].set(polygonData[off], polygonData[off + 1], polygonData[off + 2], 1.0f);
                     posMatrix.transform(tempVec4[v]);
 
-                    vc.vertex(tempVec4[v].x(), tempVec4[v].y(), tempVec4[v].z())
-                            .color(color)
-                            .texture(polygonData[off + 3], polygonData[off + 4])
-                            .overlay(overlay)
-                            .light(light)
-                            .normal(tempNormal.x(), tempNormal.y(), tempNormal.z());
+                    vc.addVertex(tempVec4[v].x(), tempVec4[v].y(), tempVec4[v].z())
+                            .setColor(color)
+                            .setUv(polygonData[off + 3], polygonData[off + 4])
+                            .setOverlay(overlay)
+                            .setLight(light)
+                            .setNormal(tempNormal.x(), tempNormal.y(), tempNormal.z());
                 }
             }
         }
@@ -670,13 +670,13 @@ public class Skin3DRenderer {
         private static boolean isPresent(NativeImage img, UV uv) {
             if (uv.u < 0 || uv.u >= img.getWidth() || uv.v < 0 || uv.v >= img.getHeight()) return false;
             
-            int alpha = img.getOpacity(uv.u, uv.v);
+            int alpha = img.getLuminanceOrAlpha(uv.u, uv.v);
             return alpha != 0;
         }
 
         private static boolean isSolid(NativeImage img, UV uv) {
             if (uv.u < 0 || uv.u >= img.getWidth() || uv.v < 0 || uv.v >= img.getHeight()) return false;
-            int alpha = img.getOpacity(uv.u, uv.v);
+            int alpha = img.getLuminanceOrAlpha(uv.u, uv.v);
             return alpha == 255;
         }
 

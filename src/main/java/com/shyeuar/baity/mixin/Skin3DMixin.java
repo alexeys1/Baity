@@ -1,18 +1,18 @@
 package com.shyeuar.baity.mixin;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.shyeuar.baity.features.Skin3DRenderer;
 import com.shyeuar.baity.features.Skin3DRenderer.OffsetProvider;
 import com.shyeuar.baity.features.Skin3DRenderer.SkinData;
 import com.shyeuar.baity.features.Skin3DRenderer.VoxelMesh;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.entity.PlayerEntityRenderer;
-import net.minecraft.client.render.entity.feature.Deadmau5FeatureRenderer;
-import net.minecraft.client.render.entity.model.BipedEntityModel;
-import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.player.PlayerSkinType;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.entity.layers.Deadmau5EarsLayer;
+import net.minecraft.client.renderer.entity.player.AvatarRenderer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.world.entity.player.PlayerModelType;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -23,8 +23,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 public class Skin3DMixin {
 
-    @Mixin(PlayerEntityModel.class)
-    public static abstract class PlayerModelMixin extends BipedEntityModel<PlayerEntityRenderState>
+    @Mixin(PlayerModel.class)
+    public static abstract class PlayerModelMixin extends HumanoidModel<AvatarRenderState>
             implements Skin3DRenderer.PlayerModelMarker {
 
         @Shadow public ModelPart leftSleeve;
@@ -50,9 +50,9 @@ public class Skin3DMixin {
             return this.baity$ignored;
         }
 
-        @Inject(method = "setAngles(Lnet/minecraft/client/render/entity/state/PlayerEntityRenderState;)V",
+        @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V",
                 at = @At("TAIL"))
-        private void baity$setupSkin3D(PlayerEntityRenderState state, CallbackInfo ci) {
+        private void baity$setupSkin3D(AvatarRenderState state, CallbackInfo ci) {
             if (baity$ignored) {
                 return;
             }
@@ -81,27 +81,27 @@ public class Skin3DMixin {
                 return;
             }
 
-            boolean slim = state.skinTextures != null &&
-                    state.skinTextures.model() == PlayerSkinType.SLIM;
+            boolean slim = state.skin != null &&
+                    state.skin.model() == PlayerModelType.SLIM;
 
-            if (state.hatVisible) {
+            if (state.showHat) {
                 Skin3DRenderer.injectMesh(this.hat, data.head, OffsetProvider.HEAD);
             }
-            if (state.jacketVisible) {
+            if (state.showJacket) {
                 Skin3DRenderer.injectMesh(jacket, data.body, OffsetProvider.BODY);
             }
-            if (state.leftSleeveVisible) {
+            if (state.showLeftSleeve) {
                 Skin3DRenderer.injectMesh(leftSleeve, data.leftArm,
                         slim ? OffsetProvider.LEFT_ARM_SLIM : OffsetProvider.LEFT_ARM);
             }
-            if (state.rightSleeveVisible) {
+            if (state.showRightSleeve) {
                 Skin3DRenderer.injectMesh(rightSleeve, data.rightArm,
                         slim ? OffsetProvider.RIGHT_ARM_SLIM : OffsetProvider.RIGHT_ARM);
             }
-            if (state.leftPantsLegVisible) {
+            if (state.showLeftPants) {
                 Skin3DRenderer.injectMesh(leftPants, data.leftLeg, OffsetProvider.LEFT_LEG);
             }
-            if (state.rightPantsLegVisible) {
+            if (state.showRightPants) {
                 Skin3DRenderer.injectMesh(rightPants, data.rightLeg, OffsetProvider.RIGHT_LEG);
             }
         }
@@ -113,12 +113,12 @@ public class Skin3DMixin {
         }
     }
 
-    @Mixin(PlayerEntityRenderer.class)
+    @Mixin(AvatarRenderer.class)
     public static abstract class EquipmentMixin
-            extends net.minecraft.client.render.entity.LivingEntityRenderer<
-                    net.minecraft.client.network.AbstractClientPlayerEntity,
-                    PlayerEntityRenderState,
-                    PlayerEntityModel> {
+            extends net.minecraft.client.renderer.entity.LivingEntityRenderer<
+                    net.minecraft.client.player.AbstractClientPlayer,
+                    AvatarRenderState,
+                    PlayerModel> {
 
         protected EquipmentMixin() {
             super(null, null, 0);
@@ -129,24 +129,24 @@ public class Skin3DMixin {
             Skin3DRenderer.registerMainModel(this.getModel());
         }
 
-        @Inject(method = "renderRightArm", at = @At("HEAD"))
+        @Inject(method = "renderRightHand", at = @At("HEAD"))
         private void baity$renderFirstPersonRightArm(
-                MatrixStack matrices,
-                net.minecraft.client.render.command.OrderedRenderCommandQueue queue,
+                PoseStack matrices,
+                net.minecraft.client.renderer.SubmitNodeCollector queue,
                 int light,
-                net.minecraft.util.Identifier skinTexture,
+                net.minecraft.resources.ResourceLocation skinTexture,
                 boolean sleeveVisible,
                 CallbackInfo ci
         ) {
             baity$setupFirstPersonArm(false, sleeveVisible);
         }
 
-        @Inject(method = "renderLeftArm", at = @At("HEAD"))
+        @Inject(method = "renderLeftHand", at = @At("HEAD"))
         private void baity$renderFirstPersonLeftArm(
-                MatrixStack matrices,
-                net.minecraft.client.render.command.OrderedRenderCommandQueue queue,
+                PoseStack matrices,
+                net.minecraft.client.renderer.SubmitNodeCollector queue,
                 int light,
-                net.minecraft.util.Identifier skinTexture,
+                net.minecraft.resources.ResourceLocation skinTexture,
                 boolean sleeveVisible,
                 CallbackInfo ci
         ) {
@@ -159,7 +159,7 @@ public class Skin3DMixin {
                 return;
             }
 
-            net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
             if (mc.player == null) {
                 return;
             }
@@ -169,7 +169,7 @@ public class Skin3DMixin {
                 return;
             }
 
-            PlayerEntityModel model = this.getModel();
+            PlayerModel model = this.getModel();
             boolean slim = data.slim;
             ModelPart sleeve;
             VoxelMesh mesh;
@@ -192,12 +192,12 @@ public class Skin3DMixin {
         }
     }
 
-    @Mixin(Deadmau5FeatureRenderer.class)
+    @Mixin(Deadmau5EarsLayer.class)
     public static class Deadmau5EarsMixin {
 
         @Shadow
         @Final
-        private BipedEntityModel<PlayerEntityRenderState> model;
+        private HumanoidModel<AvatarRenderState> model;
 
         @Inject(method = "<init>", at = @At("TAIL"))
         private void baity$markEarsModelAsIgnored(CallbackInfo ci) {
@@ -212,7 +212,7 @@ public class Skin3DMixin {
 
         @Shadow public boolean visible;
 
-        @Shadow public abstract void applyTransform(MatrixStack matrices);
+        @Shadow public abstract void translateAndRotate(PoseStack matrices);
 
         @Unique
         private VoxelMesh baity$injectedMesh = null;
@@ -240,22 +240,22 @@ public class Skin3DMixin {
             return this.baity$offsetProvider;
         }
 
-        @Inject(method = "render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumer;II)V",
+        @Inject(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;II)V",
                 at = @At("HEAD"), cancellable = true)
-        private void baity$renderInjectedMesh4(MatrixStack matrices, VertexConsumer vertices,
+        private void baity$renderInjectedMesh4(PoseStack matrices, VertexConsumer vertices,
                                                int light, int overlay, CallbackInfo ci) {
             baity$doRender(matrices, vertices, light, overlay, -1, ci);
         }
 
-        @Inject(method = "render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumer;III)V",
+        @Inject(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V",
                 at = @At("HEAD"), cancellable = true)
-        private void baity$renderInjectedMesh5(MatrixStack matrices, VertexConsumer vertices,
+        private void baity$renderInjectedMesh5(PoseStack matrices, VertexConsumer vertices,
                                                int light, int overlay, int color, CallbackInfo ci) {
             baity$doRender(matrices, vertices, light, overlay, color, ci);
         }
 
         @Unique
-        private void baity$doRender(MatrixStack matrices, VertexConsumer vertices,
+        private void baity$doRender(PoseStack matrices, VertexConsumer vertices,
                                     int light, int overlay, int color, CallbackInfo ci) {
             if (!visible || !baity$renderingEnabled || baity$injectedMesh == null || baity$offsetProvider == null) {
                 return;
@@ -265,11 +265,11 @@ public class Skin3DMixin {
                 return;
             }
 
-            matrices.push();
-            applyTransform(matrices);
+            matrices.pushPose();
+            translateAndRotate(matrices);
             baity$offsetProvider.applyOffset(matrices, baity$injectedMesh);
             baity$injectedMesh.render(matrices, vertices, light, overlay, color);
-            matrices.pop();
+            matrices.popPose();
 
             baity$renderingEnabled = false;
             ci.cancel();

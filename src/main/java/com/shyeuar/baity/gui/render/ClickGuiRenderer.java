@@ -6,18 +6,17 @@ import com.shyeuar.baity.gui.internal.ClickGuiState;
 import com.shyeuar.baity.gui.internal.ClickGuiLayout;
 import com.shyeuar.baity.gui.theme.Theme;
 import com.shyeuar.baity.gui.value.Value;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-
 import java.util.List;
 import java.util.function.Function;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 
 public class ClickGuiRenderer {
     
-    public static void render(DrawContext context, MinecraftClient client, 
+    public static void render(GuiGraphics context, Minecraft client, 
                              ClickGuiState state, Theme theme,
                              Function<String, String> getTooltipText,
-                             Function<String, net.minecraft.text.Text> getTooltipTextWithColors,
+                             Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
                              Function<Object, String> getDisplayTextFormatter,
                              ModuleStyleRenderer.TooltipInfo tooltipInfo,
                              double mouseX, double mouseY) {
@@ -32,7 +31,7 @@ public class ClickGuiRenderer {
         float scaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
 
-        var matrices = context.getMatrices();
+        var matrices = context.pose();
         matrices.pushMatrix();
         matrices.translate(state.getWindowX(), state.getWindowY());
         matrices.scale(scaleRatio, scaleRatio);
@@ -97,14 +96,14 @@ public class ClickGuiRenderer {
         }
     }
     
-    private static void renderWindowBackground(DrawContext context, Theme theme) {
+    private static void renderWindowBackground(GuiGraphics context, Theme theme) {
         GuiRenderUtil.drawRoundedRect(context, 0, 0, ClickGuiState.WIDTH, ClickGuiState.HEIGHT, 
                                       6, theme.BG.getRGB());
         GuiRenderUtil.stroke1px(context, 0, 0, ClickGuiState.WIDTH, ClickGuiState.HEIGHT, 
                                 new java.awt.Color(255, 255, 255, 20).getRGB());
     }
     
-    private static void renderCategoryBar(DrawContext context, MinecraftClient client,
+    private static void renderCategoryBar(GuiGraphics context, Minecraft client,
                                         ClickGuiState state, Theme theme) {
         float cateX = 20;
         float cateY = 30;
@@ -113,9 +112,9 @@ public class ClickGuiRenderer {
              com.shyeuar.baity.gui.value.ModuleCategory.values()) {
             boolean active = category == state.getSelectedCategory();
             String label = category.getDisplayName();
-            int w = client.textRenderer.getWidth(label);
+            int w = client.font.width(label);
             int color = active ? theme.FONT_C.getRGB() : theme.FONT.getRGB();
-            context.drawText(client.textRenderer, label, (int)cateX, (int)cateY, color, false);
+            context.drawString(client.font, label, (int)cateX, (int)cateY, color, false);
             
             if (active) {
                 float textLeft = cateX;
@@ -131,21 +130,21 @@ public class ClickGuiRenderer {
         }
     }
     
-    private static void renderPlaceholder(DrawContext context, MinecraftClient client,
+    private static void renderPlaceholder(GuiGraphics context, Minecraft client,
                                          Theme theme, float modY) {
         String placeholderText = "not coming soon~~~";
-        int textWidth = client.textRenderer.getWidth(placeholderText);
+        int textWidth = client.font.width(placeholderText);
         int textX = (int)((ClickGuiState.WIDTH - textWidth) / 2);
         int textY = (int)(modY + 50);
-        context.drawText(client.textRenderer, placeholderText, textX, textY, theme.FONT.getRGB(), false);
+        context.drawString(client.font, placeholderText, textX, textY, theme.FONT.getRGB(), false);
     }
     
-    private static void renderModule(DrawContext context, MinecraftClient client,
+    private static void renderModule(GuiGraphics context, Minecraft client,
                                    Module module, Theme theme, ClickGuiState state,
                                    float width, float modY,
                                    float mouseX, float mouseY,
                                    Function<String, String> getTooltipText,
-                                   Function<String, net.minecraft.text.Text> getTooltipTextWithColors,
+                                   Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
                                    ModuleStyleRenderer.TooltipInfo tooltipInfo) {
         ModuleStyleRenderer.renderModule(context, client, module, theme,
                                         20, modY, width, 25,
@@ -154,12 +153,12 @@ public class ClickGuiRenderer {
                                         getTooltipText, getTooltipTextWithColors, tooltipInfo);
     }
     
-    private static float renderSubOptions(DrawContext context, MinecraftClient client,
+    private static float renderSubOptions(GuiGraphics context, Minecraft client,
                                          Module module, Theme theme, ClickGuiState state,
                                          float modY, float visibleHeight,
                                          float mouseX, float mouseY,
                                          Function<String, String> getTooltipText,
-                                         Function<String, net.minecraft.text.Text> getTooltipTextWithColors,
+                                         Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
                                          Function<Object, String> getDisplayTextFormatter,
                                          ModuleStyleRenderer.TooltipInfo tooltipInfo) {
         int subOptionCount = 0;
@@ -175,7 +174,8 @@ public class ClickGuiRenderer {
         int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
         ClickGuiLayout.ContainerDimensions dims = 
             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
-        int containerHeight = (int)(dims.height * expandProgress);
+        int fullContainerHeight = subOptionCount * dims.subOptionHeight + dims.padding * 2 + extraHeight;
+        int containerHeight = (int)(fullContainerHeight * expandProgress);
 
         int containerBg = new java.awt.Color(30, 30, 30, 200).getRGB();
         int containerX1 = 30;
@@ -190,12 +190,14 @@ public class ClickGuiRenderer {
         int innerVisible = Math.max(0, containerHeight - dims.padding * 2);
         if (innerVisible >= dims.subOptionHeight / 2) {
             float subModY = modY + dims.padding;
-            int maxVisibleOptions = Math.max(0, innerVisible / dims.subOptionHeight);
-            int renderedCount = 0;
             
+            Value previousValue = null;
             for (Value value : module.getValues()) {
                 if ("enabled".equals(value.getName())) continue;
-                if (renderedCount >= maxVisibleOptions) break;
+                
+                if (value.needsSeparatorBefore(previousValue)) {
+                    subModY += 12; 
+                }
                 
                 float currentHeight = dims.subOptionHeight;
                 if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.COLOR_PALETTE) {
@@ -203,7 +205,7 @@ public class ClickGuiRenderer {
                 }
                 
                 float localAlphaF = Math.min(1f, Math.max(0f, 
-                    (innerVisible - renderedCount * dims.subOptionHeight) / (float)dims.subOptionHeight));
+                    (innerVisible - (subModY - modY - dims.padding)) / (float)dims.subOptionHeight));
                 int localAlpha = (int)(255 * expandProgress * localAlphaF);
                 
                 int subX1 = containerX1 + 4;
@@ -227,14 +229,14 @@ public class ClickGuiRenderer {
                 }
                 
                 subModY += currentHeight;
-                renderedCount++;
+                previousValue = value;
             }
         }
         
         return containerHeight + 5;
     }
     
-    private static void renderScrollbar(DrawContext context, Theme theme,
+    private static void renderScrollbar(GuiGraphics context, Theme theme,
                                        ClickGuiLayout.ScrollbarInfo info) {
         float barX1 = ClickGuiState.WIDTH - 6;
         float barX2 = ClickGuiState.WIDTH - 2;
@@ -242,9 +244,9 @@ public class ClickGuiRenderer {
                                      info.barY + info.barHeight, 2, theme.BG_2.getRGB());
     }
     
-    private static void renderWatermark(DrawContext context, MinecraftClient client, Theme theme) {
+    private static void renderWatermark(GuiGraphics context, Minecraft client, Theme theme) {
         String watermark = "Baity by 11YearCookieBuff (AKA raueyhs , shyeuar)";
-        int wmRawWidth = client.textRenderer.getWidth(watermark);
+        int wmRawWidth = client.font.width(watermark);
         float wmScale = 0.70f;
         float scaledWidth = wmScale * wmRawWidth;
         
@@ -252,15 +254,15 @@ public class ClickGuiRenderer {
         float baseY = 8;
         
         int wmColor = new java.awt.Color(120, 124, 132).getRGB();
-        var matrices = context.getMatrices();
+        var matrices = context.pose();
         matrices.pushMatrix();
         matrices.scale(wmScale, wmScale);
-        context.drawText(client.textRenderer, watermark, 
+        context.drawString(client.font, watermark, 
                         (int)(baseX / wmScale), (int)(baseY / wmScale), wmColor, false);
         matrices.popMatrix();
     }
     
-    private static void renderTooltip(DrawContext context, MinecraftClient client,
+    private static void renderTooltip(GuiGraphics context, Minecraft client,
                                      Theme theme, ClickGuiState state,
                                      double mouseX, double mouseY) {
         float tooltipScaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
@@ -269,9 +271,9 @@ public class ClickGuiRenderer {
         
         int rawTextWidth;
         if (state.getHoveredTooltipText() != null) {
-            rawTextWidth = client.textRenderer.getWidth(state.getHoveredTooltipText());
+            rawTextWidth = client.font.width(state.getHoveredTooltipText());
         } else {
-            rawTextWidth = client.textRenderer.getWidth(state.getHoveredTooltip());
+            rawTextWidth = client.font.width(state.getHoveredTooltip());
         }
         
         int bgPadding = 10;
@@ -282,8 +284,8 @@ public class ClickGuiRenderer {
         int scaledTooltipWidth = (int)(rawTooltipWidth * tipScale);
         int scaledTooltipHeight = (int)(rawTooltipHeight * tipScale);
         
-        int screenWidth = client.getWindow().getScaledWidth();
-        int screenHeight = client.getWindow().getScaledHeight();
+        int screenWidth = client.getWindow().getGuiScaledWidth();
+        int screenHeight = client.getWindow().getGuiScaledHeight();
         
         int finalTooltipX = (int)mouseX + offsetFromCursor;
         int finalTooltipY = (int)mouseY - offsetFromCursor - scaledTooltipHeight;
@@ -301,7 +303,7 @@ public class ClickGuiRenderer {
             finalTooltipX = 2;
         }
         
-        var guiMatrices = context.getMatrices();
+        var guiMatrices = context.pose();
         guiMatrices.pushMatrix();
         guiMatrices.translate((float)finalTooltipX, (float)finalTooltipY);
         guiMatrices.scale(tipScale, tipScale);
@@ -314,9 +316,9 @@ public class ClickGuiRenderer {
         int textY = (rawTooltipHeight - rawFontHeight) / 2;
         
         if (state.getHoveredTooltipText() != null) {
-            context.drawText(client.textRenderer, state.getHoveredTooltipText(), textX, textY, 0xFFFFFFFF, false);
+            context.drawString(client.font, state.getHoveredTooltipText(), textX, textY, 0xFFFFFFFF, false);
         } else if (state.getHoveredTooltip() != null) {
-            context.drawText(client.textRenderer, state.getHoveredTooltip(), textX, textY, theme.FONT_C.getRGB() | 0xFF000000, false);
+            context.drawString(client.font, state.getHoveredTooltip(), textX, textY, theme.FONT_C.getRGB() | 0xFF000000, false);
         }
 
         guiMatrices.popMatrix();

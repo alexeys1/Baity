@@ -1,21 +1,21 @@
 package com.shyeuar.baity.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import net.minecraft.client.gui.hud.InGameHud;
-import net.minecraft.client.option.Perspective;
+import net.minecraft.client.CameraType;
+import net.minecraft.client.gui.Gui;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Mixin(InGameHud.class)
+@Mixin(Gui.class)
 public class CrosshairMixin {
-    @ModifyExpressionValue(method = "renderCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/option/GameOptions;getPerspective()Lnet/minecraft/client/option/Perspective;"))
-    private Perspective baity$forceCrosshairInThirdPersonRear(Perspective original) {
+    @ModifyExpressionValue(method = "renderCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Options;getCameraType()Lnet/minecraft/client/CameraType;"))
+    private CameraType baity$forceCrosshairInThirdPersonRear(CameraType original) {
         com.shyeuar.baity.gui.module.Module smolPeopleModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("SmolPeople");
         if (smolPeopleModule == null || !smolPeopleModule.isEnabled()) return original;
         
         boolean crosshairMode = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(smolPeopleModule, "crosshair", false);
-        if (crosshairMode && original == Perspective.THIRD_PERSON_BACK) {
-            return Perspective.FIRST_PERSON;
+        if (crosshairMode && original == CameraType.THIRD_PERSON_BACK) {
+            return CameraType.FIRST_PERSON;
         }
         return original;
     }

@@ -6,10 +6,9 @@ import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.gui.value.ButtonValue;
 import com.shyeuar.baity.gui.value.Value;
 import com.shyeuar.baity.utils.KeyMappingUtils;
-import net.minecraft.client.MinecraftClient;
-
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.Minecraft;
 
 public class KeybindManager {
     
@@ -58,8 +57,8 @@ public class KeybindManager {
         cacheDirty = false;
     }
     
-    public static void handleModuleKeybinds(MinecraftClient client, long windowHandle) {
-        if (client.currentScreen != null) return;
+    public static void handleModuleKeybinds(Minecraft client, long windowHandle) {
+        if (client.screen != null) return;
         
         updateKeybindCache();
         

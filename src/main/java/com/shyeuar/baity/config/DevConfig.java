@@ -1,9 +1,9 @@
 package com.shyeuar.baity.config;
 
-import net.minecraft.entity.player.PlayerEntity;
 import java.util.HashSet;
 import java.util.Arrays;
 import java.util.Set;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * 开发者配置类
@@ -19,8 +19,8 @@ public class DevConfig {
     public static final String DEV_PREFIX = "[Dev]";
     public static final int DEV_PREFIX_COLOR = 0xFF6B6B;
     
-    public static boolean isDeveloper(PlayerEntity player) {
+    public static boolean isDeveloper(Player player) {
         if (player == null) return false;
-        return DEV_UUIDS.contains(player.getUuid().toString());
+        return DEV_UUIDS.contains(player.getUUID().toString());
     }
 }

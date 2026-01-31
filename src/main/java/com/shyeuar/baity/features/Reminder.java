@@ -2,19 +2,19 @@ package com.shyeuar.baity.features;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.text.Text;
-import net.minecraft.text.MutableText;
-import net.minecraft.util.Formatting;
 import com.shyeuar.baity.utils.TickSchedulerUtils;
 import com.shyeuar.baity.utils.MessageUtils;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 @Environment(EnvType.CLIENT)
 public class Reminder {
@@ -89,11 +89,12 @@ public class Reminder {
             boolean meowEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "meowalert", false);
             if (!meowEnabled) return;
             
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             if (client.player == null) return;
             
             String playerName = client.player.getName().getString();
-            String messageContent = message.getString();
+            String fullMessage = message.getString();
+            String messageContent = extractMessageContent(fullMessage);
             
             if (messageContainsName(messageContent, playerName)) {
                 long currentTime = System.currentTimeMillis();
@@ -105,15 +106,44 @@ public class Reminder {
         });
         meowAlertRegistered = true;
     }
-    
-    private boolean messageContainsName(String message, String name) {
-        if (message == null || name == null) return false;
-        return message.toLowerCase().contains(name.toLowerCase());
+
+    private String extractMessageContent(String fullMessage) {
+        if (fullMessage == null || fullMessage.isEmpty()) {
+            return "";
+        }
+        
+        int colonIndex = fullMessage.indexOf(':');
+        int spaceIndex = fullMessage.indexOf(' ');
+        
+        if (colonIndex != -1) {
+            String afterColon = fullMessage.substring(colonIndex + 1).trim();
+            return afterColon;
+        }
+        
+        if (spaceIndex != -1) {
+            String afterSpace = fullMessage.substring(spaceIndex + 1).trim();
+            return afterSpace;
+        }
+        
+        return fullMessage;
     }
     
-    private void playMeowSound(net.minecraft.client.network.ClientPlayerEntity player) {
-        player.playSound(net.minecraft.sound.SoundEvents.ENTITY_CAT_AMBIENT, MEOW_VOLUME * 5.0f, MEOW_PITCH);
-        player.playSound(net.minecraft.sound.SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, MEOW_VOLUME * 5.0f, 5.0f);
+    private boolean messageContainsName(String message, String name) {
+        if (message == null || name == null || name.isEmpty()) return false;
+        String lowerMessage = message.toLowerCase();
+        String lowerName = name.toLowerCase();
+        int index = lowerMessage.indexOf(lowerName);
+        if (index == -1) return false;
+        int before = index - 1;
+        int after = index + lowerName.length();
+        boolean validBefore = before < 0 || !Character.isLetterOrDigit(lowerMessage.charAt(before));
+        boolean validAfter = after >= lowerMessage.length() || !Character.isLetterOrDigit(lowerMessage.charAt(after));
+        return validBefore && validAfter;
+    }
+    
+    private void playMeowSound(net.minecraft.client.player.LocalPlayer player) {
+        player.playSound(net.minecraft.sounds.SoundEvents.CAT_AMBIENT, MEOW_VOLUME * 5.0f, MEOW_PITCH);
+        player.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, MEOW_VOLUME * 5.0f, 5.0f);
     }
     
     private void tickCookieReminder() {
@@ -171,32 +201,32 @@ public class Reminder {
     }
     
     private void sendCookieNotification() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         
-        MutableText prefix = MessageUtils.createBaityPrefix();
-        MutableText message = Text.literal("You don't have a").formatted(Formatting.RED, Formatting.BOLD)
-                .append(Text.literal(" Booster Cookie ").formatted(Formatting.LIGHT_PURPLE, Formatting.BOLD))
-                .append(Text.literal("active!").formatted(Formatting.RED, Formatting.BOLD));
+        MutableComponent prefix = MessageUtils.createBaityPrefix();
+        MutableComponent message = Component.literal("You don't have a").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)
+                .append(Component.literal(" Booster Cookie ").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD))
+                .append(Component.literal("active!").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
         
         MessageUtils.sendCustomMessage(prefix.append(message));
-        client.player.playSound(net.minecraft.sound.SoundEvents.ENTITY_BLAZE_DEATH, 1.0f, 0.75f);
+        client.player.playSound(net.minecraft.sounds.SoundEvents.BLAZE_DEATH, 1.0f, 0.75f);
         showCookieAnimation(client, client.player);
     }
     
     private void sendGodPotionNotification(int remainingMinutes) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         
-        MutableText prefix = MessageUtils.createBaityPrefix();
-        MutableText message = Text.literal("Your ").formatted(Formatting.YELLOW, Formatting.BOLD)
-                .append(Text.literal("God Potion ").formatted(Formatting.GOLD, Formatting.BOLD))
-                .append(Text.literal("will expire in ").formatted(Formatting.YELLOW, Formatting.BOLD))
-                .append(Text.literal(formatMinutes(remainingMinutes)).formatted(Formatting.RED, Formatting.BOLD))
-                .append(Text.literal("!").formatted(Formatting.YELLOW, Formatting.BOLD));
+        MutableComponent prefix = MessageUtils.createBaityPrefix();
+        MutableComponent message = Component.literal("Your ").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)
+                .append(Component.literal("God Potion ").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD))
+                .append(Component.literal("will expire in ").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD))
+                .append(Component.literal(formatMinutes(remainingMinutes)).withStyle(ChatFormatting.RED, ChatFormatting.BOLD))
+                .append(Component.literal("!").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
         
         MessageUtils.sendCustomMessage(prefix.append(message));
-        client.player.playSound(net.minecraft.sound.SoundEvents.ENTITY_BLAZE_DEATH, 1.0f, 0.75f);
+        client.player.playSound(net.minecraft.sounds.SoundEvents.BLAZE_DEATH, 1.0f, 0.75f);
         showGodPotionAnimation(client, client.player);
     }
     
@@ -227,28 +257,28 @@ public class Reminder {
         return minutes + "m";
     }
     
-    private void showCookieAnimation(MinecraftClient client, net.minecraft.client.network.ClientPlayerEntity player) {
-        if (client.world == null) return;
-        client.gameRenderer.showFloatingItem(COOKIE_DISPLAY_ICON);
-        client.particleManager.addEmitter(player, ParticleTypes.OMINOUS_SPAWNING, 10);
+    private void showCookieAnimation(Minecraft client, net.minecraft.client.player.LocalPlayer player) {
+        if (client.level == null) return;
+        client.gameRenderer.displayItemActivation(COOKIE_DISPLAY_ICON);
+        client.particleEngine.createTrackingEmitter(player, ParticleTypes.OMINOUS_SPAWNING, 10);
     }
     
-    private void showGodPotionAnimation(MinecraftClient client, net.minecraft.client.network.ClientPlayerEntity player) {
-        if (client.world == null) return;
-        client.gameRenderer.showFloatingItem(GOD_POTION_DISPLAY_ICON);
-        client.particleManager.addEmitter(player, ParticleTypes.OMINOUS_SPAWNING, 10);
+    private void showGodPotionAnimation(Minecraft client, net.minecraft.client.player.LocalPlayer player) {
+        if (client.level == null) return;
+        client.gameRenderer.displayItemActivation(GOD_POTION_DISPLAY_ICON);
+        client.particleEngine.createTrackingEmitter(player, ParticleTypes.OMINOUS_SPAWNING, 10);
     }
     
     private boolean isInSkyBlock() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null || client.player == null) return false;
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null || client.player == null) return false;
         
-        if (client.isInSingleplayer()) {
+        if (client.isLocalServer()) {
             return net.fabricmc.loader.api.FabricLoader.getInstance().isDevelopmentEnvironment();
         }
         
-        if (client.getCurrentServerEntry() != null) {
-            String serverAddress = client.getCurrentServerEntry().address.toLowerCase();
+        if (client.getCurrentServer() != null) {
+            String serverAddress = client.getCurrentServer().ip.toLowerCase();
             return serverAddress.contains("hypixel");
         }
         
@@ -256,19 +286,19 @@ public class Reminder {
     }
     
     private String getTabFooterText() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.inGameHud == null || client.inGameHud.getPlayerListHud() == null) return null;
+        Minecraft client = Minecraft.getInstance();
+        if (client.gui == null || client.gui.getTabList() == null) return null;
         
         try {
-            net.minecraft.text.Text footer = ((com.shyeuar.baity.mixin.PlayerListHudAccessor) client.inGameHud.getPlayerListHud()).getFooter();
+            net.minecraft.network.chat.Component footer = ((com.shyeuar.baity.mixin.PlayerListHudAccessor) client.gui.getTabList()).getFooter();
             return footer != null ? footer.getString() : null;
         } catch (Exception e) {
             try {
-                if (client.getNetworkHandler() != null) {
-                    var playerList = client.getNetworkHandler().getPlayerList();
+                if (client.getConnection() != null) {
+                    var playerList = client.getConnection().getOnlinePlayers();
                     for (var entry : playerList) {
-                        if (entry.getDisplayName() != null) {
-                            String name = entry.getDisplayName().getString();
+                        if (entry.getTabListDisplayName() != null) {
+                            String name = entry.getTabListDisplayName().getString();
                             if (name.contains("Cookie Buff")) {
                                 return name;
                             }

@@ -3,11 +3,6 @@ package com.shyeuar.baity.mixin;
 import com.shyeuar.baity.features.FancyDmgSplash;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import net.minecraft.client.render.entity.ArmorStandEntityRenderer;
-import net.minecraft.client.render.entity.state.ArmorStandEntityRenderState;
-import net.minecraft.entity.decoration.ArmorStandEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,8 +13,13 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.minecraft.client.renderer.entity.ArmorStandRenderer;
+import net.minecraft.client.renderer.entity.state.ArmorStandRenderState;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.phys.Vec3;
 
-@Mixin(ArmorStandEntityRenderer.class)
+@Mixin(ArmorStandRenderer.class)
 public class SkyblockDamageMixin {
     
    
@@ -32,9 +32,9 @@ public class SkyblockDamageMixin {
     @Unique
     private static long lastCleanupTime = 0;
    
-    @Inject(method = "updateRenderState(Lnet/minecraft/entity/decoration/ArmorStandEntity;Lnet/minecraft/client/render/entity/state/ArmorStandEntityRenderState;F)V", 
+    @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/decoration/ArmorStand;Lnet/minecraft/client/renderer/entity/state/ArmorStandRenderState;F)V", 
             at = @At("TAIL"))
-    private void baity$onUpdateRenderState(ArmorStandEntity armorStand, ArmorStandEntityRenderState state, 
+    private void baity$onUpdateRenderState(ArmorStand armorStand, ArmorStandRenderState state, 
                                             float tickDelta, CallbackInfo ci) {
         
         if (!armorStand.hasCustomName() || armorStand.getCustomName() == null) {
@@ -56,8 +56,8 @@ public class SkyblockDamageMixin {
             return;
         }
         
-        state.invisible = true;
-        state.displayName = null;
+        state.isInvisible = true;
+        state.nameTag = null;
         
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastCleanupTime > 5000) {
@@ -70,9 +70,9 @@ public class SkyblockDamageMixin {
             
             try {
                 double damage = parseDamageValue(customName);
-                Vec3d targetPos = new Vec3d(armorStand.getX(), armorStand.getY(), armorStand.getZ());
+                Vec3 targetPos = new Vec3(armorStand.getX(), armorStand.getY(), armorStand.getZ());
                 
-                Text originalText = armorStand.getCustomName();
+                Component originalText = armorStand.getCustomName();
                 
                 FancyDmgSplash.addDamageNumber(damage, targetPos, originalText);
                 

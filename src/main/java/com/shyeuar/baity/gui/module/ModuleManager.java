@@ -127,10 +127,10 @@ public class ModuleManager {
             }
         );
         
-        Module antiSwimModule = ModuleRegistry.registerModuleWithValues(
-            "AntiSwim", "AntiSwim", ModuleCategory.QOL,
-            () -> ConfigManager.antiSwimEnabled,
-            val -> ConfigManager.antiSwimEnabled = val,
+        Module noSwimChangeModule = ModuleRegistry.registerModuleWithValues(
+            "NoSwimChange", "NoSwimChange", ModuleCategory.QOL,
+            () -> ConfigManager.noSwimChangeEnabled,
+            val -> ConfigManager.noSwimChangeEnabled = val,
             new Option[]{
                 new Option("disable swim pose", "disable swim pose", true, ModuleCategory.QOL),
                 new Option("disable swim eye height", "disable swim eye height", true, ModuleCategory.QOL)
@@ -138,17 +138,17 @@ public class ModuleManager {
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
                     "disable swim pose",
-                    () -> ConfigManager.antiSwimDisablePose,
-                    val -> ConfigManager.antiSwimDisablePose = (Boolean) val
+                    () -> ConfigManager.noSwimChangeDisablePose,
+                    val -> ConfigManager.noSwimChangeDisablePose = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "disable swim eye height",
-                    () -> ConfigManager.antiSwimDisableEyeHeight,
-                    val -> ConfigManager.antiSwimDisableEyeHeight = (Boolean) val
+                    () -> ConfigManager.noSwimChangeDisableEyeHeight,
+                    val -> ConfigManager.noSwimChangeDisableEyeHeight = (Boolean) val
                 )
             }
         );
-        antiSwimModule.setEnabled(true);
+        noSwimChangeModule.setEnabled(true);
         
         ModuleRegistry.registerModuleWithValues(
             "Muffler", "Muffler", ModuleCategory.QOL,
@@ -311,7 +311,7 @@ public class ModuleManager {
         TooltipManager.registerTooltip("BlockAnimation", "Restored the blocking animation of version 1.8", 0xFFFFFF);
         TooltipManager.registerTooltip("PepCat", "Play an animation and give pep talk when you died. It's a skill issue!", 0xFFFFFF);
         TooltipManager.registerTooltip("RadialMenu", "A roulette tool that invokes a shortcut command", 0xFFFFFF);
-        TooltipManager.registerTooltip("AntiSwim", "Only disables the swimming pose and eye height change on your client.", 0xFFFFFF);
+        TooltipManager.registerTooltip("NoSwimChange", "Only disables the swimming pose and eye height change on your client.", 0xFFFFFF);
         TooltipManager.registerTooltip("meowalert", 
             MessageUtils.createColoredText("play a ", 0xFFFFFF)
                 .append(MessageUtils.createColoredText("ᯠ₋ ̫ ₋.ᯄ ੭", 0xFFC0CB))

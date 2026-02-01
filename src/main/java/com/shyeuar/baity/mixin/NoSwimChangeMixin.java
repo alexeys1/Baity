@@ -3,7 +3,7 @@ package com.shyeuar.baity.mixin;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.shyeuar.baity.utils.AntiSwimUtils;
+import com.shyeuar.baity.utils.NoSwimChangeUtils;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.api.EnvType;
 import net.minecraft.client.Camera;
@@ -21,22 +21,21 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-public class AntiSwimMixin {
+public class NoSwimChangeMixin {
 
     @Mixin(AvatarRenderer.class)
     public static class PlayerRendererTransformMixin {
 
-        @Inject(method = "setupRotations(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;FF)V",
-                at = @At("HEAD"))
+        @Inject(method = "setupRotations", at = @At("HEAD"))
         private void baity$preventSwimTransform(AvatarRenderState state, PoseStack matrixStack, float f, float g, CallbackInfo ci) {
-            if (!AntiSwimUtils.isSelfPlayerById(state.id)) return;
-            if (!AntiSwimUtils.isDisablePoseActive()) return;
+            if (!NoSwimChangeUtils.isSelfPlayerById(state.id)) return;
+            if (!NoSwimChangeUtils.isDisablePoseActive()) return;
 
             if (state.isVisuallySwimming || state.swimAmount > 0.0F) {
                 state.isVisuallySwimming = false;
                 state.swimAmount = 0.0F;
 
-                if (AntiSwimUtils.isSneaking()) {
+                if (NoSwimChangeUtils.isSneaking()) {
                     state.isCrouching = true;
                 }
             }
@@ -49,14 +48,14 @@ public class AntiSwimMixin {
         @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V",
                 at = @At("HEAD"))
         private void baity$modifySwimmingPose(AvatarRenderState state, CallbackInfo ci) {
-            if (!AntiSwimUtils.isSelfPlayerById(state.id)) return;
-            if (!AntiSwimUtils.isDisablePoseActive()) return;
+            if (!NoSwimChangeUtils.isSelfPlayerById(state.id)) return;
+            if (!NoSwimChangeUtils.isDisablePoseActive()) return;
 
             if (state.isVisuallySwimming || state.swimAmount > 0.0F) {
                 state.isVisuallySwimming = false;
                 state.swimAmount = 0.0F;
 
-                if (AntiSwimUtils.isSneaking()) {
+                if (NoSwimChangeUtils.isSneaking()) {
                     state.isCrouching = true;
                 }
             }
@@ -69,17 +68,17 @@ public class AntiSwimMixin {
         @ModifyExpressionValue(method = "setup", 
                 at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;lerp(FFF)F", ordinal = 1))
         private float baity$modifyEyeHeightLerp(float original, @Local(argsOnly = true) Entity focusedEntity) {
-            if (!AntiSwimUtils.isDisableEyeHeightActive()) return original;
+            if (!NoSwimChangeUtils.isDisableEyeHeightActive()) return original;
             
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || focusedEntity != mc.player) return original;
-            
-            if (mc.player.isInWater() || mc.player.getPose() == Pose.SWIMMING) {
-                return AntiSwimUtils.STANDING_EYE_HEIGHT;
+
+            if (mc.player.isUnderWater() || NoSwimChangeUtils.isPlayerInWaterBlock() || mc.player.getPose() == Pose.SWIMMING) {
+                return NoSwimChangeUtils.STANDING_EYE_HEIGHT;
             }
-            
+
             if (original < 0.8f) {
-                return AntiSwimUtils.STANDING_EYE_HEIGHT;
+                return NoSwimChangeUtils.STANDING_EYE_HEIGHT;
             }
 
             return original;
@@ -89,13 +88,12 @@ public class AntiSwimMixin {
     @Mixin(AvatarRenderer.class)
     public static class PlayerNameTagMixin {
 
-        @Inject(method = "submitNameTag(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
-                at = @At("HEAD"))
+        @Inject(method = "submitNameTag", at = @At("HEAD"))
         private void baity$adjustNameTagHeight(AvatarRenderState state, com.mojang.blaze3d.vertex.PoseStack matrices, net.minecraft.client.renderer.SubmitNodeCollector queue, net.minecraft.client.renderer.state.CameraRenderState cameraState, CallbackInfo ci) {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null) return;
-            if (!AntiSwimUtils.isSelfPlayerById(state.id)) return;
-            if (!AntiSwimUtils.isDisablePoseActive()) return;
+            if (!NoSwimChangeUtils.isSelfPlayerById(state.id)) return;
+            if (!NoSwimChangeUtils.isDisablePoseActive()) return;
             if (mc.player.getPose() != Pose.SWIMMING) return;
 
             matrices.translate(0, 1.2, 0);
@@ -103,7 +101,7 @@ public class AntiSwimMixin {
     }
 
     @Mixin(Entity.class)
-    public static class PlayerRaycastMixin {
+    public static class EntityEyeHeightMixin {
 
         @Inject(method = "getEyePosition(F)Lnet/minecraft/world/phys/Vec3;", at = @At("HEAD"), cancellable = true)
         private void baity$modifyCameraPosVec(float tickDelta, CallbackInfoReturnable<Vec3> cir) {
@@ -113,15 +111,38 @@ public class AntiSwimMixin {
             
             Entity self = (Entity) (Object) this;
             if (!(self instanceof Player)) return;
-            if (!AntiSwimUtils.isSelfPlayer(self)) return;
-            if (!AntiSwimUtils.isDisableEyeHeightActive()) return;
+            if (!NoSwimChangeUtils.isSelfPlayer(self)) return;
+            if (!NoSwimChangeUtils.isDisableEyeHeightActive()) return;
 
             if (mc.player.getPose() != Pose.SWIMMING) return;
 
             double x = mc.player.getX();
-            double y = mc.player.getY() + AntiSwimUtils.STANDING_EYE_HEIGHT;
+            double y = mc.player.getY() + NoSwimChangeUtils.STANDING_EYE_HEIGHT;
             double z = mc.player.getZ();
             cir.setReturnValue(new Vec3(x, y, z));
         }
+
+        @Inject(method = "getEyeHeight(Lnet/minecraft/world/entity/Pose;)F", at = @At("HEAD"), cancellable = true)
+        private void baity$modifyEyeHeight(Pose pose, CallbackInfoReturnable<Float> cir) {
+            if (FabricLoader.getInstance().getEnvironmentType() != EnvType.CLIENT) return;
+            if (!NoSwimChangeUtils.isDisableEyeHeightActive()) return;
+            
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null) return;
+            
+            Entity self = (Entity) (Object) this;
+            if (!(self instanceof Player)) return;
+            if (!NoSwimChangeUtils.isSelfPlayer(self)) return;
+
+            if (pose == Pose.SWIMMING) {
+                cir.setReturnValue(NoSwimChangeUtils.STANDING_EYE_HEIGHT);
+                return;
+            }
+
+            if (mc.player.isUnderWater() || NoSwimChangeUtils.isPlayerInWaterBlock() || mc.player.getPose() == Pose.SWIMMING) {
+                cir.setReturnValue(NoSwimChangeUtils.STANDING_EYE_HEIGHT);
+            }
+        }
     }
 }
+

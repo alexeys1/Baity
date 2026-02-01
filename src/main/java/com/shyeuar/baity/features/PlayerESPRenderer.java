@@ -87,8 +87,8 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
         try {
             float heightOffset = player.getBbHeight() + 0.5f;
             
-            Module antiSwimModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("AntiSwim");
-            if (antiSwimModule != null && antiSwimModule.isEnabled()) {
+            Module noSwimChangeModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("NoSwimChange");
+            if (noSwimChangeModule != null && noSwimChangeModule.isEnabled()) {
                 if (player == mc.player && player.getPose() == net.minecraft.world.entity.Pose.SWIMMING) {
                     heightOffset = 1.8f + 0.5f;
                 }

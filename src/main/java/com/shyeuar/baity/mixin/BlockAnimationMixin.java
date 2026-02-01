@@ -157,6 +157,10 @@ public abstract class BlockAnimationMixin {
             
             Minecraft mc = Minecraft.getInstance();
             if (mc == null || mc.player == null) return;
+            
+            AvatarRenderState avatarState = (AvatarRenderState) renderState;
+            if (avatarState.id != mc.player.getId()) return;
+            
             if (!BlockAnimationUtils.isPlayerBlockingWithSword(mc.player)) return;
 
             InteractionHand blockingHand = BlockAnimationUtils.getBlockingHand(mc.player);
@@ -272,6 +276,9 @@ public abstract class BlockAnimationMixin {
             
             Minecraft mc = Minecraft.getInstance();
             if (mc == null || mc.player == null) return;
+            
+            if (renderState.id != mc.player.getId()) return;
+            
             if (!BlockAnimationUtils.isPlayerBlockingWithSword(mc.player)) return;
             
             InteractionHand interactionHand =

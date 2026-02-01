@@ -39,9 +39,9 @@ public class ConfigManager {
     public static boolean fancyDmgSplashGenshinReaction = false;
     public static int fancyDmgSplashColorPalette = 0;
     
-    public static boolean antiSwimEnabled = true;
-    public static boolean antiSwimDisablePose = true;
-    public static boolean antiSwimDisableEyeHeight = true; 
+    public static boolean noSwimChangeEnabled = true;
+    public static boolean noSwimChangeDisablePose = true;
+    public static boolean noSwimChangeDisableEyeHeight = true; 
     
     public static boolean cullingEnabled = false;
     public static boolean cullingHideDyingMob = false;
@@ -154,15 +154,15 @@ public class ConfigManager {
         registerField("FancyDmgSplashColorPalette", Integer.class,
             c -> ConfigManager.fancyDmgSplashColorPalette,
             (c, v) -> ConfigManager.fancyDmgSplashColorPalette = (Integer) v);
-        registerField("AntiSwim", Boolean.class,
-            c -> ConfigManager.antiSwimEnabled,
-            (c, v) -> ConfigManager.antiSwimEnabled = (Boolean) v);
+        registerField("NoSwimChange", Boolean.class,
+            c -> ConfigManager.noSwimChangeEnabled,
+            (c, v) -> ConfigManager.noSwimChangeEnabled = (Boolean) v);
         registerField("DisablePose", Boolean.class,
-            c -> ConfigManager.antiSwimDisablePose,
-            (c, v) -> ConfigManager.antiSwimDisablePose = (Boolean) v);
+            c -> ConfigManager.noSwimChangeDisablePose,
+            (c, v) -> ConfigManager.noSwimChangeDisablePose = (Boolean) v);
         registerField("DisableEyeHeight", Boolean.class,
-            c -> ConfigManager.antiSwimDisableEyeHeight,
-            (c, v) -> ConfigManager.antiSwimDisableEyeHeight = (Boolean) v);
+            c -> ConfigManager.noSwimChangeDisableEyeHeight,
+            (c, v) -> ConfigManager.noSwimChangeDisableEyeHeight = (Boolean) v);
         registerField("Culling", Boolean.class,
             c -> ConfigManager.cullingEnabled,
             (c, v) -> ConfigManager.cullingEnabled = (Boolean) v);

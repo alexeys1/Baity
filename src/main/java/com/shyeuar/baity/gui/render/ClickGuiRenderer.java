@@ -721,7 +721,8 @@ public class ClickGuiRenderer {
     }
     
     private static void updateModuleExpandAnimations(ClickGuiState state) {
-        for (Module module : ModuleManager.getModulesByCategory(state.getSelectedCategory())) {
+        java.util.List<Module> modules = getFilteredModules(state);
+        for (Module module : modules) {
             updateModuleExpandAnimation(state, module.getName(), module.isExpanded());
         }
     }

@@ -84,8 +84,8 @@ public class RadialMenu {
         isOpen = true;
         long windowHandle = client.getWindow().handle();
         GLFW.glfwSetInputMode(windowHandle, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
-        double centerX = client.getWindow().getWidth() / 2.0;
-        double centerY = client.getWindow().getHeight() / 2.0;
+        double centerX = client.getWindow().getScreenWidth() / 2.0;
+        double centerY = client.getWindow().getScreenHeight() / 2.0;
         GLFW.glfwSetCursorPos(windowHandle, centerX, centerY);
         client.setScreen(new RadialMenuScreen(keybind));
     }

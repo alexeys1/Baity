@@ -34,9 +34,26 @@ public class RadialMenuScreen extends BaseOwoScreen<StackLayout> {
         this.wheel = new RadialMenuComponent(entries);
     }
 
+    private boolean cursorCentered = false;
+
     @Override
     protected @NotNull OwoUIAdapter<StackLayout> createAdapter() {
         return OwoUIAdapter.create(this, Containers::stack);
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        if (!cursorCentered) {
+            final Minecraft client = Minecraft.getInstance();
+            if (client != null && client.getWindow() != null) {
+                long windowHandle = client.getWindow().handle();
+                double centerX = client.getWindow().getScreenWidth() / 2.0;
+                double centerY = client.getWindow().getScreenHeight() / 2.0;
+                org.lwjgl.glfw.GLFW.glfwSetCursorPos(windowHandle, centerX, centerY);
+            }
+            cursorCentered = true;
+        }
     }
 
     @Override

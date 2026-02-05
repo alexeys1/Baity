@@ -1,4 +1,4 @@
-package com.shyeuar.baity.features.customhandholding;
+package com.shyeuar.baity.features;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;

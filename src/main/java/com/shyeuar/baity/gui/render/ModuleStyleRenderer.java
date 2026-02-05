@@ -2,10 +2,22 @@ package com.shyeuar.baity.gui.render;
 
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.theme.Theme;
+import com.shyeuar.baity.gui.internal.ClickGuiState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
 public class ModuleStyleRenderer {
+    
+    private static ClickGuiState currentState = null;
+    
+    public static void setState(ClickGuiState state) {
+        currentState = state;
+    }
+    
+    private static ClickGuiState.ShimmerAnimationState getShimmerState(String moduleName) {
+        if (currentState == null) return null;
+        return currentState.getModuleShimmerAnimations().get(moduleName);
+    }
    
    public static void renderModule(GuiGraphics context, Minecraft client, Module module, Theme theme,
                                   float x1, float y, float x2, float moduleHeight,
@@ -15,19 +27,34 @@ public class ModuleStyleRenderer {
                                   java.util.function.Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
                                   TooltipInfo hoveredTooltipInfo) {
 
-       boolean hovered = GuiRenderUtil.isHovered(x1, y, x2, y + moduleHeight, mouseX, mouseY);
-       int enabledBg = new java.awt.Color(54, 42, 150).getRGB();
-       int cardBg = module.isEnabled() ? enabledBg : theme.Modules.getRGB();
-       GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + moduleHeight, 6, cardBg);
+      boolean hovered = mouseX >= x1 && mouseY >= y && mouseX <= x2 && mouseY <= y + moduleHeight;
+      
+      com.shyeuar.baity.gui.theme.LinearTheme.applyToTheme(theme);
+      
+      if (module.isEnabled()) {
+          int accentStart = com.shyeuar.baity.gui.theme.LinearTheme.ACCENT_PRIMARY.getRGB();
+          int accentEnd = com.shyeuar.baity.gui.theme.LinearTheme.ACCENT_SECONDARY.getRGB();
+          GuiRenderUtil.draw3DGradientRect(context, x1, y, x2, y + moduleHeight, accentStart, accentEnd, 6f);
+      } else {
+          int cardBg = com.shyeuar.baity.gui.theme.LinearTheme.BG_TERTIARY.getRGB();
+          GuiRenderUtil.drawFrostedGlass(context, x1, y, x2, y + moduleHeight, cardBg, 6f);
+          GuiRenderUtil.draw3DRect(context, x1, y, x2, y + moduleHeight, cardBg, 6f);
+      }
 
-       if (hovered && !"ClickGUI".equals(module.getName())) {
-           int hi = new java.awt.Color(255, 255, 255, 24).getRGB();
-           int lx = (int)(x1 + 1);
-           int ty = (int)(y + 1);
-           int rx = (int)(x2 - 1);
-           int by = (int)(y + moduleHeight - 1);
-           context.fill(lx, ty, rx, by, hi);
-       }
+      if (!"ClickGUI".equals(module.getName())) {
+          com.shyeuar.baity.gui.internal.ClickGuiState.ShimmerAnimationState shimmerState = 
+              getShimmerState(module.getName());
+          
+          if (shimmerState != null && (shimmerState.isActive || shimmerState.isExiting || shimmerState.progress > 0f)) {
+              boolean isEnabled = module.isEnabled();
+              com.shyeuar.baity.gui.animation.ShimmerEffect.renderHoverShimmer(
+                  context, x1, y, x2, y + moduleHeight,
+                  shimmerState.mouseX, shimmerState.mouseY,
+                  shimmerState.isActive, shimmerState.isExiting,
+                  shimmerState.progress, shimmerState.direction,
+                  isEnabled);
+          }
+      }
 
        String displayName = module.getName();
        if ("ClickGUI".equals(module.getName())) {
@@ -92,7 +119,7 @@ public class ModuleStyleRenderer {
        boolean boxHovered = GuiRenderUtil.isHovered(boxX1, boxY1, boxX2, boxY2, mouseX, mouseY);
        int boxBgColor = isListening ? theme.BG_3.getRGB() :
                        (boxHovered ? new java.awt.Color(255, 255, 255, 24).getRGB() : theme.BG_2.getRGB());
-       context.fill(boxX1, boxY1, boxX2, boxY2, boxBgColor);
+       GuiRenderUtil.draw3DRect(context, boxX1, boxY1, boxX2, boxY2, boxBgColor, 0f);
 
        int baseX = boxX1 + 8;
        int baseY = (int)(boxCenterY - 4);

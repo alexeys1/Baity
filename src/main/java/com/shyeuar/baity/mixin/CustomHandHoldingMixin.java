@@ -1,6 +1,6 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.features.customhandholding.CustomHandHoldingManager;
+import com.shyeuar.baity.features.CustomHandHoldingManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import net.fabricmc.loader.api.FabricLoader;

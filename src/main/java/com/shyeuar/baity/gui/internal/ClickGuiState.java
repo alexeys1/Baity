@@ -11,6 +11,11 @@ public class ClickGuiState {
     public static final float HEIGHT = 310;
     public static final float BASE_GUI_SCALE = 3.0f;
     
+    public static final float SIDEBAR_WIDTH = 120f;
+    public static final float CONTENT_WIDTH = WIDTH - SIDEBAR_WIDTH;
+    public static final float HEADER_HEIGHT = 50f;
+    public static final float FOOTER_HEIGHT = 20f;
+    
     private float dragX = 0;
     private float dragY = 0;
     private boolean isDragging = false;
@@ -23,6 +28,9 @@ public class ClickGuiState {
     public static final float LIST_TOP_PADDING = 60f;
     public static final float ITEM_HEIGHT = 30f;
     
+    private String searchText = "";
+    private boolean isSearchFocused = false;
+    
     private boolean isListeningForKey = false;
     private String currentKeyDisplay = "Right Ctrl";
     private String listeningButtonValueModule = null;
@@ -34,6 +42,14 @@ public class ClickGuiState {
     private String sliderInputText = "";
     
     private final Map<String, Float> moduleExpandAnimations = new HashMap<>();
+    
+    private final Map<String, ShimmerAnimationState> moduleShimmerAnimations = new HashMap<>();
+    
+    private String versionCheckStatus = null;
+    private String latestVersion = null;
+    private long versionCheckStartTime = 0;
+    private boolean isVersionChecking = false;
+    private boolean isVersionHovered = false;
     
     private String hoveredTooltip = null;
     private net.minecraft.network.chat.Component hoveredTooltipText = null;
@@ -92,6 +108,8 @@ public class ClickGuiState {
     
     public Map<String, Float> getModuleExpandAnimations() { return moduleExpandAnimations; }
     
+    public Map<String, ShimmerAnimationState> getModuleShimmerAnimations() { return moduleShimmerAnimations; }
+    
     public String getHoveredTooltip() { return hoveredTooltip; }
     public void setHoveredTooltip(String tooltip) { hoveredTooltip = tooltip; }
     
@@ -103,6 +121,27 @@ public class ClickGuiState {
     
     public int getTooltipY() { return tooltipY; }
     public void setTooltipY(int y) { tooltipY = y; }
+    
+    public String getVersionCheckStatus() { return versionCheckStatus; }
+    public void setVersionCheckStatus(String status) { versionCheckStatus = status; }
+    
+    public String getLatestVersion() { return latestVersion; }
+    public void setLatestVersion(String version) { latestVersion = version; }
+    
+    public long getVersionCheckStartTime() { return versionCheckStartTime; }
+    public void setVersionCheckStartTime(long time) { versionCheckStartTime = time; }
+    
+    public boolean isVersionChecking() { return isVersionChecking; }
+    public void setVersionChecking(boolean checking) { isVersionChecking = checking; }
+    
+    public boolean isVersionHovered() { return isVersionHovered; }
+    public void setVersionHovered(boolean hovered) { isVersionHovered = hovered; }
+    
+    public String getSearchText() { return searchText; }
+    public void setSearchText(String text) { searchText = text; }
+    
+    public boolean isSearchFocused() { return isSearchFocused; }
+    public void setSearchFocused(boolean focused) { isSearchFocused = focused; }
     
     public void resetDragState() {
         dragX = 0;
@@ -152,6 +191,27 @@ public class ClickGuiState {
         public SliderInputInfo(String moduleName, String valueName) {
             this.moduleName = moduleName;
             this.valueName = valueName;
+        }
+    }
+
+    public static class ShimmerAnimationState {
+        public boolean isActive = false;
+        public float mouseX = 0f;
+        public float mouseY = 0f;
+        public float progress = 0f;
+        public float direction = 1f;
+        public long lastUpdateTime = System.currentTimeMillis();
+        public boolean isExiting = false;
+        public float appearSpeed = 0f;
+        public float exitSpeed = 0f;
+        
+        public void reset() {
+            isActive = false;
+            isExiting = false;
+            progress = 0f;
+            direction = 1f;
+            appearSpeed = 0f;
+            exitSpeed = 0f;
         }
     }
 }

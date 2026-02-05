@@ -8,8 +8,10 @@
   "contact": {},
   "license": "MIT",
   "environment": "client",
+  "icon": "assets/baity/textures/gui/logo.png",
   "entrypoints": {
-    "client": ["com.shyeuar.baity.client.Baity"]
+    "client": ["com.shyeuar.baity.client.Baity"],
+    "modmenu": ["com.shyeuar.baity.compatibility.ModMenuEntry"]
   },
   "mixins": [
     "baity.mixins.json"

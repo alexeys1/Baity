@@ -19,7 +19,7 @@
     "accessor.ItemStackRenderStateAccessor$LayerRenderStateAccessor",
     "accessor.ItemInHandRendererAccessor",
     "TotemAnimationMixin",
-    "PlayerListHudAccessor",
+    "PlayerListHudMixin",
     "CustomHandHoldingMixin$SwingDurationMixin",
     "CustomHandHoldingMixin$AttackCooldownMixin",
     "CustomHandHoldingMixin$HeldItemTransformMixin",
@@ -42,7 +42,10 @@
     "Skin3DMixin$ModelPartMixin",
     "MufflerMixin",
     "ImmuneReactionMixin$ChatDetectorMixin",
-    "ImmuneReactionMixin$PlayerTickMixin"
+    "ImmuneReactionMixin$PlayerTickMixin",
+    "InvisibleBugHighlightsMixin$ParticlePacketMixin",
+    "InvisibleBugHighlightsMixin$EntityRemovalMixin",
+    "FancyCreeperVeilMixin"
   ],
   "injectors": {
     "defaultRequire": 1

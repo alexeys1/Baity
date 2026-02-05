@@ -3,6 +3,7 @@ package com.shyeuar.baity.mixin;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.utils.ModuleUtils;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundEngine;
 import net.minecraft.resources.ResourceLocation;
@@ -27,7 +28,20 @@ public class MufflerMixin {
         if (ModuleUtils.getOptionBoolean(m, "mute enderman scream", true)) {
             if (soundId.equals(ENDERMAN_SCREAM) || soundId.equals(ENDERMAN_STARE)) {
                 cir.setReturnValue(SoundEngine.PlayResult.NOT_STARTED);
+                return;
             }
         }
+        
+        if (ModuleUtils.getOptionBoolean(m, "mute phantom", true)) {
+            if (isInGalatea() && soundId.getPath().startsWith("entity.phantom")) {
+                cir.setReturnValue(SoundEngine.PlayResult.NOT_STARTED);
+            }
+        }
+    }
+    
+    private static boolean isInGalatea() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return false;
+        return true;
     }
 }

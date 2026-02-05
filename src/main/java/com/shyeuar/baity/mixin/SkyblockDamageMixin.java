@@ -1,6 +1,6 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.features.FancyDmgSplash;
+import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import org.spongepowered.asm.mixin.Mixin;

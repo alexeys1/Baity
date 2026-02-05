@@ -19,6 +19,8 @@ public class AntiBotUtils {
     public static void updatePlayerMap() {
         if (mc.player == null || mc.level == null || mc.getConnection() == null) return;
         
+        boolean onServer = mc.hasSingleplayerServer() == false && mc.getCurrentServer() != null;
+        
         tickCount++;
         if (tickCount % 40 == 0) {
             playerMap.clear();
@@ -42,9 +44,9 @@ public class AntiBotUtils {
                         continue;
                     }
                     
-                    // 检测方法2：状态效果
+                    // 检测方法2：状态效果（仅在服务器上使用，防止本地世界 / LAN 把无效果玩家当成 Bot）
                     Player worldPlayer = mc.level.getPlayerByUUID(uuid);
-                    if (worldPlayer != null && worldPlayer.getActiveEffects().isEmpty()) {
+                    if (onServer && worldPlayer != null && worldPlayer.getActiveEffects().isEmpty()) {
                         continue;
                     }
                     

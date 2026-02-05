@@ -1,6 +1,6 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.features.RadialMenu;
+import com.shyeuar.baity.features.radialmenu.RadialMenu;
 import net.minecraft.client.MouseHandler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

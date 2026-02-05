@@ -7,6 +7,7 @@ import com.shyeuar.baity.managers.KeybindManager;
 import com.shyeuar.baity.managers.ModuleInitializer;
 import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.items.CustomTotemItem;
+import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -15,8 +16,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.Minecraft;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import com.shyeuar.baity.features.RadialMenu;
+import com.shyeuar.baity.features.radialmenu.RadialMenu;
 import com.shyeuar.baity.utils.SoundUtils;
 
 @Environment(EnvType.CLIENT)
@@ -25,7 +25,6 @@ public class Baity implements ClientModInitializer {
     private static long lastKeyPressTime = 0;
     public static boolean openGuiNextTick = false;
 
-    @SuppressWarnings("deprecation")
     @Override
     public void onInitializeClient() {
         CustomTotemItem.register();
@@ -72,12 +71,12 @@ public class Baity implements ClientModInitializer {
                 return 1;
             })));
 
-        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.PlayerESPRenderer());
-        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.FancyDmgSplash());
+        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.NametagRenderer());
+        WorldRenderEvents.AFTER_ENTITIES.register(new FancyDmgSplash());
+        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.highlights.ShulkerHighlights());
+        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.highlights.InvisibleBugHighlights());
         
-        HudRenderCallback.EVENT.register((context, tickDelta) -> {
-            RadialMenu.render(context, Minecraft.getInstance());
-        });
+        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.FancyCreeperVeil());
     }
     
     public static final net.minecraft.sounds.SoundEvent LAUGHTER_SOUND = registerSoundEvent("sounds.laughter");

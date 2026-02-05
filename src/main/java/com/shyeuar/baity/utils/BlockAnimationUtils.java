@@ -28,10 +28,6 @@ public final class BlockAnimationUtils {
         return com.shyeuar.baity.config.ConfigManager.blockAnimationNoReequipWhenUsing;
     }
 
-    public static boolean isSlowdownEnabled() {
-        return com.shyeuar.baity.config.ConfigManager.blockAnimationSlowdown;
-    }
-
     public static boolean isPlayerBlockingWithSword(Player player) {
         if (!isFeatureActive()) return false;
         if (player == null) return false;

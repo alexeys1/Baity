@@ -1,4 +1,4 @@
-package com.shyeuar.baity.features;
+package com.shyeuar.baity.features.fancydmgsplash;
 
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.value.ColorPaletteValue;
@@ -64,10 +64,9 @@ public class ElementalReactionDetector {
     private static final Map<UUID, Long> entityFireCooldown = new HashMap<>();
     private static final long FIRE_COOLDOWN_MS = 3000;
     
-    // Wither Cloak 检测 - 通过聊天栏消息检测
     private static long lastWitherCloakImmuneTime = 0;
-    private static final long WITHER_CLOAK_COOLDOWN_MS = 2500; // 2.5秒冷却
-    private static boolean witherCloakActive = false; // 通过聊天栏消息设置 
+    private static final long WITHER_CLOAK_COOLDOWN_MS = 2500;
+    private static boolean witherCloakActive = false;
     
     public static ReactionResult recordDamageAndCheckReaction(int color, Vec3 targetPos) {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) {
@@ -287,24 +286,17 @@ public class ElementalReactionDetector {
         }
         return null;
     }
-    
-    /**
-     * 判断实体是否应该触发元素反应
-     * 过滤掉非生物实体：盔甲架、船、矿车等
-     */
+  
     private static boolean shouldTriggerReaction(Entity entity) {
         if (entity == null) return false;
         
-        // 玩家始终可以触发
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && entity == mc.player) return true;
         
-        // 过滤非生物实体
         if (entity instanceof ArmorStand) return false;
         if (entity instanceof Boat) return false;
         if (entity instanceof AbstractMinecart) return false;
         
-        // 只有 LivingEntity 才能触发反应
         return entity instanceof LivingEntity;
     }
     
@@ -312,7 +304,6 @@ public class ElementalReactionDetector {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
         if (entity == null) return null;
         
-        // 过滤非生物实体（盔甲架、船、矿车等）
         if (!shouldTriggerReaction(entity)) return null;
         
         Minecraft mc = Minecraft.getInstance();
@@ -369,7 +360,6 @@ public class ElementalReactionDetector {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
         if (entity == null) return null;
         
-        // 过滤非生物实体（盔甲架、船、矿车等）
         if (!shouldTriggerReaction(entity)) return null;
         
         Minecraft mc = Minecraft.getInstance();
@@ -469,26 +459,15 @@ public class ElementalReactionDetector {
         entityWasOnFire.remove(entityId);
         entityFireCooldown.remove(entityId);
     }
-    
-    /**
-     * 检测玩家是否正在使用 Wither Cloak（凋零斗篷剑）
-     * 通过聊天栏消息检测激活/解除状态
-     */
+
     public static boolean isUsingWitherCloak() {
         return witherCloakActive;
     }
-    
-    /**
-     * 设置 Wither Cloak 激活状态（由聊天栏消息检测调用）
-     */
+ 
     public static void setWitherCloakActive(boolean active) {
         witherCloakActive = active;
     }
-    
-    /**
-     * 检测 Wither Cloak 免疫反应
-     * 只要 Wither Cloak 激活就触发免疫反应（因为激活期间玩家就是免疫状态）
-     */
+   
     public static ReactionResult checkWitherCloakImmune() {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
         
@@ -559,3 +538,4 @@ public class ElementalReactionDetector {
         }
     }
 }
+

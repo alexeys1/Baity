@@ -64,14 +64,14 @@ public final class BlockAnimationRenderer {
         com.shyeuar.baity.gui.module.Module customHandHoldingModule = 
                 com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("CustomHandHolding");
         if (customHandHoldingModule != null && customHandHoldingModule.isEnabled()) {
-            com.shyeuar.baity.features.customhandholding.CustomHandHoldingManager.getInstance()
+            com.shyeuar.baity.features.CustomHandHoldingManager.getInstance()
                     .applyPositionAndRotation(poseStack, handSide);
         }
         
         float actualSwingProgress = swingProgress;
-        if (com.shyeuar.baity.features.blockanimation.BlockAnimationManager.isSwinging() 
-                && com.shyeuar.baity.features.blockanimation.BlockAnimationManager.getSwingHand() == interactionHand) {
-            actualSwingProgress = com.shyeuar.baity.features.blockanimation.BlockAnimationManager.getSwingProgress(partialTick);
+        if (BlockAnimationManager.isSwinging() 
+                && BlockAnimationManager.getSwingHand() == interactionHand) {
+            actualSwingProgress = BlockAnimationManager.getSwingProgress(partialTick);
         }
         
         if (BlockAnimationUtils.isInteractAnimationsEnabled()) {
@@ -81,7 +81,7 @@ public final class BlockAnimationRenderer {
         applyFirstPersonBlockTransform(poseStack, handSide);
        
         if (customHandHoldingModule != null && customHandHoldingModule.isEnabled()) {
-            com.shyeuar.baity.features.customhandholding.CustomHandHoldingManager.getInstance()
+            com.shyeuar.baity.features.CustomHandHoldingManager.getInstance()
                     .applyScale(poseStack);
         }
         

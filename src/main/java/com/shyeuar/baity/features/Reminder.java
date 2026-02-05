@@ -290,7 +290,7 @@ public class Reminder {
         if (client.gui == null || client.gui.getTabList() == null) return null;
         
         try {
-            net.minecraft.network.chat.Component footer = ((com.shyeuar.baity.mixin.PlayerListHudAccessor) client.gui.getTabList()).getFooter();
+            net.minecraft.network.chat.Component footer = ((com.shyeuar.baity.mixin.PlayerListHudMixin) client.gui.getTabList()).getFooter();
             return footer != null ? footer.getString() : null;
         } catch (Exception e) {
             try {

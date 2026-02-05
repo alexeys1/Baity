@@ -1,4 +1,4 @@
-package com.shyeuar.baity.features;
+package com.shyeuar.baity.features.fancydmgsplash;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.gui.module.Module;
@@ -73,7 +73,7 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
             }
         }
     }
-   
+
     private static int extractColorFromText(Component text) {
         if (text == null) return 0xFFFFFF;
         
@@ -469,3 +469,5 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         }
     }
 }
+
+

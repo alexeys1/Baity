@@ -1,7 +1,8 @@
-package com.shyeuar.baity.features;
+package com.shyeuar.baity.features.radialmenu;
 
-import com.shyeuar.baity.utils.RadialMenuRendererUtils;
-import com.shyeuar.baity.utils.SoundUtils;
+import com.shyeuar.baity.gui.theme.LinearTheme;
+import io.wispforest.owo.ui.core.Color;
+import io.wispforest.owo.ui.core.OwoUIDrawContext;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -15,22 +16,8 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
-import static com.shyeuar.baity.utils.RadialMenuRendererUtils.*;
-
 @Environment(EnvType.CLIENT)
 public class WarpMenuScreen extends Screen {
-
-    private static double savedMouseX = -1;
-    private static double savedMouseY = -1;
-
-    public static void setInitialMousePosition(double x, double y) {
-        savedMouseX = x;
-        savedMouseY = y;
-    }
-
-    private int hoveredSection = -1;
-    private final WarpCategory currentCategory;
-    private final Screen parentScreen;
 
     public enum WarpCategory {
         MAIN(null, "Warp Menu", "\u2302", List.of()),
@@ -122,6 +109,24 @@ public class WarpMenuScreen extends Screen {
         }
     }
 
+    private static double savedMouseX = -1;
+    private static double savedMouseY = -1;
+
+    public static void setInitialMousePosition(double x, double y) {
+        savedMouseX = x;
+        savedMouseY = y;
+    }
+
+    private int hoveredSection = -1;
+    private final WarpCategory currentCategory;
+    private final Screen parentScreen;
+    
+    private static final int OUTER_RADIUS = 80;
+    private static final int INNER_RADIUS = 30;
+    private static final int CENTER_RADIUS = 30;
+    
+    private static final int BG_COLOR = LinearTheme.BG_PRIMARY.getRGB(); // 深灰色 (18, 18, 20)
+    
     private static final WarpCategory[] MAIN_CATEGORIES = {
         WarpCategory.BASIC,
         WarpCategory.PARK_BARN,
@@ -179,25 +184,39 @@ public class WarpMenuScreen extends Screen {
             double angle = Math.atan2(dy, dx);
             double degrees = Math.toDegrees(angle);
             if (degrees < 0) degrees += 360;
-            hoveredSection = RadialMenuRendererUtils.getSectionFromAngle(degrees, sectionCount);
+            hoveredSection = getSectionFromAngle(degrees, sectionCount);
         }
 
         double anglePerSection = 360.0 / sectionCount;
         double startAngle = getStartAngle(sectionCount);
 
-        for (int i = 0; i < sectionCount; i++) {
-            double sectionStartAngle = startAngle + i * anglePerSection;
-            double sectionEndAngle = sectionStartAngle + anglePerSection;
-            boolean isHovered = (hoveredSection == i);
-            int sectionColor = isHovered ? SECTION_HOVER_COLOR : SECTION_COLOR;
-            drawArcSection(context, centerX, centerY, INNER_RADIUS, OUTER_RADIUS,
-                    sectionStartAngle, sectionEndAngle, sectionColor);
-        }
+        final var owo = OwoUIDrawContext.of(context);
+        final int segments = 220;
 
-        for (int i = 0; i < sectionCount; i++) {
-            double lineAngle = Math.toRadians(startAngle + i * anglePerSection);
-            drawRadialLine(context, centerX, centerY, INNER_RADIUS, OUTER_RADIUS, lineAngle, BORDER_COLOR);
-        }
+        final int baseOuter = OUTER_RADIUS;
+        final int baseInner = OUTER_RADIUS - 7;
+
+        int faceColor = BG_COLOR;
+        int edgeColor = lerpArgb(BG_COLOR, LinearTheme.BG_SECONDARY.getRGB(), 0.35f);
+
+        int edgeArgb = withAlpha(edgeColor, 0x99);
+        int faceArgb = withAlpha(faceColor, 0x66);
+
+        owo.drawCircle(centerX, centerY, segments, baseOuter, Color.ofArgb(edgeArgb));
+        owo.drawCircle(centerX, centerY, segments, baseInner, Color.ofArgb(faceArgb));
+
+        int aaInner = withAlpha(edgeColor, 0x60);
+        int aaOuter = withAlpha(edgeColor, 0x00);
+        drawRingSplit(owo, centerX, centerY, 0, 360, segments,
+                baseOuter - 1, baseOuter + 0.75, Color.ofArgb(aaInner), Color.ofArgb(aaOuter));
+
+        int innerBase = withAlpha(lerpArgb(faceColor, 0x00000000, 0.18f), 0x66);
+        int innerEdge = withAlpha(lerpArgb(faceColor, LinearTheme.BG_SECONDARY.getRGB(), 0.4f), 0x88);
+
+        int innerRadius = CENTER_RADIUS - 2;
+        owo.drawCircle(centerX, centerY, segments, innerRadius, Color.ofArgb(innerBase));
+        drawRingSplit(owo, centerX, centerY, 0, 360, segments,
+                innerRadius - 1, innerRadius + 1, Color.ofArgb(innerEdge), Color.ofArgb(innerEdge));
 
         for (int i = 0; i < sectionCount; i++) {
             double sectionStartAngle = startAngle + i * anglePerSection;
@@ -213,7 +232,7 @@ public class WarpMenuScreen extends Screen {
 
                 int textColor = isHovered ? 0xFFFFFF00 : 0xFFFFFFFF;
                 String icon = getIcon(sections[i]);
-                
+
                 float scale = 3.0f;
                 var matrices = context.pose();
                 matrices.pushMatrix();
@@ -223,16 +242,16 @@ public class WarpMenuScreen extends Screen {
                 matrices.popMatrix();
             } else {
                 WarpDestination dest = (WarpDestination) sections[i];
-                
+
                 int iconRadius = (INNER_RADIUS + OUTER_RADIUS) / 2;
                 int iconX = centerX + (int) (Math.cos(midAngle) * iconRadius);
                 int iconY = centerY + (int) (Math.sin(midAngle) * iconRadius);
-                
+
                 int iconSize = 24;
-                context.blit(RenderPipelines.GUI_TEXTURED, dest.getIconTexture(), 
-                    iconX - iconSize / 2, iconY - iconSize / 2, 
+                context.blit(RenderPipelines.GUI_TEXTURED, dest.getIconTexture(),
+                    iconX - iconSize / 2, iconY - iconSize / 2,
                     0.0f, 0.0f, iconSize, iconSize, iconSize, iconSize);
-                
+
                 String labelText = dest.name;
                 int labelWidth = this.font.width(labelText);
 
@@ -244,8 +263,6 @@ public class WarpMenuScreen extends Screen {
                 context.drawString(this.font, labelText, labelX, labelY, labelColor, true);
             }
         }
-
-        drawFilledCircle(context, centerX, centerY, INNER_RADIUS + 2, CENTER_COLOR);
 
         if (currentCategory == null && hoveredSection >= 0 && hoveredSection < sectionCount) {
             WarpCategory hoveredCat = MAIN_CATEGORIES[hoveredSection];
@@ -262,31 +279,60 @@ public class WarpMenuScreen extends Screen {
 
             context.drawString(this.font, labelText, labelX, labelY, 0xFFFFFF00, true);
         }
-
-        String centerIcon;
-        int centerColor;
-        float centerScale;
-        if (currentCategory == null) {
-            centerIcon = "\u274C";
-            centerColor = hoveringExit ? 0xFFFF4444 : 0xFFFFFFFF;
-            centerScale = 2.0f; 
-        } else {
-            centerIcon = "\u21A9"; 
-            centerColor = hoveringExit ? 0xFFFFFF00 : 0xFFFFFFFF;
-            centerScale = 2.0f;
-        }
         
-        var matrices = context.pose();
-        matrices.pushMatrix();
-        matrices.translate(centerX, centerY);
-        matrices.scale(centerScale, centerScale);
-        int centerTextWidth = this.font.width(centerIcon);
-        context.drawString(this.font, centerIcon, -centerTextWidth / 2, -this.font.lineHeight / 2, centerColor, true);
-        matrices.popMatrix();
+        int iconOuterR = 7;
+        int iconInnerR = 4;
+        if (currentCategory == null) {
+            owo.drawCircle(centerX, centerY, 48, iconOuterR, Color.ofArgb(0xCCFF4444));
+            owo.drawCircle(centerX, centerY, 48, iconInnerR, Color.ofArgb(withAlpha(BG_COLOR, 0xFF)));
+        } else {
+            owo.drawCircle(centerX, centerY, 48, iconOuterR, Color.ofArgb(0xCCFFFF55));
+            owo.drawCircle(centerX, centerY, 48, iconInnerR, Color.ofArgb(withAlpha(BG_COLOR, 0xFF)));
+        }
 
         String title = currentCategory == null ? "Warp Menu" : currentCategory.displayName;
         int titleWidth = this.font.width(title);
         context.drawString(this.font, title, (this.width - titleWidth) / 2, 20, 0xFFFFFF, true);
+    }
+
+    private void drawRingSplit(OwoUIDrawContext context, int centerX, int centerY,
+                               double fromDeg, double toDeg, int segments,
+                               double innerRadius, double outerRadius,
+                               Color innerColor, Color outerColor) {
+        double f = normalizeDeg(fromDeg);
+        double t = normalizeDeg(toDeg);
+        if (t <= f) t += 360d;
+
+        if (t <= 360d) {
+            context.drawRing(centerX, centerY, f, t, segments, innerRadius, outerRadius, innerColor, outerColor);
+        } else {
+            context.drawRing(centerX, centerY, f, 360d, segments, innerRadius, outerRadius, innerColor, outerColor);
+            context.drawRing(centerX, centerY, 0d, t - 360d, segments, innerRadius, outerRadius, innerColor, outerColor);
+        }
+    }
+
+    private static float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
+    }
+
+    private static int lerpArgb(int a, int b, float t) {
+        int aa = (a >>> 24) & 0xFF, ar = (a >>> 16) & 0xFF, ag = (a >>> 8) & 0xFF, ab = a & 0xFF;
+        int ba = (b >>> 24) & 0xFF, br = (b >>> 16) & 0xFF, bg = (b >>> 8) & 0xFF, bb = b & 0xFF;
+        int ra = Math.round(lerp(aa, ba, t));
+        int rr = Math.round(lerp(ar, br, t));
+        int rg = Math.round(lerp(ag, bg, t));
+        int rb = Math.round(lerp(ab, bb, t));
+        return (ra << 24) | (rr << 16) | (rg << 8) | rb;
+    }
+
+    private static int withAlpha(int rgb, int alpha) {
+        return ((alpha & 0xFF) << 24) | (rgb & 0x00FFFFFF);
+    }
+
+    private static double normalizeDeg(double deg) {
+        deg %= 360d;
+        if (deg < 0) deg += 360d;
+        return deg;
     }
 
     private Object[] getSections() {
@@ -306,6 +352,22 @@ public class WarpMenuScreen extends Screen {
         return "?";
     }
 
+    private double getStartAngle(int sectionCount) {
+        return -90 - (360.0 / sectionCount) / 2;
+    }
+
+    private int getSectionFromAngle(double degrees, int sectionCount) {
+        double anglePerSection = 360.0 / sectionCount;
+        double startAngle = -90 - anglePerSection / 2;
+        if (startAngle < 0) startAngle += 360;
+
+        double adjustedDegrees = degrees - startAngle;
+        if (adjustedDegrees < 0) adjustedDegrees += 360;
+
+        int section = (int) (adjustedDegrees / anglePerSection);
+        return section % sectionCount;
+    }
+
     @Override
     public boolean mouseClicked(MouseButtonEvent click, boolean isInsideWindow) {
         if (click.button() == 0) {
@@ -316,7 +378,7 @@ public class WarpMenuScreen extends Screen {
             double distance = Math.sqrt(dx * dx + dy * dy);
 
             if (distance <= INNER_RADIUS + 2) {
-                SoundUtils.playWoodenButton();
+                com.shyeuar.baity.utils.SoundUtils.playWoodenButton();
                 if (parentScreen != null) {
                     Minecraft.getInstance().setScreen(parentScreen);
                 } else {
@@ -329,7 +391,7 @@ public class WarpMenuScreen extends Screen {
                 Object[] sections = getSections();
                 if (hoveredSection < sections.length) {
                     Object selected = sections[hoveredSection];
-                    SoundUtils.playWoodenButton();
+                    com.shyeuar.baity.utils.SoundUtils.playWoodenButton();
                     if (selected instanceof WarpCategory cat) {
                         Minecraft.getInstance().setScreen(new WarpMenuScreen(cat, this));
                     } else if (selected instanceof WarpDestination dest) {
@@ -350,3 +412,5 @@ public class WarpMenuScreen extends Screen {
         this.onClose();
     }
 }
+
+

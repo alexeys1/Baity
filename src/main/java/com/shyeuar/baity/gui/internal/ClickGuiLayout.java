@@ -34,6 +34,31 @@ public class ClickGuiLayout {
         
         return contentHeight;
     }
+    
+    public static float calculateContentHeightForModules(List<Module> modules, float visibleHeight) {
+        float contentHeight = 0f;
+        
+        for (Module module : modules) {
+            contentHeight += ClickGuiState.ITEM_HEIGHT;
+            if (module.isExpanded()) {
+                int childCount = 0;
+                int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
+                for (Value value : module.getValues()) {
+                    if (!"enabled".equals(value.getName())) {
+                        childCount++;
+                    }
+                }
+                if (childCount > 0) {
+                    ClickGuiLayout.ContainerDimensions dims = 
+                        ClickGuiLayout.calculateSubOptionContainer(childCount, visibleHeight, extraHeight);
+                    int fullContainerHeight = childCount * dims.subOptionHeight + dims.padding * 2 + extraHeight;
+                    contentHeight += fullContainerHeight + 5;
+                }
+            }
+        }
+        
+        return contentHeight;
+    }
    
     public static ContainerDimensions calculateSubOptionContainer(int subOptionCount, float visibleHeight) {
         return calculateSubOptionContainer(subOptionCount, visibleHeight, 0);
@@ -72,7 +97,10 @@ public class ClickGuiLayout {
     }
     
     public static ScrollbarInfo calculateScrollbar(ClickGuiState state, float contentHeight, float visibleHeight) {
-        float maxScroll = Math.max(0, contentHeight - visibleHeight);
+        float contentY = ClickGuiState.HEADER_HEIGHT;
+        float contentStartY = contentY + 10;
+        float contentEndY = contentY + visibleHeight;
+        float maxScroll = Math.max(0, contentHeight + contentStartY - contentEndY);
         float ratio = visibleHeight / contentHeight;
         float barHeight = Math.max(10, visibleHeight * ratio);
         float travel = visibleHeight - barHeight;
@@ -110,6 +138,27 @@ public class ClickGuiLayout {
         } else if (scrollOffset > maxScroll) {
             state.setScrollOffset(maxScroll);
         }
+    }
+    
+    public static float clampScrollDelta(ClickGuiState state, float maxScroll, float delta) {
+        float currentOffset = state.getScrollOffset();
+        float newOffset = currentOffset + delta;
+        
+        if (currentOffset <= 0 && delta < 0) {
+            return 0;
+        }
+        if (currentOffset >= maxScroll && delta > 0) {
+            return 0;
+        }
+        
+        if (newOffset < 0) {
+            return -currentOffset;
+        }
+        if (newOffset > maxScroll) {
+            return maxScroll - currentOffset;
+        }
+        
+        return delta;
     }
     
     public static class ContainerDimensions {

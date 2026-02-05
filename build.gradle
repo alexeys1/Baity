@@ -15,6 +15,14 @@ repositories {
         name = 'Fabric'
         url = 'https://maven.fabricmc.net/'
     }
+    maven {
+        name = 'Wisp Forest'
+        url = 'https://maven.wispforest.io'
+    }
+    maven {
+        name = 'TerraformersMC'
+        url = 'https://maven.terraformersmc.com/releases'
+    }
 }
 
 loom {
@@ -28,6 +36,14 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     
     include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:0.4.1")))
+    
+    // owo-lib 依赖
+    modImplementation "io.wispforest:owo-lib:0.12.24+1.21.9"
+    include "io.wispforest:owo-sentinel:0.12.24+1.21.9"
+    
+    modCompileOnly("com.terraformersmc:modmenu:17.0.0-alpha.1") {
+        exclude(group: "net.fabricmc.fabric-api")
+    }
 }
 
 processResources {

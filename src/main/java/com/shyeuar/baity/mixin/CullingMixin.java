@@ -106,15 +106,14 @@ public class CullingMixin {
             
             if (submersionType != FogType.WATER) return;
             
-            for (FogEnvironment modifier : FOG_ENVIRONMENTS) {
+            for (int i = 0; i < FOG_ENVIRONMENTS.size(); i++) {
+                FogEnvironment modifier = FOG_ENVIRONMENTS.get(i);
                 if (modifier.isApplicable(submersionType, entity)) {
                     fogData.environmentalStart = Float.MAX_VALUE;
                     fogData.environmentalEnd = Float.MAX_VALUE;
                     fogData.renderDistanceStart = Float.MAX_VALUE;
                     fogData.renderDistanceEnd = Float.MAX_VALUE;
-                    fogData.skyEnd = Float.MAX_VALUE;
-                    fogData.cloudEnd = Float.MAX_VALUE;
-                    return;
+                    break;
                 }
             }
         }

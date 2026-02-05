@@ -13,6 +13,7 @@ import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.utils.TimerUtils;
 import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.utils.SoundUtils;
+import com.shyeuar.baity.utils.VersionCheckUtils;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -103,7 +104,23 @@ public class ClickGuiInputHandler {
             return true;
         }
         
+        if (handleSearchInput(coords, button)) {
+            return true;
+        }
+        
         if (handleCategoryClick(coords)) {
+            return true;
+        }
+        
+        if (handleGitHubIconClick(coords, button)) {
+            return true;
+        }
+        
+        if (handleVersionUpdateClick(coords, button)) {
+            return true;
+        }
+        
+        if (handleVersionClick(coords, button)) {
             return true;
         }
         
@@ -132,22 +149,38 @@ public class ClickGuiInputHandler {
     public boolean handleMouseScroll(double mouseX, double mouseY, double verticalAmount) {
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
         
-        if (GuiRenderUtil.isHovered(0, ClickGuiState.LIST_TOP_PADDING, 
-                                    ClickGuiState.WIDTH, ClickGuiState.HEIGHT - 20, 
+        float contentX = ClickGuiState.SIDEBAR_WIDTH;
+        float contentY = ClickGuiState.HEADER_HEIGHT;
+        float contentWidth = ClickGuiState.CONTENT_WIDTH;
+        float visibleBottom = ClickGuiState.HEIGHT - ClickGuiState.FOOTER_HEIGHT;
+        float visibleHeight = visibleBottom - contentY;
+        
+        if (GuiRenderUtil.isHovered(contentX, contentY, contentX + contentWidth, visibleBottom, 
                                     coords.mouseX, coords.mouseY)) {
-            float modY = 60 - state.getScrollOffset();
-            List<Module> modules = ModuleManager.getModulesByCategory(state.getSelectedCategory());
+            List<Module> modules = getFilteredModules();
             
-            for (Module module : modules) {
-                if (module.isExpanded()) {
-                    handleSubOptionScroll(module, modY, coords, verticalAmount);
-                    modY += getSubOptionContainerHeight(module);
-                }
-                modY += 30;
-            }
+            float calculatedContentHeight = ClickGuiLayout.calculateContentHeightForModules(modules, visibleHeight);
+            float contentStartY = ClickGuiState.HEADER_HEIGHT + 10;
+            float contentEndY = ClickGuiState.HEADER_HEIGHT + visibleHeight;
+            float maxScroll = Math.max(0, calculatedContentHeight + contentStartY - contentEndY);
             
             float delta = (float)(-verticalAmount * 20);
-            state.setScrollOffset(state.getScrollOffset() + delta);
+            
+            float clampedDelta = ClickGuiLayout.clampScrollDelta(state, maxScroll, delta);
+            
+            if (clampedDelta != 0) {
+                state.setScrollOffset(state.getScrollOffset() + clampedDelta);
+                
+                float modY = contentY + 10 - state.getScrollOffset();
+                for (Module module : modules) {
+                    modY += 30;
+                    if (module.isExpanded()) {
+                        handleSubOptionScroll(module, modY, coords, verticalAmount, contentX, contentWidth);
+                        modY += getSubOptionContainerHeight(module);
+                    }
+                }
+            }
+            
             return true;
         }
         
@@ -155,6 +188,24 @@ public class ClickGuiInputHandler {
     }
     
     public boolean handleKeyPress(int keyCode, int scanCode, int modifiers) {
+        if (state.isSearchFocused()) {
+            if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
+                String current = state.getSearchText();
+                if (!current.isEmpty()) {
+                    state.setSearchText(current.substring(0, current.length() - 1));
+                }
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                state.setSearchFocused(false);
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+                state.setSearchFocused(false);
+                return true;
+            }
+        }
+        
         if (state.isListeningForKey()) {
             return handleClickGuiKeybindInput(keyCode);
         }
@@ -190,6 +241,14 @@ public class ClickGuiInputHandler {
             }
             return true;
         }
+        
+        if (state.isSearchFocused()) {
+            if (chr >= 32 && chr < 127) {
+                state.setSearchText(state.getSearchText() + chr);
+                return true;
+            }
+        }
+        
         return false;
     }
     
@@ -328,37 +387,252 @@ public class ClickGuiInputHandler {
         return false;
     }
     
+    private boolean handleVersionClick(ClickGuiLayout.ScaledCoordinates coords, int button) {
+        if (button != 0) return false;
+        
+        long currentTime = System.currentTimeMillis();
+        boolean inFeedback = state.getVersionCheckStatus() != null && 
+                           currentTime - state.getVersionCheckStartTime() < 2000;
+        
+        if (inFeedback) {
+            return false;
+        }
+        
+        String currentVersion = getModVersion();
+        if (currentVersion == null || currentVersion.isEmpty()) {
+            currentVersion = "v1.1.7";
+        } else {
+            if (!currentVersion.startsWith("v") && !currentVersion.startsWith("V")) {
+                currentVersion = "v" + currentVersion;
+            }
+        }
+        
+        Minecraft client = Minecraft.getInstance();
+        if (client == null) return false;
+        
+        float versionScale = 0.70f;
+        int versionRawWidth = client.font.width(currentVersion);
+        float scaledWidth = versionScale * versionRawWidth;
+        
+        float baseX = ClickGuiState.WIDTH - scaledWidth - 8;
+        float baseY = ClickGuiState.HEIGHT - 8 - (int)(client.font.lineHeight * versionScale) - 2;
+        float baseHeight = (int)(client.font.lineHeight * versionScale);
+        float lineY = baseY + baseHeight + 1;
+        float lineHeight = 1;
+        
+        float expandedBottom = lineY + lineHeight + 3;
+        if (coords.mouseX >= baseX && coords.mouseX <= baseX + scaledWidth &&
+            coords.mouseY >= baseY && coords.mouseY <= expandedBottom) {
+            
+            if (state.isVersionChecking()) {
+                return true;
+            }
+            
+            state.setVersionChecking(true);
+            state.setVersionCheckStatus(null);
+            state.setLatestVersion(null);
+            state.setVersionCheckStartTime(System.currentTimeMillis());
+            Minecraft mc = client;
+            VersionCheckUtils.checkVersionAsync(currentVersion).thenAccept(result -> {
+                if (mc != null && mc.level != null) {
+                    mc.schedule(() -> {
+                        state.setVersionChecking(false);
+                        if (result.hasError) {
+                            state.setVersionCheckStatus("error");
+                            state.setVersionCheckStartTime(System.currentTimeMillis());
+                            return;
+                        }
+                        
+                        if (result.isLatest) {
+                            state.setVersionCheckStatus("latest");
+                        } else {
+                            state.setVersionCheckStatus("update_available");
+                            state.setLatestVersion(result.latestVersion);
+                        }
+                        state.setVersionCheckStartTime(System.currentTimeMillis());
+                    });
+                } else {
+                    state.setVersionChecking(false);
+                }
+            }).exceptionally(throwable -> {
+                if (client != null && client.level != null) {
+                    client.schedule(() -> {
+                        state.setVersionChecking(false);
+                    });
+                } else {
+                    state.setVersionChecking(false);
+                }
+                return null;
+            });
+            
+            return true;
+        }
+        
+        return false;
+    }
+    
+    private boolean handleVersionUpdateClick(ClickGuiLayout.ScaledCoordinates coords, int button) {
+        if (button != 0) return false;
+        
+        long currentTime = System.currentTimeMillis();
+        if (state.getVersionCheckStatus() == null || 
+            !"update_available".equals(state.getVersionCheckStatus()) ||
+            currentTime - state.getVersionCheckStartTime() >= 2000) {
+            return false;
+        }
+        
+        String latest = state.getLatestVersion();
+        if (latest == null || latest.isEmpty()) {
+            return false;
+        }
+        
+        Minecraft client = Minecraft.getInstance();
+        if (client == null) return false;
+        
+        float versionScale = 0.70f;
+        String prefix = "Available updates！Check ";
+        String suffix = "！";
+        String displayText = prefix + latest + suffix;
+        int displayTextWidth = client.font.width(displayText);
+        float scaledWidth = versionScale * displayTextWidth;
+        
+        float baseX = ClickGuiState.WIDTH - scaledWidth - 8;
+        float baseY = ClickGuiState.HEIGHT - 8 - (int)(client.font.lineHeight * versionScale) - 2;
+        float baseHeight = (int)(client.font.lineHeight * versionScale);
+        
+        int prefixWidth = client.font.width(prefix);
+        float scaledPrefixWidth = versionScale * prefixWidth;
+        float versionX = baseX + scaledPrefixWidth;
+        float versionY = baseY;
+        float scaledVersionWidth = versionScale * client.font.width(latest);
+        
+        if (coords.mouseX >= versionX && coords.mouseX <= versionX + scaledVersionWidth &&
+            coords.mouseY >= versionY && coords.mouseY <= versionY + baseHeight) {
+            
+            try {
+                net.minecraft.Util.getPlatform().openUri(new java.net.URI("https://github.com/raueyhs/Baity/releases"));
+                return true;
+            } catch (Exception e) {
+                if (client.player != null) {
+                    client.player.displayClientMessage(
+                        net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://github.com/raueyhs/Baity/releases"),
+                        false
+                    );
+                }
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    private String getModVersion() {
+        try {
+            net.fabricmc.loader.api.FabricLoader loader = net.fabricmc.loader.api.FabricLoader.getInstance();
+            java.util.Optional<net.fabricmc.loader.api.ModContainer> modContainer = loader.getModContainer("baity");
+            if (modContainer.isPresent()) {
+                String version = modContainer.get().getMetadata().getVersion().getFriendlyString();
+                if (!version.startsWith("v") && !version.startsWith("V")) {
+                    version = "v" + version;
+                }
+                return version;
+            }
+        } catch (Exception e) {
+        }
+        return "v1.1.7";
+    }
+    
+    private boolean handleSearchInput(ClickGuiLayout.ScaledCoordinates coords, int button) {
+        if (button != 0) return false;
+        
+        float searchX = ClickGuiState.SIDEBAR_WIDTH + 20;
+        float searchY = 15;
+        float searchWidth = ClickGuiState.CONTENT_WIDTH - 40;
+        float searchHeight = 20;
+        
+        if (GuiRenderUtil.isHovered(searchX, searchY, searchX + searchWidth, searchY + searchHeight, 
+                                    coords.mouseX, coords.mouseY)) {
+            state.setSearchFocused(true);
+            return true;
+        } else {
+            state.setSearchFocused(false);
+        }
+        
+        return false;
+    }
+    
+    private boolean handleGitHubIconClick(ClickGuiLayout.ScaledCoordinates coords, int button) {
+        if (button != 0) return false;
+        
+        int iconSize = 20;
+        int padding = 8;
+        int iconX = padding;
+        int iconY = (int)(ClickGuiState.HEIGHT - iconSize - padding);
+        
+        if (coords.mouseX >= iconX && coords.mouseX < iconX + iconSize &&
+            coords.mouseY >= iconY && coords.mouseY < iconY + iconSize) {
+            
+            try {
+                net.minecraft.Util.getPlatform().openUri(new java.net.URI("https://github.com/raueyhs/Baity"));
+                return true;
+            } catch (Exception e) {
+                net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                if (mc.player != null) {
+                    mc.player.displayClientMessage(
+                        net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://github.com/raueyhs/Baity"),
+                        false
+                    );
+                }
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
     private boolean handleCategoryClick(ClickGuiLayout.ScaledCoordinates coords) {
         Minecraft client = Minecraft.getInstance();
         if (client == null) return false;
         
-        float cateX = 20;
-        float cateY = 30;
+        float categoryY = ClickGuiState.HEADER_HEIGHT + 20;
+        float categorySpacing = 35f;
         
         for (com.shyeuar.baity.gui.value.ModuleCategory category : 
              com.shyeuar.baity.gui.value.ModuleCategory.values()) {
-            String label = category.getDisplayName();
-            int textWidth = client.font.width(label);
+            boolean hovered = coords.mouseX >= 0 && coords.mouseX < ClickGuiState.SIDEBAR_WIDTH &&
+                            coords.mouseY >= categoryY - 5 && coords.mouseY < categoryY + 25;
             
-            if (GuiRenderUtil.isHovered(cateX, cateY, cateX + textWidth, cateY + 12, 
-                                       coords.mouseX, coords.mouseY) && 
-                timer.delay(100)) {
+            if (hovered && timer.delay(100)) {
                 state.setSelectedCategory(category);
+                state.setSearchText("");
+                state.setSearchFocused(false);
                 timer.reset();
                 return true;
             }
-            cateX += textWidth + 28;
+            
+            categoryY += categorySpacing;
         }
         
         return false;
     }
     
     private boolean handleModuleAndSubOptionClick(ClickGuiLayout.ScaledCoordinates coords, int button) {
-        float modY = 60 - state.getScrollOffset();
-        List<Module> modules = ModuleManager.getModulesByCategory(state.getSelectedCategory());
+        float contentX = ClickGuiState.SIDEBAR_WIDTH;
+        float contentY = ClickGuiState.HEADER_HEIGHT;
+        float contentWidth = ClickGuiState.CONTENT_WIDTH;
+        
+        if (coords.mouseX < contentX || coords.mouseX >= contentX + contentWidth ||
+            coords.mouseY < contentY || coords.mouseY >= ClickGuiState.HEIGHT - ClickGuiState.FOOTER_HEIGHT) {
+            return false;
+        }
+        
+        List<Module> modules = getFilteredModules();
+        float modY = contentY + 10 - state.getScrollOffset();
         
         for (Module module : modules) {
-            if (GuiRenderUtil.isHovered(20, modY, ClickGuiState.WIDTH - 20, modY + 25, 
+            float moduleX1 = contentX + 10;
+            float moduleX2 = contentX + contentWidth - 10;
+            if (GuiRenderUtil.isHovered(moduleX1, modY, moduleX2, modY + 25, 
                                        coords.mouseX, coords.mouseY) && 
                 timer.delay(100)) {
                 if (handleModuleClick(module, modY, coords, button)) {
@@ -370,7 +644,7 @@ public class ClickGuiInputHandler {
             modY += 30;
             
             if (module.isExpanded()) {
-                if (handleSubOptionClick(module, modY, coords, button)) {
+                if (handleSubOptionClick(module, modY, coords, button, contentX, contentWidth)) {
                     timer.reset();
                     return true;
                 }
@@ -379,6 +653,18 @@ public class ClickGuiInputHandler {
         }
         
         return false;
+    }
+    
+    private List<Module> getFilteredModules() {
+        String searchText = state.getSearchText().toLowerCase().trim();
+        
+        if (searchText.isEmpty()) {
+            return ModuleManager.getModulesByCategory(state.getSelectedCategory());
+        }
+        
+        return ModuleManager.getModules().stream()
+                .filter(module -> module.getName().toLowerCase().contains(searchText))
+                .collect(java.util.stream.Collectors.toList());
     }
     
     private boolean handleModuleClick(Module module, float modY, 
@@ -439,7 +725,8 @@ public class ClickGuiInputHandler {
     }
     
     private boolean handleSubOptionClick(Module module, float modY, 
-                                        ClickGuiLayout.ScaledCoordinates coords, int button) {
+                                        ClickGuiLayout.ScaledCoordinates coords, int button,
+                                        float contentX, float contentWidth) {
         if (button != 0 || !timer.delay(100)) return false;
         
         int subOptionCount = 0;
@@ -450,12 +737,12 @@ public class ClickGuiInputHandler {
         if (subOptionCount == 0) return false;
         
         int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
+        float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
         ClickGuiLayout.ContainerDimensions dims = 
-            ClickGuiLayout.calculateSubOptionContainer(subOptionCount, 
-            ClickGuiState.HEIGHT - 20 - ClickGuiState.LIST_TOP_PADDING, extraHeight);
+            ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
         
-        int containerX1 = 30;
-        int containerX2 = (int)(ClickGuiState.WIDTH - 30);
+        float containerX1 = contentX + 20;
+        float containerX2 = contentX + contentWidth - 20;
         float subModY = modY + dims.padding;
         
         int containerHeight = dims.height;
@@ -491,7 +778,7 @@ public class ClickGuiInputHandler {
                 int boxWidth = boxTextWidth + 16;
                 float boxCenterY = subModY + dims.subOptionHeight / 2f;
                 int boxHeight = 12;
-                int subX2 = containerX2 - 4;
+                int subX2 = (int)(containerX2 - 4);
                 int boxX1 = (int)(subX2 - boxWidth - 10);
                 int boxY1 = (int)(boxCenterY - boxHeight / 2f);
                 int boxX2 = (int)(subX2 - 10);
@@ -516,7 +803,7 @@ public class ClickGuiInputHandler {
                 Minecraft client = Minecraft.getInstance();
                 if (client == null) return false;
                 
-                int subX2 = containerX2 - 4;
+                int subX2 = (int)(containerX2 - 4);
                 
                 int resetBoxWidth = 30;
                 int resetBoxHeight = 12;
@@ -619,7 +906,8 @@ public class ClickGuiInputHandler {
     
     private boolean handleSubOptionScroll(Module module, float modY, 
                                          ClickGuiLayout.ScaledCoordinates coords, 
-                                         double verticalAmount) {
+                                         double verticalAmount,
+                                         float contentX, float contentWidth) {
         int subOptionCount = 0;
         for (Value value : module.getValues()) {
             if (!"enabled".equals(value.getName())) subOptionCount++;
@@ -628,12 +916,12 @@ public class ClickGuiInputHandler {
         if (subOptionCount == 0) return false;
         
         int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
+        float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
         ClickGuiLayout.ContainerDimensions dims = 
-            ClickGuiLayout.calculateSubOptionContainer(subOptionCount, 
-            ClickGuiState.HEIGHT - 20 - ClickGuiState.LIST_TOP_PADDING, extraHeight);
+            ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
         
-        int containerX1 = 30;
-        int containerX2 = (int)(ClickGuiState.WIDTH - 30);
+        float containerX1 = contentX + 20;
+        float containerX2 = contentX + contentWidth - 20;
         float subModY = modY + dims.padding;
         int containerHeight = dims.height;
         
@@ -751,22 +1039,21 @@ public class ClickGuiInputHandler {
     
     private int getSubOptionContainerHeight(Module module) {
         int subOptionCount = 0;
-        int extraHeight = 0;
         for (Value value : module.getValues()) {
-            if (!"enabled".equals(value.getName())) {
-                subOptionCount++;
-                if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
-                    extraHeight += 20; 
-                }
-            }
+            if (!"enabled".equals(value.getName())) subOptionCount++;
         }
-        
         if (subOptionCount == 0) return 0;
         
+        int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
+        float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
         ClickGuiLayout.ContainerDimensions dims = 
-            ClickGuiLayout.calculateSubOptionContainer(subOptionCount, 
-            ClickGuiState.HEIGHT - 20 - ClickGuiState.LIST_TOP_PADDING);
-        return dims.height + 5 + extraHeight;
+            ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
+        int fullContainerHeight = subOptionCount * dims.subOptionHeight + dims.padding * 2 + extraHeight;
+        
+        float expandProgress = state.getModuleExpandAnimations().getOrDefault(module.getName(), 0.0f);
+        int containerHeight = (int)(fullContainerHeight * expandProgress);
+        
+        return containerHeight + 5;
     }
     
     private void updateKeyDisplay() {

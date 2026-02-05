@@ -8,7 +8,6 @@ public class ConfigManager {
     public static boolean blockAnimationMode = false;
     public static boolean blockAnimationInteractAnimations = true;
     public static boolean blockAnimationNoReequipWhenUsing = true;
-    public static boolean blockAnimationSlowdown = false;
     public static boolean crosshairMode = true;
     public static boolean guiEnabled = true;
     public static int guiKeyCode = 345;
@@ -54,6 +53,13 @@ public class ConfigManager {
     
     public static boolean mufflerEnabled = false;
     public static boolean mufflerMuteEndermanScream = true;
+    public static boolean mufflerMutePhantom = true;
+    
+    public static boolean highlightsEnabled = false;
+    public static boolean highlightsShulkerEnabled = false;
+    public static boolean highlightsInvisibleBugEnabled = false;
+    
+    public static boolean fancyCreeperVeilEnabled = true;
     
     private static final String BAITY_DIR = "baity";
     private static final String CONFIG_FILE = "baity/config.txt";
@@ -73,9 +79,6 @@ public class ConfigManager {
         registerField("BlockAnimationNoReequipWhenUsing", Boolean.class,
             c -> ConfigManager.blockAnimationNoReequipWhenUsing,
             (c, v) -> ConfigManager.blockAnimationNoReequipWhenUsing = (Boolean) v);
-        registerField("BlockAnimationSlowdown", Boolean.class,
-            c -> ConfigManager.blockAnimationSlowdown,
-            (c, v) -> ConfigManager.blockAnimationSlowdown = (Boolean) v);
         registerField("Crosshair", Boolean.class,
             c -> ConfigManager.crosshairMode,
             (c, v) -> ConfigManager.crosshairMode = (Boolean) v);
@@ -85,7 +88,7 @@ public class ConfigManager {
         registerField("GuiKeyCode", Integer.class,
             c -> ConfigManager.guiKeyCode,
             (c, v) -> ConfigManager.guiKeyCode = (Integer) v);
-        registerField("PlayerESP", Boolean.class,
+        registerField("Nametag", Boolean.class,
             c -> ConfigManager.playerEspEnabled,
             (c, v) -> ConfigManager.playerEspEnabled = (Boolean) v);
         registerField("  ShowDistance", Boolean.class,
@@ -187,6 +190,21 @@ public class ConfigManager {
         registerField("MufflerMuteEndermanScream", Boolean.class,
             c -> ConfigManager.mufflerMuteEndermanScream,
             (c, v) -> ConfigManager.mufflerMuteEndermanScream = (Boolean) v);
+        registerField("MufflerMutePhantom", Boolean.class,
+            c -> ConfigManager.mufflerMutePhantom,
+            (c, v) -> ConfigManager.mufflerMutePhantom = (Boolean) v);
+        registerField("Highlights", Boolean.class,
+            c -> ConfigManager.highlightsEnabled,
+            (c, v) -> ConfigManager.highlightsEnabled = (Boolean) v);
+        registerField("  HighlightsShulker", Boolean.class,
+            c -> ConfigManager.highlightsShulkerEnabled,
+            (c, v) -> ConfigManager.highlightsShulkerEnabled = (Boolean) v);
+        registerField("  HighlightsInvisibleBug", Boolean.class,
+            c -> ConfigManager.highlightsInvisibleBugEnabled,
+            (c, v) -> ConfigManager.highlightsInvisibleBugEnabled = (Boolean) v);
+        registerField("FancyCreeperVeil", Boolean.class,
+            c -> ConfigManager.fancyCreeperVeilEnabled,
+            (c, v) -> ConfigManager.fancyCreeperVeilEnabled = (Boolean) v);
     }
     
     private static void registerField(String key, Class<?> type,

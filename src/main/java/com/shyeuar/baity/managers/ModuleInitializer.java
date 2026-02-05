@@ -12,6 +12,7 @@ public class ModuleInitializer {
     private static final Set<String> PLAYERESP_OPTIONS = Set.of("show distance", "show own nametag");
     private static final Set<String> REMINDER_OPTIONS = Set.of("cookie buff reminder", "god potion reminder", "meowalert");
     private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of("genshin elemental reaction");
+    private static final Set<String> HIGHLIGHTS_OPTIONS = Set.of("shulker", "invisible bug");
     
     public static void initializeModules() {
         initializeSmolPeople();
@@ -20,6 +21,7 @@ public class ModuleInitializer {
         initializeReminder();
         initializePlayerESP();
         initializeFancyDmgSplash();
+        initializeHighlights();
         
         com.shyeuar.baity.gui.sync.ConfigSynchronizer.syncModuleStates();
         
@@ -75,7 +77,7 @@ public class ModuleInitializer {
     
     
     private static void initializePlayerESP() {
-        Module playerEsp = ModuleManager.getModuleByName("PlayerESP");
+        Module playerEsp = ModuleManager.getModuleByName("Nametag");
         if (playerEsp != null) {
             playerEsp.setEnabled(ConfigManager.playerEspEnabled);
             for (Value v : playerEsp.getValues()) {
@@ -97,6 +99,21 @@ public class ModuleInitializer {
                 if (FANCYDMGSPLASH_OPTIONS.contains(v.getName())) {
                     switch (v.getName()) {
                         case "genshin elemental reaction" -> v.setValue(ConfigManager.fancyDmgSplashGenshinReaction);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void initializeHighlights() {
+        Module highlights = ModuleManager.getModuleByName("Highlights");
+        if (highlights != null) {
+            highlights.setEnabled(ConfigManager.highlightsEnabled);
+            for (Value v : highlights.getValues()) {
+                if (HIGHLIGHTS_OPTIONS.contains(v.getName())) {
+                    switch (v.getName()) {
+                        case "shulker" -> v.setValue(ConfigManager.highlightsShulkerEnabled);
+                        case "invisible bug" -> v.setValue(ConfigManager.highlightsInvisibleBugEnabled);
                     }
                 }
             }

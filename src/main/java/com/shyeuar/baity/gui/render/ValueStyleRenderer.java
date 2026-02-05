@@ -70,7 +70,7 @@ public class ValueStyleRenderer {
        int baseValueColor = subHovered ? new java.awt.Color(60, 60, 60, 80).getRGB() : 
                            new java.awt.Color(40, 40, 40, 50).getRGB();
        int valueColor = (baseValueColor & 0x00FFFFFF) | (localAlpha << 24);
-       GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + subOptionHeight, 6, valueColor);
+       GuiRenderUtil.draw3DRect(context, x1, y, x2, y + subOptionHeight, valueColor, 6f);
        
        if (subHovered) {
            String tooltip = getTooltipText.apply(value.getName());
@@ -93,9 +93,9 @@ public class ValueStyleRenderer {
        var handler = ValueTypeRegistry.getHandlerForValue(val);
        if (handler != null) {
            status = handler.formatValue(val);
-           if (val instanceof Boolean) {
-               boolean boolValue = (Boolean) val;
-               statusColor = boolValue ? theme.BG_3.getRGB() : theme.FONT.getRGB();
+          if (val instanceof Boolean) {
+              boolean boolValue = (Boolean) val;
+              statusColor = boolValue ? com.shyeuar.baity.gui.theme.LinearTheme.ACCENT_PRIMARY.getRGB() : theme.FONT.getRGB();
            } else {
                statusColor = theme.FONT.getRGB();
            }
@@ -123,9 +123,23 @@ public class ValueStyleRenderer {
                                              java.util.function.Function<Object, String> getDisplayTextFormatter,
                                              String listeningButtonValueName) {
        
-       int buttonEnabledBg = new java.awt.Color(54, 42, 150).getRGB();
-       int valueColor = (buttonEnabledBg & 0x00FFFFFF) | (localAlpha << 24);
-       GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + subOptionHeight, 6, valueColor);
+       Object buttonVal = buttonValue.getValue();
+       boolean isEnabled = buttonVal instanceof Boolean && (Boolean)buttonVal;
+       
+       if (isEnabled) {
+           int accentStart = com.shyeuar.baity.gui.theme.LinearTheme.ACCENT_PRIMARY.getRGB();
+           int accentEnd = com.shyeuar.baity.gui.theme.LinearTheme.ACCENT_SECONDARY.getRGB();
+           int aStart = ((accentStart >> 24) & 0xFF) * localAlpha / 255;
+           int aEnd = ((accentEnd >> 24) & 0xFF) * localAlpha / 255;
+           accentStart = (aStart << 24) | (accentStart & 0x00FFFFFF);
+           accentEnd = (aEnd << 24) | (accentEnd & 0x00FFFFFF);
+           GuiRenderUtil.draw3DGradientRect(context, x1, y, x2, y + subOptionHeight, accentStart, accentEnd, 6f);
+       } else {
+           int cardBg = com.shyeuar.baity.gui.theme.LinearTheme.BG_TERTIARY.getRGB();
+           int valueColor = (cardBg & 0x00FFFFFF) | (localAlpha << 24);
+           GuiRenderUtil.drawFrostedGlass(context, x1, y, x2, y + subOptionHeight, valueColor, 6f);
+           GuiRenderUtil.draw3DRect(context, x1, y, x2, y + subOptionHeight, valueColor, 6f);
+       }
        
        int textColor = (theme.FONT_C.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        context.drawString(client.font, buttonValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
@@ -155,7 +169,7 @@ public class ValueStyleRenderer {
        
        int baseValueColor = new java.awt.Color(40, 40, 40, 50).getRGB();
        int valueColor = (baseValueColor & 0x00FFFFFF) | (localAlpha << 24);
-       GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + subOptionHeight, 6, valueColor);
+       GuiRenderUtil.draw3DRect(context, x1, y, x2, y + subOptionHeight, valueColor, 6f);
        
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        context.drawString(client.font, sliderValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
@@ -214,8 +228,13 @@ public class ValueStyleRenderer {
        double percentage = sliderValue.getPercentage();
        int filledWidth = (int)(sliderWidth * percentage);
        if (filledWidth > 0) {
-           int sliderFillColor = (new java.awt.Color(54, 42, 150, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-           GuiRenderUtil.drawRoundedRect(context, sliderX, sliderY, sliderX + filledWidth, sliderY + sliderHeight, 2, sliderFillColor);
+           int accentStart = com.shyeuar.baity.gui.theme.LinearTheme.ACCENT_PRIMARY.getRGB();
+           int accentEnd = com.shyeuar.baity.gui.theme.LinearTheme.ACCENT_SECONDARY.getRGB();
+           int aStart = ((accentStart >> 24) & 0xFF) * localAlpha / 255;
+           int aEnd = ((accentEnd >> 24) & 0xFF) * localAlpha / 255;
+           accentStart = (aStart << 24) | (accentStart & 0x00FFFFFF);
+           accentEnd = (aEnd << 24) | (accentEnd & 0x00FFFFFF);
+           GuiRenderUtil.drawGradientRect(context, sliderX, sliderY, sliderX + filledWidth, sliderY + sliderHeight, accentStart, accentEnd, 2f);
        }
        
        int handleRadius = 5;

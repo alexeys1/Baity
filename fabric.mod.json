@@ -8,6 +8,7 @@
   "contact": {},
   "license": "MIT",
   "environment": "client",
+  "icon": "assets/baity/icon.png",
   "entrypoints": {
     "client": ["com.shyeuar.baity.client.Baity"]
   },
@@ -18,6 +19,7 @@
     "fabricloader": ">=0.15.0",
     "minecraft": ">=1.21.10",
     "fabric": ">=0.128.0",
-    "fabric-command-api-v2": "*"
+    "fabric-command-api-v2": "*",
+    "owo": ">=0.12.0"
   }
 }

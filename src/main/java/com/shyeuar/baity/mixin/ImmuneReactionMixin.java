@@ -1,7 +1,7 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.features.ElementalReactionDetector;
-import com.shyeuar.baity.features.FancyDmgSplash;
+import com.shyeuar.baity.features.fancydmgsplash.ElementalReactionDetector;
+import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import net.minecraft.client.Minecraft;
@@ -16,9 +16,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 public class ImmuneReactionMixin {
 
-    /**
-     * 监听聊天消息，检测 Wither Cloak 激活/失效
-     */
     @Mixin(ChatComponent.class)
     public static class ChatDetectorMixin {
         @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;)V", at = @At("HEAD"))
@@ -29,15 +26,14 @@ public class ImmuneReactionMixin {
 
             if (text.contains("Creeper Veil Activated!")) {
                 ElementalReactionDetector.setWitherCloakActive(true);
-            } else if (text.contains("Creeper Veil De-activated!")) {
+            } else if (text.contains("Creeper Veil De-activated!") || 
+                       text.contains("Not enough mana! Creeper Veil De-activated!")) {
                 ElementalReactionDetector.setWitherCloakActive(false);
+                com.shyeuar.baity.features.FancyCreeperVeil.lastDeactivate = System.currentTimeMillis();
             }
         }
     }
 
-    /**
-     * 定期检测 Wither Cloak 状态并触发免疫反应
-     */
     @Mixin(LocalPlayer.class)
     public static class PlayerTickMixin {
         @Unique

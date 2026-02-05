@@ -17,7 +17,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 @Environment(EnvType.CLIENT)
-public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
+public class NametagRenderer implements WorldRenderEvents.AfterEntities {
     private static final Minecraft mc = Minecraft.getInstance();
     
     private static long lastTimeUpdate = 0;
@@ -25,7 +25,7 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
     
     @Override
     public void afterEntities(WorldRenderContext context) {
-        Module m = ModuleManager.getModuleByName("PlayerESP");
+        Module m = ModuleManager.getModuleByName("Nametag");
         if (m == null || !m.isEnabled()) {
             return; 
         }
@@ -113,6 +113,16 @@ public class PlayerESPRenderer implements WorldRenderEvents.AfterEntities {
             matrices.scale(-breathingScale, -breathingScale, breathingScale);
         
         String baseName = player.getDisplayName() != null ? player.getDisplayName().getString() : player.getName().getString();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < baseName.length(); i++) {
+            char c = baseName.charAt(i);
+            if (c == '\u00A7' && i + 1 < baseName.length()) {
+                i++;
+                continue;
+            }
+            sb.append(c);
+        }
+        baseName = sb.toString();
         boolean isDeveloper = DevConfig.isDeveloper(player);
         boolean showDistance = ModuleUtils.getOptionBoolean(module, "show distance", true);
         

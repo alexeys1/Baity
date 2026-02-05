@@ -1,6 +1,7 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.features.WarpMenuScreen;
+import com.shyeuar.baity.features.radialmenu.WarpMenuScreen;
+import com.shyeuar.baity.features.radialmenu.RadialMenuScreen;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
@@ -20,7 +21,7 @@ public class WarpMenuMovementMixin extends ClientInput {
     @Inject(method = "tick", at = @At("TAIL"))
     private void allowMovementInWarpMenu(CallbackInfo ci) {
         Minecraft client = Minecraft.getInstance();
-        if (client.screen instanceof WarpMenuScreen) {
+        if (client.screen instanceof WarpMenuScreen || client.screen instanceof RadialMenuScreen) {
             long window = client.getWindow().handle();
             Options options = client.options;
 
@@ -41,19 +42,6 @@ public class WarpMenuMovementMixin extends ClientInput {
             float forwardMovement = getMovementMultiplier(forward, back);
             float sidewaysMovement = getMovementMultiplier(left, right);
             this.moveVector = new Vec2(sidewaysMovement, forwardMovement).normalized();
-        }
-        
-        if (client.player != null && com.shyeuar.baity.utils.BlockAnimationUtils.isFeatureActive() 
-                && com.shyeuar.baity.utils.BlockAnimationUtils.isSlowdownEnabled()) {
-            if (com.shyeuar.baity.utils.BlockAnimationUtils.isPlayerBlockingWithSword(client.player)) {
-                float slowdownFactor = 0.3f; 
-                if (this.moveVector != null && (this.moveVector.x != 0.0f || this.moveVector.y != 0.0f)) {
-                    this.moveVector = new Vec2(
-                            this.moveVector.x * slowdownFactor,
-                            this.moveVector.y * slowdownFactor
-                    );
-                }
-            }
         }
     }
 

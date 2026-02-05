@@ -9,7 +9,6 @@ import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
@@ -304,7 +303,7 @@ public abstract class BlockAnimationMixin {
         }
     }
     
-    @Mixin(LevelRenderer.class)
+    @Mixin(net.minecraft.client.renderer.LevelRenderer.class)
     public static abstract class LevelRendererMixin {
         @Inject(method = "tick", at = @At("TAIL"))
         private void baity$injectClientBreakingProgress(net.minecraft.client.Camera camera, CallbackInfo ci) {
@@ -319,10 +318,10 @@ public abstract class BlockAnimationMixin {
                 int progress = com.shyeuar.baity.features.blockanimation.BlockAnimationManager.getBreakingProgress(breakingPos);
                 if (progress >= 0 && progress < 10) {
                     int playerId = mc.player.getId();
-                    ((LevelRenderer)(Object)this).destroyBlockProgress(playerId, breakingPos, progress);
+                    ((net.minecraft.client.renderer.LevelRenderer)(Object)this).destroyBlockProgress(playerId, breakingPos, progress);
                 } else if (progress >= 10) {
                     int playerId = mc.player.getId();
-                    ((LevelRenderer)(Object)this).destroyBlockProgress(playerId, breakingPos, -1);
+                    ((net.minecraft.client.renderer.LevelRenderer)(Object)this).destroyBlockProgress(playerId, breakingPos, -1);
                 }
             }
         }

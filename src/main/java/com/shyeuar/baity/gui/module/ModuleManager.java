@@ -28,16 +28,8 @@ public class ModuleManager {
             "BlockAnimation", "BlockAnimation", ModuleCategory.FUN,
             () -> ConfigManager.blockAnimationMode,
             val -> ConfigManager.blockAnimationMode = val,
-            new Option[]{
-                new Option("slowdown", "slowdown", false, ModuleCategory.FUN)
-            },
-            new ModuleRegistry.ValueConfigInfo[]{
-                new ModuleRegistry.ValueConfigInfo(
-                    "slowdown",
-                    () -> ConfigManager.blockAnimationSlowdown,
-                    val -> ConfigManager.blockAnimationSlowdown = (Boolean) val
-                )
-            }
+            new Option[]{},
+            new ModuleRegistry.ValueConfigInfo[]{}
         );
         
         ModuleRegistry.registerModuleWithValues(
@@ -104,6 +96,13 @@ public class ModuleManager {
             }
         );
         
+        Module fancyCreeperVeilModule = ModuleRegistry.registerSimpleModule(
+            "FancyCreeperVeil", "FancyCreeperVeil", ModuleCategory.FUN,
+            () -> ConfigManager.fancyCreeperVeilEnabled,
+            val -> ConfigManager.fancyCreeperVeilEnabled = (Boolean) val
+        );
+        fancyCreeperVeilModule.setEnabled(true);
+        
         Module pepCatModule = ModuleRegistry.registerSimpleModule(
             "PepCat", "PepCat", ModuleCategory.FUN,
             () -> ConfigManager.pepCatEnabled,
@@ -155,13 +154,19 @@ public class ModuleManager {
             () -> ConfigManager.mufflerEnabled,
             val -> ConfigManager.mufflerEnabled = val,
             new Option[]{
-                new Option("mute enderman scream", "mute enderman scream", true, ModuleCategory.QOL)
+                new Option("mute enderman scream", "mute enderman scream", true, ModuleCategory.QOL),
+                new Option("mute phantom", "mute phantom", true, ModuleCategory.QOL)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
                     "mute enderman scream",
                     () -> ConfigManager.mufflerMuteEndermanScream,
                     val -> ConfigManager.mufflerMuteEndermanScream = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "mute phantom",
+                    () -> ConfigManager.mufflerMutePhantom,
+                    val -> ConfigManager.mufflerMutePhantom = (Boolean) val
                 )
             }
         );
@@ -284,7 +289,7 @@ public class ModuleManager {
         );
         
         ModuleRegistry.registerModuleWithValues(
-            "PlayerESP", "PlayerESP", ModuleCategory.RENDER,
+            "Nametag", "Nametag", ModuleCategory.RENDER,
             () -> ConfigManager.playerEspEnabled,
             val -> ConfigManager.playerEspEnabled = val,
             new Option[]{
@@ -301,6 +306,28 @@ public class ModuleManager {
                     "show own nametag",
                     () -> ConfigManager.playerEspShowOwnNametag,
                     val -> ConfigManager.playerEspShowOwnNametag = (Boolean) val
+                )
+            }
+        );
+
+        ModuleRegistry.registerModuleWithValues(
+            "Highlights", "Highlights", ModuleCategory.RENDER,
+            () -> ConfigManager.highlightsEnabled,
+            val -> ConfigManager.highlightsEnabled = val,
+            new Option[]{
+                new Option("shulker", "shulker", false, ModuleCategory.RENDER),
+                new Option("invisible bug", "invisible bug", false, ModuleCategory.RENDER)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "shulker",
+                    () -> ConfigManager.highlightsShulkerEnabled,
+                    val -> ConfigManager.highlightsShulkerEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "invisible bug",
+                    () -> ConfigManager.highlightsInvisibleBugEnabled,
+                    val -> ConfigManager.highlightsInvisibleBugEnabled = (Boolean) val
                 )
             }
         );

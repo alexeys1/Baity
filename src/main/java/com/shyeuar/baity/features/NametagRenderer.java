@@ -13,6 +13,8 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -112,30 +114,41 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
             float breathingScale = (float) (baseScale * (1.0 + cachedSinValue * 0.3)); 
             matrices.scale(-breathingScale, -breathingScale, breathingScale);
         
-        String baseName = player.getDisplayName() != null ? player.getDisplayName().getString() : player.getName().getString();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < baseName.length(); i++) {
-            char c = baseName.charAt(i);
-            if (c == '\u00A7' && i + 1 < baseName.length()) {
-                i++;
-                continue;
-            }
-            sb.append(c);
-        }
-        baseName = sb.toString();
+        Component originalNameComponent = player.getDisplayName() != null ? player.getDisplayName() : player.getName();
         boolean isDeveloper = DevConfig.isDeveloper(player);
         boolean showDistance = ModuleUtils.getOptionBoolean(module, "show distance", true);
+        boolean forcePinkColor = ModuleUtils.getOptionBoolean(module, "force pink color", true);
+        
+        Component nameComponent;
+        String baseName;
+        if (forcePinkColor) {
+            baseName = originalNameComponent.getString();
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < baseName.length(); i++) {
+                char c = baseName.charAt(i);
+                if (c == '\u00A7' && i + 1 < baseName.length()) {
+                    i++;
+                    continue;
+                }
+                sb.append(c);
+            }
+            baseName = sb.toString();
+            nameComponent = Component.literal(baseName).withStyle(Style.EMPTY.withColor(0xFFFF69B4));
+        } else {
+            nameComponent = originalNameComponent;
+            baseName = nameComponent.getString();
+        }
         
         Font textRenderer = mc.font;
         
-        int totalWidth = textRenderer.width(baseName);
+        int totalWidth = textRenderer.width(nameComponent);
         if (isDeveloper) {
             totalWidth += textRenderer.width(DevConfig.DEV_PREFIX) + 2; 
         }
         
         int currentX;
         if (isDeveloper) {
-            int nameWidth = textRenderer.width(baseName);
+            int nameWidth = textRenderer.width(nameComponent);
             int prefixWidth = textRenderer.width(DevConfig.DEV_PREFIX) + 2;
             currentX = -nameWidth / 2 - prefixWidth; 
         } else {
@@ -144,7 +157,6 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         
         MultiBufferSource.BufferSource immediate = mc.renderBuffers().bufferSource();
         
-        int nameColorWithAlpha = 0xFFFF69B4;
         int distanceColorWithAlpha = 0xFF00FFFF;
         int devColorWithAlpha = DevConfig.DEV_PREFIX_COLOR | 0xFF000000;
         
@@ -153,14 +165,14 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
             currentX += textRenderer.width(DevConfig.DEV_PREFIX) + 2;
         }
         
-        textRenderer.drawInBatch(baseName, currentX, 0, nameColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+        textRenderer.drawInBatch(nameComponent, currentX, 0, 0xFFFFFFFF, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
         
         if (showDistance) {
             double dist = mc.player != null ? mc.player.distanceTo(player) : 0.0;
             String distanceText = " [" + (int)Math.round(dist) + "]";
             int distanceX;
             if (isDeveloper) {
-                distanceX = currentX + textRenderer.width(baseName) + 2;
+                distanceX = currentX + textRenderer.width(nameComponent) + 2;
             } else {
                 distanceX = totalWidth / 2 + 2;
             }

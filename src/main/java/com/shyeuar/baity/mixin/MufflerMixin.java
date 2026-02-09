@@ -17,6 +17,7 @@ public class MufflerMixin {
 
     private static final ResourceLocation ENDERMAN_SCREAM = ResourceLocation.fromNamespaceAndPath("minecraft", "entity.enderman.scream");
     private static final ResourceLocation ENDERMAN_STARE = ResourceLocation.fromNamespaceAndPath("minecraft", "entity.enderman.stare");
+    private static final ResourceLocation PORTAL_AMBIENT = ResourceLocation.fromNamespaceAndPath("minecraft", "block.portal.ambient");
 
     @Inject(method = "play(Lnet/minecraft/client/resources/sounds/SoundInstance;)Lnet/minecraft/client/sounds/SoundEngine$PlayResult;", at = @At("HEAD"), cancellable = true)
     private void baity$muteSound(SoundInstance sound, CallbackInfoReturnable<SoundEngine.PlayResult> cir) {
@@ -35,6 +36,14 @@ public class MufflerMixin {
         if (ModuleUtils.getOptionBoolean(m, "mute phantom", true)) {
             if (isInGalatea() && soundId.getPath().startsWith("entity.phantom")) {
                 cir.setReturnValue(SoundEngine.PlayResult.NOT_STARTED);
+                return;
+            }
+        }
+        
+        if (ModuleUtils.getOptionBoolean(m, "mute portal", true)) {
+            if (soundId.equals(PORTAL_AMBIENT)) {
+                cir.setReturnValue(SoundEngine.PlayResult.NOT_STARTED);
+                return;
             }
         }
     }

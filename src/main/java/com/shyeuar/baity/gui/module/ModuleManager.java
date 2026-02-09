@@ -155,7 +155,8 @@ public class ModuleManager {
             val -> ConfigManager.mufflerEnabled = val,
             new Option[]{
                 new Option("mute enderman scream", "mute enderman scream", true, ModuleCategory.QOL),
-                new Option("mute phantom", "mute phantom", true, ModuleCategory.QOL)
+                new Option("mute phantom", "mute phantom", true, ModuleCategory.QOL),
+                new Option("mute portal", "mute portal", true, ModuleCategory.QOL)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
@@ -167,6 +168,11 @@ public class ModuleManager {
                     "mute phantom",
                     () -> ConfigManager.mufflerMutePhantom,
                     val -> ConfigManager.mufflerMutePhantom = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "mute portal",
+                    () -> ConfigManager.mufflerMutePortal,
+                    val -> ConfigManager.mufflerMutePortal = (Boolean) val
                 )
             }
         );
@@ -266,6 +272,7 @@ public class ModuleManager {
             val -> ConfigManager.fancyDmgSplashEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
                 new Option("genshin elemental reaction", "genshin elemental reaction", false, ModuleCategory.RENDER),
+                new Option("compact damage number", "compact damage number", true, ModuleCategory.RENDER),
                 new com.shyeuar.baity.gui.value.ColorPaletteValue("color palette", "color palette", ModuleCategory.RENDER)
             },
             new ModuleRegistry.ValueConfigInfo[]{
@@ -273,6 +280,11 @@ public class ModuleManager {
                     "genshin elemental reaction",
                     () -> ConfigManager.fancyDmgSplashGenshinReaction,
                     val -> ConfigManager.fancyDmgSplashGenshinReaction = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "compact damage number",
+                    () -> ConfigManager.fancyDmgSplashCompactDamageNumber,
+                    val -> ConfigManager.fancyDmgSplashCompactDamageNumber = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "color palette",
@@ -289,12 +301,35 @@ public class ModuleManager {
         );
         
         ModuleRegistry.registerModuleWithValues(
+            "Nodebuff", "Nodebuff", ModuleCategory.RENDER,
+            () -> ConfigManager.nodebuffEnabled,
+            val -> ConfigManager.nodebuffEnabled = val,
+            new Option[]{
+                new Option("remove nausea", "remove nausea", true, ModuleCategory.RENDER),
+                new Option("remove blindness", "remove blindness", true, ModuleCategory.RENDER)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "remove nausea",
+                    () -> ConfigManager.nodebuffRemoveNausea,
+                    val -> ConfigManager.nodebuffRemoveNausea = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "remove blindness",
+                    () -> ConfigManager.nodebuffRemoveBlindness,
+                    val -> ConfigManager.nodebuffRemoveBlindness = (Boolean) val
+                )
+            }
+        );
+        
+        ModuleRegistry.registerModuleWithValues(
             "Nametag", "Nametag", ModuleCategory.RENDER,
             () -> ConfigManager.playerEspEnabled,
             val -> ConfigManager.playerEspEnabled = val,
             new Option[]{
                 new Option("show distance", "show distance", true, ModuleCategory.RENDER),
-                new Option("show own nametag", "show own nametag", false, ModuleCategory.RENDER)
+                new Option("show own nametag", "show own nametag", false, ModuleCategory.RENDER),
+                new Option("force pink color", "force pink color", true, ModuleCategory.RENDER)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
@@ -306,6 +341,11 @@ public class ModuleManager {
                     "show own nametag",
                     () -> ConfigManager.playerEspShowOwnNametag,
                     val -> ConfigManager.playerEspShowOwnNametag = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "force pink color",
+                    () -> ConfigManager.playerEspForcePinkColor,
+                    val -> ConfigManager.playerEspForcePinkColor = (Boolean) val
                 )
             }
         );

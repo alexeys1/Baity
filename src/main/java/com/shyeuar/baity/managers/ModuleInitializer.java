@@ -9,10 +9,11 @@ import java.util.Set;
 public class ModuleInitializer {
     
     private static final Set<String> SMOLPEOPLE_OPTIONS = Set.of("crosshair");
-    private static final Set<String> PLAYERESP_OPTIONS = Set.of("show distance", "show own nametag");
+    private static final Set<String> PLAYERESP_OPTIONS = Set.of("show distance", "show own nametag", "force pink color");
     private static final Set<String> REMINDER_OPTIONS = Set.of("cookie buff reminder", "god potion reminder", "meowalert");
-    private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of("genshin elemental reaction");
+    private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of("genshin elemental reaction", "compact damage number");
     private static final Set<String> HIGHLIGHTS_OPTIONS = Set.of("shulker", "invisible bug");
+    private static final Set<String> NODEBUFF_OPTIONS = Set.of("remove nausea", "remove blindness");
     
     public static void initializeModules() {
         initializeSmolPeople();
@@ -22,6 +23,7 @@ public class ModuleInitializer {
         initializePlayerESP();
         initializeFancyDmgSplash();
         initializeHighlights();
+        initializeNodebuff();
         
         com.shyeuar.baity.gui.sync.ConfigSynchronizer.syncModuleStates();
         
@@ -85,6 +87,7 @@ public class ModuleInitializer {
                     switch (v.getName()) {
                         case "show distance" -> v.setValue(ConfigManager.playerEspShowDistance);
                         case "show own nametag" -> v.setValue(ConfigManager.playerEspShowOwnNametag);
+                        case "force pink color" -> v.setValue(ConfigManager.playerEspForcePinkColor);
                     }
                 }
             }
@@ -99,6 +102,7 @@ public class ModuleInitializer {
                 if (FANCYDMGSPLASH_OPTIONS.contains(v.getName())) {
                     switch (v.getName()) {
                         case "genshin elemental reaction" -> v.setValue(ConfigManager.fancyDmgSplashGenshinReaction);
+                        case "compact damage number" -> v.setValue(ConfigManager.fancyDmgSplashCompactDamageNumber);
                     }
                 }
             }
@@ -114,6 +118,21 @@ public class ModuleInitializer {
                     switch (v.getName()) {
                         case "shulker" -> v.setValue(ConfigManager.highlightsShulkerEnabled);
                         case "invisible bug" -> v.setValue(ConfigManager.highlightsInvisibleBugEnabled);
+                    }
+                }
+            }
+        }
+    }
+    
+    private static void initializeNodebuff() {
+        Module nodebuff = ModuleManager.getModuleByName("Nodebuff");
+        if (nodebuff != null) {
+            nodebuff.setEnabled(ConfigManager.nodebuffEnabled);
+            for (Value v : nodebuff.getValues()) {
+                if (NODEBUFF_OPTIONS.contains(v.getName())) {
+                    switch (v.getName()) {
+                        case "remove nausea" -> v.setValue(ConfigManager.nodebuffRemoveNausea);
+                        case "remove blindness" -> v.setValue(ConfigManager.nodebuffRemoveBlindness);
                     }
                 }
             }

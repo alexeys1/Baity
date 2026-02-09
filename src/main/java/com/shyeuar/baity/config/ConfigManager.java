@@ -14,6 +14,7 @@ public class ConfigManager {
     public static boolean playerEspEnabled = false;
     public static boolean playerEspShowDistance = true;
     public static boolean playerEspShowOwnNametag = false;
+    public static boolean playerEspForcePinkColor = true;
     public static boolean pepCatEnabled = true;
     public static boolean reminderEnabled = false;
     public static boolean cookieBuffReminderEnabled = true;
@@ -36,6 +37,7 @@ public class ConfigManager {
     
     public static boolean fancyDmgSplashEnabled = true;
     public static boolean fancyDmgSplashGenshinReaction = false;
+    public static boolean fancyDmgSplashCompactDamageNumber = true;
     public static int fancyDmgSplashColorPalette = 0;
     
     public static boolean noSwimChangeEnabled = true;
@@ -51,9 +53,14 @@ public class ConfigManager {
     
     public static boolean noHurtCamEnabled = false;
     
+    public static boolean nodebuffEnabled = true;
+    public static boolean nodebuffRemoveNausea = true;
+    public static boolean nodebuffRemoveBlindness = true;
+    
     public static boolean mufflerEnabled = false;
     public static boolean mufflerMuteEndermanScream = true;
     public static boolean mufflerMutePhantom = true;
+    public static boolean mufflerMutePortal = true;
     
     public static boolean highlightsEnabled = false;
     public static boolean highlightsShulkerEnabled = false;
@@ -97,6 +104,9 @@ public class ConfigManager {
         registerField("  ShowOwnNametag", Boolean.class,
             c -> ConfigManager.playerEspShowOwnNametag,
             (c, v) -> ConfigManager.playerEspShowOwnNametag = (Boolean) v);
+        registerField("  ForcePinkColor", Boolean.class,
+            c -> ConfigManager.playerEspForcePinkColor,
+            (c, v) -> ConfigManager.playerEspForcePinkColor = (Boolean) v);
         registerField("PepCat", Boolean.class,
             c -> ConfigManager.pepCatEnabled,
             (c, v) -> ConfigManager.pepCatEnabled = (Boolean) v);
@@ -154,6 +164,9 @@ public class ConfigManager {
         registerField("FancyDmgSplashGenshinReaction", Boolean.class,
             c -> ConfigManager.fancyDmgSplashGenshinReaction,
             (c, v) -> ConfigManager.fancyDmgSplashGenshinReaction = (Boolean) v);
+        registerField("FancyDmgSplashCompactDamageNumber", Boolean.class,
+            c -> ConfigManager.fancyDmgSplashCompactDamageNumber,
+            (c, v) -> ConfigManager.fancyDmgSplashCompactDamageNumber = (Boolean) v);
         registerField("FancyDmgSplashColorPalette", Integer.class,
             c -> ConfigManager.fancyDmgSplashColorPalette,
             (c, v) -> ConfigManager.fancyDmgSplashColorPalette = (Integer) v);
@@ -184,6 +197,15 @@ public class ConfigManager {
         registerField("NoHurtCam", Boolean.class,
             c -> ConfigManager.noHurtCamEnabled,
             (c, v) -> ConfigManager.noHurtCamEnabled = (Boolean) v);
+        registerField("Nodebuff", Boolean.class,
+            c -> ConfigManager.nodebuffEnabled,
+            (c, v) -> ConfigManager.nodebuffEnabled = (Boolean) v);
+        registerField("  RemoveNausea", Boolean.class,
+            c -> ConfigManager.nodebuffRemoveNausea,
+            (c, v) -> ConfigManager.nodebuffRemoveNausea = (Boolean) v);
+        registerField("  RemoveBlindness", Boolean.class,
+            c -> ConfigManager.nodebuffRemoveBlindness,
+            (c, v) -> ConfigManager.nodebuffRemoveBlindness = (Boolean) v);
         registerField("Muffler", Boolean.class,
             c -> ConfigManager.mufflerEnabled,
             (c, v) -> ConfigManager.mufflerEnabled = (Boolean) v);
@@ -193,6 +215,9 @@ public class ConfigManager {
         registerField("MufflerMutePhantom", Boolean.class,
             c -> ConfigManager.mufflerMutePhantom,
             (c, v) -> ConfigManager.mufflerMutePhantom = (Boolean) v);
+        registerField("MufflerMutePortal", Boolean.class,
+            c -> ConfigManager.mufflerMutePortal,
+            (c, v) -> ConfigManager.mufflerMutePortal = (Boolean) v);
         registerField("Highlights", Boolean.class,
             c -> ConfigManager.highlightsEnabled,
             (c, v) -> ConfigManager.highlightsEnabled = (Boolean) v);

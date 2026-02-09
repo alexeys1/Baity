@@ -3,6 +3,7 @@ package com.shyeuar.baity.features.fancydmgsplash;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
+import com.shyeuar.baity.utils.ModuleUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
@@ -324,7 +325,15 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
             
             matrices.scale(-finalScale, -finalScale, finalScale);
             
-            String damageText = formatDamage(dn.damage);
+            Module module = ModuleManager.getModuleByName("FancyDmgSplash");
+            boolean useCompactDamage = module != null && ModuleUtils.getOptionBoolean(module, "compact damage number", true);
+            
+            String damageText;
+            if (useCompactDamage) {
+                damageText = CompactDamageNumber.formatDamage(dn.damage);
+            } else {
+                damageText = String.valueOf((long) dn.damage);
+            }
             
             Component styledText;
             int color;
@@ -354,15 +363,6 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         }
     }
     
-    private String formatDamage(double damage) {
-        if (damage >= 1000000) {
-            return String.format("%.1fM", damage / 1000000);
-        } else if (damage >= 1000) {
-            return String.format("%.1fK", damage / 1000);
-        } else {
-            return String.format("%.0f", damage);
-        }
-    }
     
     private void renderReactionText(PoseStack matrices, ReactionText rt, Vec3 cameraPos,
                                     float cameraYaw, float cameraPitch, long currentTime) {

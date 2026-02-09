@@ -3,16 +3,18 @@ package com.shyeuar.baity.features.fancydmgsplash;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import com.shyeuar.baity.utils.ModuleUtils;
+import com.shyeuar.baity.utils.ColorGradientUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.world.entity.Entity;
@@ -25,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Environment(EnvType.CLIENT)
 public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
@@ -97,6 +101,90 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         }
         
         return 0xFFFFFF;
+    }
+    
+    private static final Pattern DAMAGE_TEXT_PATTERN = Pattern.compile("([✧✯]?)[\\d,]+[✧✯]?([❤+⚔☄♞]?)");
+    private static final Pattern COMPACT_SUFFIX_PATTERN = Pattern.compile(".*[kKmMbBtTqQ]$");
+    
+    private static boolean hasCompactSuffix(String text) {
+        if (text == null || text.isEmpty()) return false;
+        String cleaned = text.replaceAll("[^\\d.,kKmMbBtTqQ]", "");
+        return COMPACT_SUFFIX_PATTERN.matcher(cleaned).find();
+    }
+    
+    public static Component applyCompactFormatting(Component originalText, double damage) {
+        if (originalText == null) return null;
+        
+        String textContent = originalText.getString();
+        
+        if (hasCompactSuffix(textContent)) {
+            return originalText;
+        }
+        
+        Matcher matcher = DAMAGE_TEXT_PATTERN.matcher(textContent);
+        if (!matcher.matches()) return originalText;
+        
+        List<Component> siblings = originalText.getSiblings();
+        if (siblings.isEmpty()) return originalText;
+        
+        boolean isCritical = !matcher.group(1).isEmpty();
+        String numericPart = textContent.replaceAll("\\D", "");
+        if (numericPart.isEmpty()) return originalText;
+        
+        long damageValue;
+        try {
+            damageValue = Long.parseLong(numericPart);
+        } catch (NumberFormatException e) {
+            return originalText;
+        }
+        
+        TextColor originalColor = siblings.getFirst().getStyle().getColor();
+        MutableComponent result = Component.empty();
+        
+        if (isCritical) {
+            String critSymbol = matcher.group(1);
+            String displayText;
+            if (damageValue < 1000) {
+                displayText = critSymbol + String.valueOf(damageValue) + critSymbol;
+            } else {
+                String compactText = CompactDamageNumber.formatDamage(damageValue, 4);
+                displayText = critSymbol + compactText + critSymbol;
+            }
+            
+            int textLength = displayText.length();
+            int gradientStart = com.shyeuar.baity.config.ConfigManager.fancyDmgSplashCritGradientStart & 0x00FFFFFF;
+            int gradientEnd = com.shyeuar.baity.config.ConfigManager.fancyDmgSplashCritGradientEnd & 0x00FFFFFF;
+            
+            for (int i = 0; i < textLength; i++) {
+                float ratio = i / (textLength - 1.0f);
+                int color = ColorGradientUtils.blendColors(
+                    gradientStart,
+                    gradientEnd,
+                    ratio
+                );
+                result.append(Component.literal(displayText.substring(i, i + 1))
+                    .withStyle(Style.EMPTY.withColor(color)));
+            }
+            result.setStyle(originalText.getStyle());
+        } else {
+            String compactText = CompactDamageNumber.formatDamage(damageValue, 4);
+            int displayColor;
+            if (originalColor == null || originalColor == TextColor.fromLegacyFormat(ChatFormatting.GRAY)) {
+                displayColor = com.shyeuar.baity.config.ConfigManager.fancyDmgSplashNormalDamageColor & 0x00FFFFFF;
+            } else {
+                displayColor = originalColor.getValue();
+            }
+            result = Component.literal(compactText)
+                .setStyle(originalText.getStyle())
+                .withStyle(Style.EMPTY.withColor(displayColor));
+        }
+        
+        if (!matcher.group(2).isEmpty()) {
+            result.append(Component.literal(matcher.group(2))
+                .setStyle(siblings.getLast().getStyle()));
+        }
+        
+        return result;
     }
     
     public static int generateDamageColor(double damage) {
@@ -325,23 +413,14 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
             
             matrices.scale(-finalScale, -finalScale, finalScale);
             
-            Module module = ModuleManager.getModuleByName("FancyDmgSplash");
-            boolean useCompactDamage = module != null && ModuleUtils.getOptionBoolean(module, "compact damage number", true);
-            
-            String damageText;
-            if (useCompactDamage) {
-                damageText = CompactDamageNumber.formatDamage(dn.damage);
-            } else {
-                damageText = String.valueOf((long) dn.damage);
-            }
-            
             Component styledText;
             int color;
             
             if (dn.originalText != null) {
                 styledText = dn.originalText;
-                color = dn.color; 
+                color = dn.color;
             } else {
+                String damageText = String.valueOf((long) dn.damage);
                 styledText = Component.literal(damageText);
                 color = dn.color;
             }

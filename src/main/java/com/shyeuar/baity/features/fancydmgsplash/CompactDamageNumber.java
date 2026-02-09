@@ -1,9 +1,9 @@
 package com.shyeuar.baity.features.fancydmgsplash;
 
 public class CompactDamageNumber {
-    private static final int DEFAULT_MAX_PRECISION = 4;
+    private static final int DEFAULT_PRECISION = 4;
     
-    private static final int[] DIGIT_GUESSES = new int[]{
+    private static final int[] DECIMAL_DIGIT_ESTIMATES = new int[]{
         0,  1,  1,  1,  1,  2,  2,  2,
         3,  3,  3,  4,  4,  4,  4,  5,
         5,  5,  6,  6,  6,  7,  7,  7,
@@ -14,7 +14,7 @@ public class CompactDamageNumber {
         17, 17, 18, 18, 18, 19, 19, 19,
     };
 
-    private static final long[] POWERS_OF_TEN = new long[]{
+    private static final long[] TEN_POWERS = new long[]{
         1L,                   10L,                100L,
         1000L,                10000L,             100000L,
         1000000L,             10000000L,          100000000L,
@@ -27,51 +27,41 @@ public class CompactDamageNumber {
     private CompactDamageNumber() {
     }
 
+    public static String formatDamage(double damage) {
+        return formatDamage(damage, DEFAULT_PRECISION);
+    }
+
     public static String formatDamage(double damage, int maxPrecision) {
         long damageLong = (long) damage;
-        return formatDamageNumber(damageLong, maxPrecision);
+        return convertToCompactFormat(damageLong, maxPrecision);
     }
 
-    public static String formatDamage(double damage) {
-        return formatDamage(damage, DEFAULT_MAX_PRECISION);
-    }
-
-    private static String formatDamageNumber(final long damage, final int maxPrecision) {
-        long targetDamage = damage;
-        int targetPrecision = maxPrecision;
+    private static String convertToCompactFormat(long damage, int maxPrecision) {
+        long adjustedDamage = damage;
+        int adjustedPrecision = maxPrecision;
         
-        int usedPrecision = getBaseTenDigits(targetDamage);
-        if (usedPrecision > targetPrecision) {
-            double powerToRoundTo = POWERS_OF_TEN[usedPrecision - maxPrecision];
-            targetDamage = (long) (Math.round((double) targetDamage / powerToRoundTo) * powerToRoundTo);
-        } else if (targetPrecision > usedPrecision) {
-            targetPrecision = usedPrecision;
+        int currentDigits = countDecimalDigits(adjustedDamage);
+        if (currentDigits > maxPrecision) {
+            double roundingFactor = TEN_POWERS[currentDigits - maxPrecision];
+            adjustedDamage = (long) (Math.round((double) adjustedDamage / roundingFactor) * roundingFactor);
+        } else if (adjustedPrecision > currentDigits) {
+            adjustedPrecision = currentDigits;
         }
 
-        if (targetDamage < 1_000L) return String.valueOf(targetDamage);
-        if (targetDamage < 1_000_000L) return formatNumberToPrecision(targetDamage / 1_000.0, targetPrecision) + "k";
-        if (targetDamage < 1_000_000_000L) return formatNumberToPrecision(targetDamage / 1_000_000.0, targetPrecision) + "M";
-        if (targetDamage < 1_000_000_000_000L) return formatNumberToPrecision(targetDamage / 1_000_000_000.0, targetPrecision) + "B";
-        if (targetDamage < 1_000_000_000_000_000L) return formatNumberToPrecision(targetDamage / 1_000_000_000_000.0, targetPrecision) + "T";
-        return formatNumberToPrecision(targetDamage / 1_000_000_000_000_000.0, targetPrecision) + "Q";
+        if (adjustedDamage < 1_000L) return String.valueOf(adjustedDamage);
+        if (adjustedDamage < 1_000_000L) return String.format("%.1fk", adjustedDamage / 1_000.0);
+        if (adjustedDamage < 1_000_000_000L) return String.format("%.1fM", adjustedDamage / 1_000_000.0);
+        if (adjustedDamage < 1_000_000_000_000L) return String.format("%.1fB", adjustedDamage / 1_000_000_000.0);
+        if (adjustedDamage < 1_000_000_000_000_000L) return String.format("%.1fT", adjustedDamage / 1_000_000_000_000.0);
+        return String.format("%.1fQ", adjustedDamage / 1_000_000_000_000_000.0);
     }
 
-    private static String formatNumberToPrecision(double number, int precision) {
-        int usedPrecision = getBaseTenDigits((int) number);
-        int remainingPrecision = precision - usedPrecision;
-        if (remainingPrecision <= 0) {
-            long powerToRoundTo = POWERS_OF_TEN[usedPrecision - precision];
-            return String.valueOf((Math.round(number / powerToRoundTo) * powerToRoundTo));
-        }
-        return ("%." + remainingPrecision + "f").formatted(number);
+    private static int countBinaryDigits(long value) {
+        return 64 - Long.numberOfLeadingZeros(value);
     }
 
-    private static int getBaseTwoDigits(long x) {
-        return 64 - Long.numberOfLeadingZeros(x);
-    }
-
-    private static int getBaseTenDigits(long x) {
-        int guess = DIGIT_GUESSES[getBaseTwoDigits(x)];
-        return guess + ((x >= POWERS_OF_TEN[guess]) ? 1 : 0);
+    private static int countDecimalDigits(long value) {
+        int estimate = DECIMAL_DIGIT_ESTIMATES[countBinaryDigits(value)];
+        return estimate + ((value >= TEN_POWERS[estimate]) ? 1 : 0);
     }
 }

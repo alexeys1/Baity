@@ -39,10 +39,11 @@ public class ConfigManager {
     public static boolean fancyDmgSplashGenshinReaction = false;
     public static boolean fancyDmgSplashCompactDamageNumber = true;
     public static int fancyDmgSplashColorPalette = 0;
+    public static int fancyDmgSplashCritGradientStart = 0xFFFF55;
+    public static int fancyDmgSplashCritGradientEnd = 0xFF5555;
+    public static int fancyDmgSplashNormalDamageColor = 0xFFFFFF;
     
-    public static boolean noSwimChangeEnabled = true;
-    public static boolean noSwimChangeDisablePose = true;
-    public static boolean noSwimChangeDisableEyeHeight = true; 
+    public static boolean noSwimChangeEnabled = true; 
     
     public static boolean cullingEnabled = false;
     public static boolean cullingHideDyingMob = false;
@@ -52,6 +53,8 @@ public class ConfigManager {
     public static boolean skinLayer3DEnabled = false;
     
     public static boolean noHurtCamEnabled = false;
+    
+    public static boolean noSwapAnimationEnabled = false;
     
     public static boolean nodebuffEnabled = true;
     public static boolean nodebuffRemoveNausea = true;
@@ -170,15 +173,18 @@ public class ConfigManager {
         registerField("FancyDmgSplashColorPalette", Integer.class,
             c -> ConfigManager.fancyDmgSplashColorPalette,
             (c, v) -> ConfigManager.fancyDmgSplashColorPalette = (Integer) v);
+        registerField("FancyDmgSplashCritGradientStart", Integer.class,
+            c -> ConfigManager.fancyDmgSplashCritGradientStart,
+            (c, v) -> ConfigManager.fancyDmgSplashCritGradientStart = (Integer) v);
+        registerField("FancyDmgSplashCritGradientEnd", Integer.class,
+            c -> ConfigManager.fancyDmgSplashCritGradientEnd,
+            (c, v) -> ConfigManager.fancyDmgSplashCritGradientEnd = (Integer) v);
+        registerField("FancyDmgSplashNormalDamageColor", Integer.class,
+            c -> ConfigManager.fancyDmgSplashNormalDamageColor,
+            (c, v) -> ConfigManager.fancyDmgSplashNormalDamageColor = (Integer) v);
         registerField("NoSwimChange", Boolean.class,
             c -> ConfigManager.noSwimChangeEnabled,
             (c, v) -> ConfigManager.noSwimChangeEnabled = (Boolean) v);
-        registerField("DisablePose", Boolean.class,
-            c -> ConfigManager.noSwimChangeDisablePose,
-            (c, v) -> ConfigManager.noSwimChangeDisablePose = (Boolean) v);
-        registerField("DisableEyeHeight", Boolean.class,
-            c -> ConfigManager.noSwimChangeDisableEyeHeight,
-            (c, v) -> ConfigManager.noSwimChangeDisableEyeHeight = (Boolean) v);
         registerField("Culling", Boolean.class,
             c -> ConfigManager.cullingEnabled,
             (c, v) -> ConfigManager.cullingEnabled = (Boolean) v);
@@ -197,6 +203,9 @@ public class ConfigManager {
         registerField("NoHurtCam", Boolean.class,
             c -> ConfigManager.noHurtCamEnabled,
             (c, v) -> ConfigManager.noHurtCamEnabled = (Boolean) v);
+        registerField("NoSwapAnimation", Boolean.class,
+            c -> ConfigManager.noSwapAnimationEnabled,
+            (c, v) -> ConfigManager.noSwapAnimationEnabled = (Boolean) v);
         registerField("Nodebuff", Boolean.class,
             c -> ConfigManager.nodebuffEnabled,
             (c, v) -> ConfigManager.nodebuffEnabled = (Boolean) v);

@@ -73,8 +73,18 @@ public class SkyblockDamageMixin {
                 Vec3 targetPos = new Vec3(armorStand.getX(), armorStand.getY(), armorStand.getZ());
                 
                 Component originalText = armorStand.getCustomName();
+                Module module = ModuleManager.getModuleByName("FancyDmgSplash");
+                boolean useCompactDamage = module != null && com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(module, "compact damage number", true);
                 
-                FancyDmgSplash.addDamageNumber(damage, targetPos, originalText);
+                Component formattedText = originalText;
+                if (useCompactDamage) {
+                    boolean isCritical = customName.contains("✧") || customName.contains("✯");
+                    if (damage >= 1000 || isCritical) {
+                        formattedText = FancyDmgSplash.applyCompactFormatting(originalText, damage);
+                    }
+                }
+                
+                FancyDmgSplash.addDamageNumber(damage, targetPos, formattedText);
                 
             } catch (NumberFormatException ignored) {
             }

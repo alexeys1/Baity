@@ -1,15 +1,18 @@
 package com.shyeuar.baity.utils;
 
-import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.material.Fluids;
 
 public final class NoSwimChangeUtils {
 
     public static final float STANDING_EYE_HEIGHT = 1.62F;
+    private static final long DELAY_MS = 500L;
+    private static long exitWaterTime = 0L;
+    private static boolean wasInWater = false;
 
     private NoSwimChangeUtils() {}
 
@@ -18,14 +21,36 @@ public final class NoSwimChangeUtils {
         return m != null && m.isEnabled();
     }
 
-    public static boolean isDisablePoseActive() {
+    public static boolean shouldApplyEyeHeightChange() {
         if (!isFeatureActive()) return false;
-        return ConfigManager.noSwimChangeDisablePose;
-    }
 
-    public static boolean isDisableEyeHeightActive() {
-        if (!isFeatureActive()) return false;
-        return ConfigManager.noSwimChangeDisableEyeHeight;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return false;
+
+        boolean isInWater = mc.player.isUnderWater() || isPlayerInWaterBlock() || mc.player.getPose() == Pose.SWIMMING;
+        long currentTime = System.currentTimeMillis();
+
+        if (isInWater) {
+            wasInWater = true;
+            exitWaterTime = 0L;
+            return true;
+        }
+
+        if (wasInWater) {
+            if (exitWaterTime == 0L) {
+                exitWaterTime = currentTime;
+            }
+            long timeSinceExit = currentTime - exitWaterTime;
+            if (timeSinceExit < DELAY_MS) {
+                return true;
+            } else {
+                wasInWater = false;
+                exitWaterTime = 0L;
+                return false;
+            }
+        }
+
+        return false;
     }
 
     public static boolean isSelfPlayer(Object entity) {

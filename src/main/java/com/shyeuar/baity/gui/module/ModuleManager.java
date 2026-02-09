@@ -126,26 +126,10 @@ public class ModuleManager {
             }
         );
         
-        Module noSwimChangeModule = ModuleRegistry.registerModuleWithValues(
+        Module noSwimChangeModule = ModuleRegistry.registerSimpleModule(
             "NoSwimChange", "NoSwimChange", ModuleCategory.QOL,
             () -> ConfigManager.noSwimChangeEnabled,
-            val -> ConfigManager.noSwimChangeEnabled = val,
-            new Option[]{
-                new Option("disable swim pose", "disable swim pose", true, ModuleCategory.QOL),
-                new Option("disable swim eye height", "disable swim eye height", true, ModuleCategory.QOL)
-            },
-            new ModuleRegistry.ValueConfigInfo[]{
-                new ModuleRegistry.ValueConfigInfo(
-                    "disable swim pose",
-                    () -> ConfigManager.noSwimChangeDisablePose,
-                    val -> ConfigManager.noSwimChangeDisablePose = (Boolean) val
-                ),
-                new ModuleRegistry.ValueConfigInfo(
-                    "disable swim eye height",
-                    () -> ConfigManager.noSwimChangeDisableEyeHeight,
-                    val -> ConfigManager.noSwimChangeDisableEyeHeight = (Boolean) val
-                )
-            }
+            val -> ConfigManager.noSwimChangeEnabled = val
         );
         noSwimChangeModule.setEnabled(true);
         
@@ -300,6 +284,12 @@ public class ModuleManager {
             val -> ConfigManager.noHurtCamEnabled = val
         );
         
+        ModuleRegistry.registerSimpleModule(
+            "NoSwapAnimation", "NoSwapAnimation", ModuleCategory.RENDER,
+            () -> ConfigManager.noSwapAnimationEnabled,
+            val -> ConfigManager.noSwapAnimationEnabled = val
+        );
+        
         ModuleRegistry.registerModuleWithValues(
             "Nodebuff", "Nodebuff", ModuleCategory.RENDER,
             () -> ConfigManager.nodebuffEnabled,
@@ -374,17 +364,18 @@ public class ModuleManager {
     }
     
     private static void initTooltips() {
-        TooltipManager.registerTooltip("SmolPeople", "Make your character smaller and cuter", 0xFFFFFF);
-        TooltipManager.registerTooltip("BlockAnimation", "Restored the blocking animation of version 1.8", 0xFFFFFF);
+        TooltipManager.registerTooltip("SmolPeople", "Make your character smaller and cuter.", 0xFFFFFF);
+        TooltipManager.registerTooltip("BlockAnimation", "Restored the blocking animation of version 1.7.", 0xFFFFFF);
         TooltipManager.registerTooltip("PepCat", "Play an animation and give pep talk when you died. It's a skill issue!", 0xFFFFFF);
-        TooltipManager.registerTooltip("RadialMenu", "A roulette tool that invokes a shortcut command", 0xFFFFFF);
-        TooltipManager.registerTooltip("NoSwimChange", "Only disables the swimming pose and eye height change on your client.", 0xFFFFFF);
+        TooltipManager.registerTooltip("RadialMenu", "A roulette tool that invokes a shortcut command.", 0xFFFFFF);
         TooltipManager.registerTooltip("meowalert", 
             MessageUtils.createColoredText("play a ", 0xFFFFFF)
                 .append(MessageUtils.createColoredText("ᯠ₋ ̫ ₋.ᯄ ੭", 0xFFC0CB))
                 .append(MessageUtils.createColoredText("meow~", 0xFFC0CB))
-                .append(MessageUtils.createColoredText(" when you are mentioned in chat", 0xFFFFFF)));
-        TooltipManager.registerTooltip("Muffler", "Disable certain annoying sounds", 0xFFFFFF);
+                .append(MessageUtils.createColoredText(" when you are mentioned in chat.", 0xFFFFFF)));
+        TooltipManager.registerTooltip("Muffler", "Disable certain annoying sounds.", 0xFFFFFF);
+        TooltipManager.registerTooltip("FancyCreeperVeil", "Change the wither cloak shield model to a more fancy one.", 0xFFFFFF);
+        TooltipManager.registerTooltip("NoSwimChange", "Only disables the swimming pose and eye height change on your client.", 0xFFFFFF);
     }
     
     public static List<Module> getModules() {

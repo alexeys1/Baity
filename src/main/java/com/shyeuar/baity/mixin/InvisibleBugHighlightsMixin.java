@@ -38,11 +38,83 @@ public class InvisibleBugHighlightsMixin {
             
             if (MC.level == null || MC.player == null) return;
             
+            if (!isInGalatea()) return;
+            
             if (packet.getParticle().getType() != ParticleTypes.CRIT) return;
+            
+            if (packet.getCount() != 1) return;
+            
+            try {
+                java.lang.reflect.Method getSpeedMethod = null;
+                java.lang.reflect.Method getOffsetXMethod = null;
+                java.lang.reflect.Method getOffsetYMethod = null;
+                java.lang.reflect.Method getOffsetZMethod = null;
+                java.lang.reflect.Method isImportantMethod = null;
+                java.lang.reflect.Method shouldForceSpawnMethod = null;
+                
+                for (java.lang.reflect.Method method : packet.getClass().getMethods()) {
+                    String name = method.getName();
+                    if (getSpeedMethod == null && (name.equals("getSpeed") || name.equals("speed"))) {
+                        getSpeedMethod = method;
+                    }
+                    if (getOffsetXMethod == null && (name.equals("getOffsetX") || name.equals("offsetX") || name.equals("getXOffset"))) {
+                        getOffsetXMethod = method;
+                    }
+                    if (getOffsetYMethod == null && (name.equals("getOffsetY") || name.equals("offsetY") || name.equals("getYOffset"))) {
+                        getOffsetYMethod = method;
+                    }
+                    if (getOffsetZMethod == null && (name.equals("getOffsetZ") || name.equals("offsetZ") || name.equals("getZOffset"))) {
+                        getOffsetZMethod = method;
+                    }
+                    if (isImportantMethod == null && (name.equals("isImportant") || name.equals("important"))) {
+                        isImportantMethod = method;
+                    }
+                    if (shouldForceSpawnMethod == null && (name.equals("shouldForceSpawn") || name.equals("forceSpawn"))) {
+                        shouldForceSpawnMethod = method;
+                    }
+                }
+                
+                if (getSpeedMethod != null) {
+                    float speed = ((Number) getSpeedMethod.invoke(packet)).floatValue();
+                    if (speed != 0.0f) return;
+                }
+                
+                if (getOffsetXMethod != null && getOffsetYMethod != null && getOffsetZMethod != null) {
+                    float offsetX = ((Number) getOffsetXMethod.invoke(packet)).floatValue();
+                    float offsetY = ((Number) getOffsetYMethod.invoke(packet)).floatValue();
+                    float offsetZ = ((Number) getOffsetZMethod.invoke(packet)).floatValue();
+                    if (offsetX != 0.0f || offsetY != 0.0f || offsetZ != 0.0f) return;
+                }
+                
+                if (isImportantMethod != null) {
+                    boolean important = (Boolean) isImportantMethod.invoke(packet);
+                    if (!important) return;
+                }
+                
+                if (shouldForceSpawnMethod != null) {
+                    boolean forceSpawn = (Boolean) shouldForceSpawnMethod.invoke(packet);
+                    if (!forceSpawn) return;
+                }
+            } catch (Exception e) {
+                return;
+            }
             
             Vec3 particleLocation = new Vec3(packet.getX(), packet.getY(), packet.getZ());
             
             InvisibleBugDetector.detectParticleAtLocation(particleLocation);
+        }
+        
+        private static boolean isInGalatea() {
+            if (MC.getConnection() == null) return false;
+            for (var entry : MC.getConnection().getOnlinePlayers()) {
+                if (entry.getTabListDisplayName() != null) {
+                    String text = entry.getTabListDisplayName().getString().trim();
+                    if (text.startsWith("Area:") && text.contains("Galatea")) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
     }
 

@@ -3,35 +3,40 @@ package com.shyeuar.baity.gui;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.internal.ClickGuiState;
 import com.shyeuar.baity.gui.internal.ClickGuiLayout;
-import com.shyeuar.baity.gui.render.ClickGuiRenderer;
 import com.shyeuar.baity.gui.internal.ClickGuiInputHandler;
+import com.shyeuar.baity.gui.owo.ClickGuiRootComponent;
+import com.shyeuar.baity.gui.sync.ConfigSynchronizer;
 import com.shyeuar.baity.gui.theme.Theme;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import com.shyeuar.baity.gui.sync.ConfigSynchronizer;
 import com.shyeuar.baity.gui.tooltip.TooltipManager;
 import com.shyeuar.baity.gui.value.ButtonValue;
-import com.shyeuar.baity.gui.render.ModuleStyleRenderer;
 import com.shyeuar.baity.utils.TimerUtils;
+import io.wispforest.owo.ui.base.BaseOwoScreen;
+import io.wispforest.owo.ui.container.Containers;
+import io.wispforest.owo.ui.container.FlowLayout;
+import io.wispforest.owo.ui.core.OwoUIAdapter;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.NotNull;
 
 @Environment(EnvType.CLIENT)
-public class ClickGui extends Screen {
+public class ClickGui extends BaseOwoScreen<FlowLayout> {
     
     private final ClickGuiState state;
     private final TimerUtils valuetimer;
     private final ClickGuiInputHandler inputHandler;
+    private ClickGuiRootComponent rootComponent;
     
     public static Theme theme = new Theme();
-    private final ModuleStyleRenderer.TooltipInfo tooltipInfo = new ModuleStyleRenderer.TooltipInfo();
+    private final com.shyeuar.baity.gui.render.ModuleStyleRenderer.TooltipInfo tooltipInfo = 
+        new com.shyeuar.baity.gui.render.ModuleStyleRenderer.TooltipInfo();
     
     private static ClickGui currentInstance;
     
@@ -48,14 +53,19 @@ public class ClickGui extends Screen {
     }
     
     @Override
+    protected @NotNull OwoUIAdapter<FlowLayout> createAdapter() {
+        return OwoUIAdapter.create(this, Containers::horizontalFlow);
+    }
+    
+    @Override
     protected void init() {
         super.init();
-        theme.setDark(); 
+        theme.setDark();
         
         if (ModuleManager.getModules().isEmpty()) {
             ModuleManager.init();
         }
-
+        
         if (this.minecraft != null) {
             state.setGuiScale(this.minecraft.options.guiScale().get());
         }
@@ -71,20 +81,26 @@ public class ClickGui extends Screen {
     }
     
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
-        Minecraft client = Minecraft.getInstance();
-
-        ClickGuiRenderer.render(context, client, state, theme,
+    protected void build(FlowLayout rootComponent) {
+        this.rootComponent = new ClickGuiRootComponent(state, theme,
             this::getTooltipText,
             this::getTooltipTextWithColors,
             this::getDisplayTextFormatter,
-            tooltipInfo,
-            mouseX, mouseY);
+            tooltipInfo);
+        rootComponent.child(this.rootComponent);
     }
-
-            @Override
-            public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+    
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        if (rootComponent != null) {
+            rootComponent.setGuiGraphics(graphics);
+        }
+        
+        super.render(graphics, mouseX, mouseY, delta);
+    }
+    
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (inputHandler.handleMouseScroll(mouseX, mouseY, verticalAmount)) {
             return true;
         }
@@ -199,3 +215,4 @@ public class ClickGui extends Screen {
         return state.isListeningForInput();
     }
 }
+

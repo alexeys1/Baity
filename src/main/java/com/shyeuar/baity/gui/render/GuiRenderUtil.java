@@ -64,14 +64,18 @@ public class GuiRenderUtil {
         int g2 = (colorEnd >> 8) & 0xFF;
         int b2 = colorEnd & 0xFF;
         
-        for (int px = ix; px < ix2; px++) {
-            float t = (float)(px - ix) / width;
+        int slices = Math.min(64, Math.max(1, width / 2));
+        int sliceW = Math.max(1, (int) Math.ceil(width / (double) slices));
+        for (int px = ix; px < ix2; px += sliceW) {
+            int next = Math.min(ix2, px + sliceW);
+            float t = (float) ((px + next) * 0.5f - ix) / (float) width;
+            t = Math.max(0f, Math.min(1f, t));
             int a = (int)(a1 + (a2 - a1) * t);
             int rVal = (int)(r1 + (r2 - r1) * t);
             int g = (int)(g1 + (g2 - g1) * t);
             int b = (int)(b1 + (b2 - b1) * t);
             int color = (a << 24) | (rVal << 16) | (g << 8) | b;
-            context.fill(px, iy, px + 1, iy2, color);
+            context.fill(px, iy, next, iy2, color);
         }
     }
 

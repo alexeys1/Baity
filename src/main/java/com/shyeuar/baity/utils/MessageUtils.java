@@ -25,38 +25,20 @@ public class MessageUtils {
     }
     
     public static MutableComponent createBaityPrefix() {
-        int bracketColor = com.shyeuar.baity.gui.theme.LinearTheme.TEXT_PRIMARY.getRGB();
-        MutableComponent leftBracket = createColoredText("[", bracketColor);
+        int gradientStart = 0xFF00FF;
+        int gradientEnd = com.shyeuar.baity.gui.theme.LinearTheme.ACCENT_PRIMARY.getRGB();
         
-        int accentStart = com.shyeuar.baity.gui.theme.LinearTheme.ACCENT_PRIMARY.getRGB();
-        int accentEnd = com.shyeuar.baity.gui.theme.LinearTheme.ACCENT_SECONDARY.getRGB();
+        String prefixText = "[baity] ";
+        int length = prefixText.length();
         
-        MutableComponent baityText = Component.empty();
-        String baity = "baity";
-        for (int i = 0; i < baity.length(); i++) {
-            float progress = i / (float)(baity.length() - 1);
-            int letterColor = interpolateColor(accentStart, accentEnd, progress);
-            baityText.append(createColoredText(String.valueOf(baity.charAt(i)), letterColor));
+        MutableComponent result = Component.empty();
+        for (int i = 0; i < length; i++) {
+            float progress = i / (float)(length - 1);
+            int charColor = ColorGradientUtils.blendColors(gradientStart, gradientEnd, progress);
+            result.append(createColoredText(String.valueOf(prefixText.charAt(i)), charColor));
         }
         
-        MutableComponent rightBracket = createColoredText("] ", bracketColor);
-        return leftBracket.append(baityText).append(rightBracket);
-    }
-    
-    private static int interpolateColor(int startColor, int endColor, float progress) {
-        int startR = (startColor >> 16) & 0xFF;
-        int startG = (startColor >> 8) & 0xFF;
-        int startB = startColor & 0xFF;
-        
-        int endR = (endColor >> 16) & 0xFF;
-        int endG = (endColor >> 8) & 0xFF;
-        int endB = endColor & 0xFF;
-        
-        int r = (int)(startR + (endR - startR) * progress);
-        int g = (int)(startG + (endG - startG) * progress);
-        int b = (int)(startB + (endB - startB) * progress);
-        
-        return (r << 16) | (g << 8) | b;
+        return result;
     }
     
     public static MutableComponent createMessageWithPrefix(String message, int messageColor) {

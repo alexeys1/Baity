@@ -34,6 +34,8 @@ public class InvisibleBugHighlights implements WorldRenderEvents.AfterEntities {
 
         if (MC.level == null || MC.player == null) return;
 
+        if (!isInGalatea()) return;
+
         Vec3 cameraPos = context.worldState().cameraRenderState.pos;
         PoseStack matrices = context.matrices();
         MultiBufferSource buffers = context.consumers();
@@ -127,6 +129,19 @@ public class InvisibleBugHighlights implements WorldRenderEvents.AfterEntities {
                 .setColor(r, g, b, a)
                 .setNormal(pose, nx, ny, nz);
         }
+    }
+    
+    private static boolean isInGalatea() {
+        if (MC.getConnection() == null) return false;
+        for (var entry : MC.getConnection().getOnlinePlayers()) {
+            if (entry.getTabListDisplayName() != null) {
+                String text = entry.getTabListDisplayName().getString().trim();
+                if (text.startsWith("Area:") && text.contains("Galatea")) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
 

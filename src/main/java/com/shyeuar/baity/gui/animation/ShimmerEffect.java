@@ -51,20 +51,24 @@ public class ShimmerEffect {
                 baseAlpha = 1.0f;
             }
             
-            for (int px = (int)drawLeft; px < drawRight; px++) {
-                float distFromCenter = Math.abs(px - centerX);
+            int ix = (int) drawLeft;
+            int ix2 = (int) Math.ceil(drawRight);
+            int widthI = Math.max(1, ix2 - ix);
+            int slices = Math.min(40, Math.max(1, widthI / 2));
+            int sliceW = Math.max(1, (int) Math.ceil(widthI / (double) slices));
+
+            int rgb = isModuleEnabled ? 0xFFFFFF : 0xAAAAAA;
+
+            for (int px = ix; px < ix2; px += sliceW) {
+                int next = Math.min(ix2, px + sliceW);
+                float sampleX = (px + next) * 0.5f;
+                float distFromCenter = Math.abs(sampleX - centerX);
                 float alpha = Math.max(0f, 1.0f - distFromCenter / maxDist);
                 alpha = Math.max(0f, Math.min(1f, alpha));
                 alpha *= baseAlpha;
-                
-                int rgb;
-                if (isModuleEnabled) {
-                    rgb = 0xFFFFFF;
-                } else {
-                    rgb = 0xAAAAAA;
-                }
+
                 int color = ((int)(alpha * 0.5f * 255) << 24) | rgb;
-                graphics.fill(px, (int)top, px + 1, (int)bottom, color);
+                graphics.fill(px, (int) top, next, (int) bottom, color);
             }
         }
     }

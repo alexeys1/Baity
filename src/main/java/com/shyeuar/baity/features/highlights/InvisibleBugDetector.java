@@ -1,7 +1,6 @@
 package com.shyeuar.baity.features.highlights;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -23,6 +22,10 @@ public class InvisibleBugDetector {
         if (particleLocation == null) return;
         if (MC.level == null || MC.player == null) return;
         
+        if (!hasInvisibugMarker(particleLocation)) {
+            return;
+        }
+        
         for (LivingEntity existing : invisbugEntities) {
             if (existing != null && existing.isAlive()) {
                 Vec3 entityPos = existing.position();
@@ -33,59 +36,62 @@ public class InvisibleBugDetector {
         }
         
         AABB searchBox = new AABB(
-            particleLocation.x - DETECTION_DISTANCE,
-            particleLocation.y - DETECTION_DISTANCE,
-            particleLocation.z - DETECTION_DISTANCE,
-            particleLocation.x + DETECTION_DISTANCE,
-            particleLocation.y + DETECTION_DISTANCE,
-            particleLocation.z + DETECTION_DISTANCE
+            particleLocation.x - 0.5,
+            particleLocation.y - 1.0,
+            particleLocation.z - 0.5,
+            particleLocation.x + 0.5,
+            particleLocation.y + 1.0,
+            particleLocation.z + 0.5
         );
         
-        ArmorStand nearestArmorStand = null;
-        double nearestDistance = Double.MAX_VALUE;
+        ArmorStand markerArmorStand = null;
         
         for (ArmorStand armorStand : MC.level.getEntitiesOfClass(ArmorStand.class, searchBox)) {
             if (armorStand == null || !armorStand.isAlive()) continue;
             
-            Vec3 entityPos = armorStand.position();
-            double distance = entityPos.distanceTo(particleLocation);
-            
-            if (distance < nearestDistance && isDefaultArmorStandCandidate(armorStand)) {
-                nearestDistance = distance;
-                nearestArmorStand = armorStand;
+            if (isInvisibugMarker(armorStand)) {
+                markerArmorStand = armorStand;
+                break;
             }
         }
         
-        final ArmorStand finalNearestArmorStand = nearestArmorStand;
-        if (finalNearestArmorStand != null) {
-            MC.execute(() -> invisbugEntities.add(finalNearestArmorStand));
+        final ArmorStand finalMarkerArmorStand = markerArmorStand;
+        if (finalMarkerArmorStand != null) {
+            MC.execute(() -> invisbugEntities.add(finalMarkerArmorStand));
         }
     }
     
-    private static boolean isDefaultArmorStandCandidate(ArmorStand armorStand) {
+    private static boolean hasInvisibugMarker(Vec3 pos) {
+        AABB searchBox = new AABB(
+            pos.x - 0.5,
+            pos.y - 1.0,
+            pos.z - 0.5,
+            pos.x + 0.5,
+            pos.y + 1.0,
+            pos.z + 0.5
+        );
+        
+        java.util.List<ArmorStand> markers = new java.util.ArrayList<>();
+        for (ArmorStand armorStand : MC.level.getEntitiesOfClass(ArmorStand.class, searchBox)) {
+            if (armorStand != null && armorStand.isAlive() && isInvisibugMarker(armorStand)) {
+                markers.add(armorStand);
+            }
+        }
+        
+        return markers.size() == 1;
+    }
+    
+    private static boolean isInvisibugMarker(ArmorStand armorStand) {
         if (armorStand == null || !armorStand.isAlive()) return false;
         
-        Component nameComponent = armorStand.getName();
-        String nameText = nameComponent.getString();
-        String defaultArmorStandName = net.minecraft.client.resources.language.I18n.get("entity.minecraft.armor_stand");
-        if (!nameText.equals(defaultArmorStandName) || armorStand.hasCustomName()) {
-            return false;
-        }
+        if (!armorStand.isMarker()) return false;
         
-        return hasEmptyInventory(armorStand);
-    }
-    
-    private static boolean hasEmptyInventory(ArmorStand armorStand) {
+        if (armorStand.hasCustomName()) return false;
+        
         ItemStack mainHand = armorStand.getItemBySlot(EquipmentSlot.MAINHAND);
-        ItemStack offHand = armorStand.getItemBySlot(EquipmentSlot.OFFHAND);
-        ItemStack head = armorStand.getItemBySlot(EquipmentSlot.HEAD);
-        ItemStack chest = armorStand.getItemBySlot(EquipmentSlot.CHEST);
-        ItemStack legs = armorStand.getItemBySlot(EquipmentSlot.LEGS);
-        ItemStack feet = armorStand.getItemBySlot(EquipmentSlot.FEET);
+        if (!mainHand.isEmpty()) return false;
         
-        return mainHand.isEmpty() && offHand.isEmpty() && 
-               head.isEmpty() && chest.isEmpty() && 
-               legs.isEmpty() && feet.isEmpty();
+        return true;
     }
   
     public static Set<LivingEntity> getCurrentInvisbugEntities() {

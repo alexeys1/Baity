@@ -38,11 +38,10 @@ public class CullingMixin {
             "Skeletor", "Sniper", "Super Archer", "Spider", "Fels", "Withermancer"
         );
         
-        @Inject(method = "submit(Lnet/minecraft/client/renderer/entity/state/ArmorStandRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
-                at = @At("HEAD"), cancellable = true)
-        private void baity$hideNonStarredNametag(net.minecraft.client.renderer.entity.state.ArmorStandRenderState state,
-                PoseStack matrices, net.minecraft.client.renderer.SubmitNodeCollector queue,
-                net.minecraft.client.renderer.state.CameraRenderState cameraState, CallbackInfo ci) {
+        @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/decoration/ArmorStand;Lnet/minecraft/client/renderer/entity/state/ArmorStandRenderState;F)V",
+                at = @At("TAIL"))
+        private void baity$hideNonStarredNametag(net.minecraft.world.entity.decoration.ArmorStand armorStand,
+                net.minecraft.client.renderer.entity.state.ArmorStandRenderState state, float tickDelta, CallbackInfo ci) {
             
             Module m = ModuleManager.getModuleByName("Culling");
             if (m == null || !m.isEnabled()) return;
@@ -54,7 +53,7 @@ public class CullingMixin {
             String nameText = state.nameTag.getString();
             
             if (!nameText.contains("✯ ") && nameText.contains("❤") && containsDungeonMobName(nameText)) {
-                ci.cancel();
+                state.nameTag = null;
             }
         }
         

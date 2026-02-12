@@ -5,9 +5,15 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import net.fabricmc.loader.api.SemanticVersion;
 import net.fabricmc.loader.api.VersionParsingException;
 
@@ -27,6 +33,7 @@ public class VersionCheckUtils {
         }
     }
     
+    @SuppressWarnings("deprecation")
     public static CompletableFuture<VersionCheckResult> checkVersionAsync(String currentVersion) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -189,17 +196,20 @@ public class VersionCheckUtils {
         return version;
     }
     
-    private static javax.net.ssl.SSLSocketFactory createTrustAllSocketFactory() {
+    private static SSLSocketFactory createTrustAllSocketFactory() {
         try {
-            javax.net.ssl.TrustManager[] trustAllCerts = new javax.net.ssl.TrustManager[] {
-                new javax.net.ssl.X509TrustManager() {
-                    public java.security.cert.X509Certificate[] getAcceptedIssuers() { return null; }
-                    public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) { }
-                    public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) { }
+            TrustManager[] trustAllCerts = new TrustManager[] {
+                new X509TrustManager() {
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) { }
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) { }
                 }
             };
-            javax.net.ssl.SSLContext sc = javax.net.ssl.SSLContext.getInstance("SSL");
-            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, trustAllCerts, new SecureRandom());
             return sc.getSocketFactory();
         } catch (Exception e) {
             throw new RuntimeException(e);

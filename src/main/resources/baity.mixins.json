@@ -5,7 +5,6 @@
   "mixins": [
     "SmolPeopleMixin$SmolNameTagMixin",
     "SmolPeopleMixin$SmolPlayerEntityRendererMixin",
-    "SmolPeopleMixin$SmolModelPartMixin",
     "SmolPeopleMixin$SmolPlayerRendererMixin",
     "SmolPeopleMixin$SmolCameraMixin",
     "CrosshairMixin",

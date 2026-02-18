@@ -5,7 +5,6 @@ import com.shyeuar.baity.gui.module.ModuleManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.world.phys.AABB;
 
 public final class NoSwimChangeUtils {
 
@@ -27,7 +26,7 @@ public final class NoSwimChangeUtils {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return false;
 
-        boolean isHeadInWater = isPlayerHeadInWaterBlock();
+        boolean isHeadInWater = mc.player.isEyeInFluid(FluidTags.WATER);
         long currentTime = System.currentTimeMillis();
 
         if (isHeadInWater) {
@@ -71,26 +70,8 @@ public final class NoSwimChangeUtils {
     public static boolean isPlayerHeadInWaterBlock() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return false;
-        
-        AABB box = mc.player.getBoundingBox();
-        double eyeY = box.maxY - 0.12D;
-        BlockPos eyePos = BlockPos.containing(mc.player.getX(), eyeY, mc.player.getZ());
-        
-        if (mc.level.getBlockState(eyePos).getFluidState().is(FluidTags.WATER)) {
-            return true;
-        }
-        
-        BlockPos eyePosAbove = BlockPos.containing(mc.player.getX(), eyeY + 0.1, mc.player.getZ());
-        if (mc.level.getBlockState(eyePosAbove).getFluidState().is(FluidTags.WATER)) {
-            return true;
-        }
-        
-        BlockPos eyePosBelow = BlockPos.containing(mc.player.getX(), eyeY - 0.1, mc.player.getZ());
-        if (mc.level.getBlockState(eyePosBelow).getFluidState().is(FluidTags.WATER)) {
-            return true;
-        }
-        
-        return false;
+
+        return mc.player.isEyeInFluid(FluidTags.WATER);
     }
     
     @Deprecated

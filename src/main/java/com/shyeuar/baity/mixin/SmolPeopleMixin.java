@@ -6,6 +6,7 @@ import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.state.CameraRenderState;
@@ -21,6 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 public class SmolPeopleMixin {
 
+  
     @Mixin(AvatarRenderer.class)
     public static class SmolNameTagMixin {
         
@@ -34,10 +36,19 @@ public class SmolPeopleMixin {
                 matrices.translate(0, -0.4, 0); 
             }
         }
+        
     }
     
     @Mixin(AvatarRenderer.class)
-    public static class SmolPlayerEntityRendererMixin {
+    public static abstract class SmolPlayerEntityRendererMixin
+            extends LivingEntityRenderer<
+                    net.minecraft.client.player.AbstractClientPlayer,
+                    AvatarRenderState,
+                    PlayerModel> {
+        
+        protected SmolPlayerEntityRendererMixin() {
+            super(null, null, 0);
+        }
         
         @Inject(method = "scale(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;)V", at = @At("TAIL"))
         private void baity$additionalScale(AvatarRenderState playerEntityRenderState, PoseStack matrixStack, CallbackInfo ci) {
@@ -45,11 +56,15 @@ public class SmolPeopleMixin {
             if (smolPeopleModule == null || !smolPeopleModule.isEnabled()) return;
             
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null && playerEntityRenderState.id == mc.player.getId()) {
+            boolean isLocalPlayer = mc.player != null && playerEntityRenderState.id == mc.player.getId();
+            
+            if (isLocalPlayer) {
                 matrixStack.scale(0.5f, 0.5f, 0.5f);
             }
         }
     }
+
+
 
     @Mixin(PlayerModel.class)
     public static class SmolPlayerRendererMixin {
@@ -60,16 +75,15 @@ public class SmolPeopleMixin {
             if (smolPeopleModule == null || !smolPeopleModule.isEnabled()) return;
             
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null && playerEntityRenderState.id == mc.player.getId()) {
-                
+            boolean isLocalPlayer = mc.player != null && playerEntityRenderState.id == mc.player.getId();
+            
+            if (isLocalPlayer) {
                 PlayerModel model = (PlayerModel) (Object) this;
-                
-                try {
-                    org.joml.Vector3f s = new org.joml.Vector3f(1.0f, 1.0f, 1.0f);
-                    model.head.offsetScale(s);
-                } catch (Throwable ignored) {
-                }
-                
+
+                model.head.xScale = 2.0f;
+                model.head.yScale = 2.0f;
+                model.head.zScale = 2.0f;
+
                 if (mc.player.isSwimming() || mc.player.isUnderWater()) {
                     return;
                 }

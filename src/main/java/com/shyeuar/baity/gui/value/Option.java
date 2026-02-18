@@ -9,12 +9,18 @@ public class Option implements Value {
     private final String displayName;
     private boolean value;
     private final ModuleCategory category;
+    private boolean needsSeparator = false;
     
     public Option(String name, String displayName, boolean defaultValue, ModuleCategory category) {
         this.name = name;
         this.displayName = displayName;
         this.value = defaultValue;
         this.category = category;
+    }
+    
+    public Option setNeedsSeparator(boolean needsSeparator) {
+        this.needsSeparator = needsSeparator;
+        return this;
     }
     
     @Override
@@ -31,4 +37,9 @@ public class Option implements Value {
     
     @Override
     public ModuleCategory getCategory() { return category; }
+    
+    @Override
+    public boolean needsSeparatorBefore(Value previousValue) {
+        return needsSeparator;
+    }
 }

@@ -109,10 +109,13 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
             matrices.mulPose(new org.joml.Quaternionf().rotationX(cameraPitch * 0.017453292F));
 
             assert mc.player != null;
+            boolean focusPlayerNametag = ModuleUtils.getOptionBoolean(module, "focus player nametag", false);
+            
             double distance = mc.player.distanceTo(player);
-            float baseScale = (float) Math.max(0.03, Math.min(distance * 0.0025, 0.12));
-            float breathingScale = (float) (baseScale * (1.0 + cachedSinValue * 0.3)); 
-            matrices.scale(-breathingScale, -breathingScale, breathingScale);
+            float dynamicScale = (float) Math.max(0.03, Math.min(distance * 0.0025, 0.12));
+            float baseScale = focusPlayerNametag ? dynamicScale : 0.03f;
+            float animatedScale = (float) (baseScale * (1.0 + cachedSinValue * 0.3));
+            matrices.scale(-animatedScale, -animatedScale, animatedScale);
         
         Component originalNameComponent = player.getDisplayName() != null ? player.getDisplayName() : player.getName();
         boolean isDeveloper = DevConfig.isDeveloper(player);
@@ -184,8 +187,6 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
             matrices.popPose();
         }
     }
-    
-
     private static void updateCache() {
         long currentTime = System.currentTimeMillis();
         if (currentTime != lastTimeUpdate) {

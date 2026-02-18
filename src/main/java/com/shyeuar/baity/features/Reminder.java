@@ -81,8 +81,6 @@ public class Reminder {
         if (meowAlertRegistered) return;
         
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
-            if (sender == null) return;
-            
             com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
             if (reminderModule == null || !reminderModule.isEnabled()) return;
             
@@ -93,10 +91,23 @@ public class Reminder {
             if (client.player == null) return;
             
             String playerName = client.player.getName().getString();
+            String playerUUID = client.player.getUUID().toString();
             String fullMessage = message.getString();
-            String messageContent = extractMessageContent(fullMessage);
             
-            if (messageContainsName(messageContent, playerName)) {
+            int colonIndex = fullMessage.indexOf(':');
+            if (colonIndex == -1) {
+                return;
+            }
+            
+            String beforeColon = fullMessage.substring(0, colonIndex).trim();
+            boolean isOwnMessage = beforeColon.equals(playerName) || beforeColon.equals(playerUUID);
+            
+            if (isOwnMessage) {
+                return;
+            }
+            
+            String afterColon = fullMessage.substring(colonIndex + 1).trim();
+            if (messageContainsName(afterColon, playerName) || afterColon.contains(playerUUID)) {
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastMeowTimestamp > MEOW_COOLDOWN) {
                     lastMeowTimestamp = currentTime;
@@ -105,27 +116,6 @@ public class Reminder {
             }
         });
         meowAlertRegistered = true;
-    }
-
-    private String extractMessageContent(String fullMessage) {
-        if (fullMessage == null || fullMessage.isEmpty()) {
-            return "";
-        }
-        
-        int colonIndex = fullMessage.indexOf(':');
-        int spaceIndex = fullMessage.indexOf(' ');
-        
-        if (colonIndex != -1) {
-            String afterColon = fullMessage.substring(colonIndex + 1).trim();
-            return afterColon;
-        }
-        
-        if (spaceIndex != -1) {
-            String afterSpace = fullMessage.substring(spaceIndex + 1).trim();
-            return afterSpace;
-        }
-        
-        return fullMessage;
     }
     
     private boolean messageContainsName(String message, String name) {
@@ -329,11 +319,11 @@ public class Reminder {
     }
     
     public boolean isCookieReminderEnabled() {
-        return com.shyeuar.baity.config.ConfigManager.cookieBuffReminderEnabled;
+        return com.shyeuar.baity.config.ConfigManager.reminderCookieBuffEnabled;
     }
     
     public void setCookieReminderEnabled(boolean enabled) {
-        com.shyeuar.baity.config.ConfigManager.cookieBuffReminderEnabled = enabled;
+        com.shyeuar.baity.config.ConfigManager.reminderCookieBuffEnabled = enabled;
         if (!enabled) {
             cookieAlreadyNotified = false;
             if (cookieSchedulerId != -1) {
@@ -348,11 +338,11 @@ public class Reminder {
     }
     
     public boolean isGodPotionReminderEnabled() {
-        return com.shyeuar.baity.config.ConfigManager.godPotionReminderEnabled;
+        return com.shyeuar.baity.config.ConfigManager.reminderGodPotionEnabled;
     }
     
     public void setGodPotionReminderEnabled(boolean enabled) {
-        com.shyeuar.baity.config.ConfigManager.godPotionReminderEnabled = enabled;
+        com.shyeuar.baity.config.ConfigManager.reminderGodPotionEnabled = enabled;
         if (!enabled) {
             godPotionAlreadyNotified = false;
             if (godPotionSchedulerId != -1) {
@@ -371,10 +361,10 @@ public class Reminder {
     }
     
     public boolean isMeowAlertEnabled() {
-        return com.shyeuar.baity.config.ConfigManager.meowAlertEnabled;
+        return com.shyeuar.baity.config.ConfigManager.reminderMeowAlertEnabled;
     }
     
     public void setMeowAlertEnabled(boolean enabled) {
-        com.shyeuar.baity.config.ConfigManager.meowAlertEnabled = enabled;
+        com.shyeuar.baity.config.ConfigManager.reminderMeowAlertEnabled = enabled;
     }
 }

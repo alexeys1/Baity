@@ -40,10 +40,10 @@ public class ModuleManager {
                 new com.shyeuar.baity.gui.value.SliderValue("position x", "position x", 0, -2.5, 1.5, 0.05, ModuleCategory.FUN),
                 new com.shyeuar.baity.gui.value.SliderValue("position y", "position y", 0, -1.5, 1.5, 0.05, ModuleCategory.FUN),
                 new com.shyeuar.baity.gui.value.SliderValue("position z", "position z", 0, -1.5, 3.0, 0.05, ModuleCategory.FUN),
-                ((com.shyeuar.baity.gui.value.SliderValue) new com.shyeuar.baity.gui.value.SliderValue("rotation x", "rotation x", 0, -180, 180, 1, ModuleCategory.FUN)).setNeedsSeparator(true),
+                withSeparator(new com.shyeuar.baity.gui.value.SliderValue("rotation x", "rotation x", 0, -180, 180, 1, ModuleCategory.FUN)),
                 new com.shyeuar.baity.gui.value.SliderValue("rotation y", "rotation y", 0, -180, 180, 1, ModuleCategory.FUN),
                 new com.shyeuar.baity.gui.value.SliderValue("rotation z", "rotation z", 0, -180, 180, 1, ModuleCategory.FUN),
-                ((com.shyeuar.baity.gui.value.SliderValue) new com.shyeuar.baity.gui.value.SliderValue("scale", "size", 1, 0.1, 3.0, 0.05, ModuleCategory.FUN)).setNeedsSeparator(true),
+                withSeparator(new com.shyeuar.baity.gui.value.SliderValue("scale", "size", 1, 0.1, 3.0, 0.05, ModuleCategory.FUN)),
                 new com.shyeuar.baity.gui.value.SliderValue("swing duration", "swing duration", 6, 1, 20, 1, ModuleCategory.FUN),
                 new com.shyeuar.baity.gui.value.Option("no swing", "no swing", false, ModuleCategory.FUN)
             },
@@ -96,19 +96,17 @@ public class ModuleManager {
             }
         );
         
-        Module fancyCreeperVeilModule = ModuleRegistry.registerSimpleModule(
+        ModuleRegistry.registerSimpleModule(
             "FancyCreeperVeil", "FancyCreeperVeil", ModuleCategory.FUN,
             () -> ConfigManager.fancyCreeperVeilEnabled,
             val -> ConfigManager.fancyCreeperVeilEnabled = (Boolean) val
         );
-        fancyCreeperVeilModule.setEnabled(true);
         
-        Module pepCatModule = ModuleRegistry.registerSimpleModule(
+        ModuleRegistry.registerSimpleModule(
             "PepCat", "PepCat", ModuleCategory.FUN,
             () -> ConfigManager.pepCatEnabled,
             val -> ConfigManager.pepCatEnabled = val
         );
-        pepCatModule.setEnabled(true);
         
         ModuleRegistry.registerModuleWithValues(
             "SmolPeople", "SmolPeople", ModuleCategory.FUN,
@@ -134,12 +132,11 @@ public class ModuleManager {
             }
         );
         
-        Module noSwimChangeModule = ModuleRegistry.registerSimpleModule(
+        ModuleRegistry.registerSimpleModule(
             "NoSwimChange", "NoSwimChange", ModuleCategory.QOL,
             () -> ConfigManager.noSwimChangeEnabled,
             val -> ConfigManager.noSwimChangeEnabled = val
         );
-        noSwimChangeModule.setEnabled(true);
         
         ModuleRegistry.registerModuleWithValues(
             "Muffler", "Muffler", ModuleCategory.QOL,
@@ -192,23 +189,23 @@ public class ModuleManager {
             new Option[]{
                 new Option("cookie buff reminder", "cookie buff reminder", true, ModuleCategory.QOL),
                 new Option("god potion reminder", "god potion reminder", true, ModuleCategory.QOL),
-                new Option("meowalert", "meowalert", true, ModuleCategory.QOL)
+                withSeparator(new Option("meowalert", "meowalert", true, ModuleCategory.QOL))
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
                     "cookie buff reminder",
-                    () -> ConfigManager.cookieBuffReminderEnabled,
-                    val -> ConfigManager.cookieBuffReminderEnabled = (Boolean) val
+                    () -> ConfigManager.reminderCookieBuffEnabled,
+                    val -> ConfigManager.reminderCookieBuffEnabled = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "god potion reminder",
-                    () -> ConfigManager.godPotionReminderEnabled,
-                    val -> ConfigManager.godPotionReminderEnabled = (Boolean) val
+                    () -> ConfigManager.reminderGodPotionEnabled,
+                    val -> ConfigManager.reminderGodPotionEnabled = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "meowalert",
-                    () -> ConfigManager.meowAlertEnabled,
-                    val -> ConfigManager.meowAlertEnabled = (Boolean) val,
+                    () -> ConfigManager.reminderMeowAlertEnabled,
+                    val -> ConfigManager.reminderMeowAlertEnabled = (Boolean) val,
                     () -> com.shyeuar.baity.features.Reminder.updateSettings()
                 )
             }
@@ -225,7 +222,7 @@ public class ModuleManager {
         
 
         ModuleRegistry.registerSimpleModule(
-            "3DSkins", "3DSkins", ModuleCategory.RENDER,
+            "3DSkins", "3DSkins", ModuleCategory.FUN,
             () -> ConfigManager.skinLayer3DEnabled,
             val -> ConfigManager.skinLayer3DEnabled = val
         );
@@ -237,7 +234,7 @@ public class ModuleManager {
             new Option[]{
                 new Option("hide dying mob", "hide dying mob", false, ModuleCategory.RENDER),
                 new Option("hide non-starred mob nametag", "hide non-starred mob nametag", false, ModuleCategory.RENDER),
-                new Option("remove underwater fog", "remove underwater fog", false, ModuleCategory.RENDER)
+                withSeparator(new Option("remove underwater fog", "remove underwater fog", false, ModuleCategory.RENDER))
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
@@ -298,6 +295,12 @@ public class ModuleManager {
             val -> ConfigManager.noSwapAnimationEnabled = val
         );
         
+        ModuleRegistry.registerSimpleModule(
+            "NoTextShadow", "NoTextShadow", ModuleCategory.RENDER,
+            () -> ConfigManager.noTextShadowEnabled,
+            val -> ConfigManager.noTextShadowEnabled = val
+        );
+        
         ModuleRegistry.registerModuleWithValues(
             "Nodebuff", "Nodebuff", ModuleCategory.RENDER,
             () -> ConfigManager.nodebuffEnabled,
@@ -322,28 +325,40 @@ public class ModuleManager {
         
         ModuleRegistry.registerModuleWithValues(
             "Nametag", "Nametag", ModuleCategory.RENDER,
-            () -> ConfigManager.playerEspEnabled,
-            val -> ConfigManager.playerEspEnabled = val,
+            () -> ConfigManager.nametagEnabled,
+            val -> ConfigManager.nametagEnabled = val,
             new Option[]{
-                new Option("show distance", "show distance", true, ModuleCategory.RENDER),
-                new Option("show own nametag", "show own nametag", false, ModuleCategory.RENDER),
-                new Option("force pink color", "force pink color", true, ModuleCategory.RENDER)
+                new Option("show distance", "show distance", false, ModuleCategory.RENDER),
+                new Option("show own nametag", "show own nametag", true, ModuleCategory.RENDER),
+                withSeparator(new Option("force pink color", "force pink color", true, ModuleCategory.RENDER)),
+                new Option("focus player nametag", "focus player nametag", false, ModuleCategory.RENDER),
+                withSeparator(new Option("transparentize other tags", "transparentize other tags", false, ModuleCategory.RENDER))
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
                     "show distance",
-                    () -> ConfigManager.playerEspShowDistance,
-                    val -> ConfigManager.playerEspShowDistance = (Boolean) val
+                    () -> ConfigManager.nametagShowDistance,
+                    val -> ConfigManager.nametagShowDistance = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "show own nametag",
-                    () -> ConfigManager.playerEspShowOwnNametag,
-                    val -> ConfigManager.playerEspShowOwnNametag = (Boolean) val
+                    () -> ConfigManager.nametagShowOwnNametag,
+                    val -> ConfigManager.nametagShowOwnNametag = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "force pink color",
-                    () -> ConfigManager.playerEspForcePinkColor,
-                    val -> ConfigManager.playerEspForcePinkColor = (Boolean) val
+                    () -> ConfigManager.nametagForcePinkColor,
+                    val -> ConfigManager.nametagForcePinkColor = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "focus player nametag",
+                    () -> ConfigManager.nametagFocusPlayerNametag,
+                    val -> ConfigManager.nametagFocusPlayerNametag = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "transparentize other tags",
+                    () -> ConfigManager.nametagTransparentizeOtherTags,
+                    val -> ConfigManager.nametagTransparentizeOtherTags = (Boolean) val
                 )
             }
         );
@@ -369,6 +384,15 @@ public class ModuleManager {
                 )
             }
         );
+    }
+    
+    private static <T extends com.shyeuar.baity.gui.value.Value> T withSeparator(T value) {
+        if (value instanceof Option) {
+            ((Option) value).setNeedsSeparator(true);
+        } else if (value instanceof com.shyeuar.baity.gui.value.SliderValue) {
+            ((com.shyeuar.baity.gui.value.SliderValue) value).setNeedsSeparator(true);
+        }
+        return value;
     }
     
     private static void initTooltips() {

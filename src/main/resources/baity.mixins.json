@@ -5,10 +5,11 @@
   "mixins": [
     "SmolPeopleMixin$SmolNameTagMixin",
     "SmolPeopleMixin$SmolPlayerEntityRendererMixin",
+    "SmolPeopleMixin$SmolModelPartMixin",
     "SmolPeopleMixin$SmolPlayerRendererMixin",
     "SmolPeopleMixin$SmolCameraMixin",
     "CrosshairMixin",
-    "PlayerNameLabelHideMixin",
+    "NametagHideMixin",
     "BlockAnimationMixin$ItemInHandRendererMixin",
     "BlockAnimationMixin$PlayerMixin",
     "BlockAnimationMixin$HumanoidModelMixin",
@@ -26,7 +27,7 @@
     "CustomHandHoldingMixin$LevelRendererTickMixin",
     "RadialMenuMouseMixin",
     "WarpMenuMovementMixin",
-    "SkyblockDamageMixin",
+    "DmgSplashMixin",
     "NoSwimChangeMixin$PlayerRendererTransformMixin",
     "NoSwimChangeMixin$PlayerModelPoseMixin",
     "NoSwimChangeMixin$PlayerCameraMixin",
@@ -49,7 +50,9 @@
     "ImmuneReactionMixin$PlayerTickMixin",
     "InvisibleBugHighlightsMixin$ParticlePacketMixin",
     "InvisibleBugHighlightsMixin$EntityRemovalMixin",
-    "FancyCreeperVeilMixin"
+    "FancyCreeperVeilMixin",
+    "TagBackgroundMixin",
+    "NoTextShadowMixin"
   ],
   "injectors": {
     "defaultRequire": 1

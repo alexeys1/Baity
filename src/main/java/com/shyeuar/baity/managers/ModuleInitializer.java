@@ -9,7 +9,13 @@ import java.util.Set;
 public class ModuleInitializer {
     
     private static final Set<String> SMOLPEOPLE_OPTIONS = Set.of("crosshair");
-    private static final Set<String> PLAYERESP_OPTIONS = Set.of("show distance", "show own nametag", "force pink color");
+    private static final Set<String> PLAYERESP_OPTIONS = Set.of(
+        "show distance",
+        "show own nametag",
+        "force pink color",
+        "focus player nametag",
+        "transparentize other tags"
+    );
     private static final Set<String> REMINDER_OPTIONS = Set.of("cookie buff reminder", "god potion reminder", "meowalert");
     private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of("genshin elemental reaction", "compact damage number");
     private static final Set<String> HIGHLIGHTS_OPTIONS = Set.of("shulker", "invisible bug");
@@ -66,9 +72,9 @@ public class ModuleInitializer {
             for (Value v : reminder.getValues()) {
                 if (REMINDER_OPTIONS.contains(v.getName())) {
                     switch (v.getName()) {
-                        case "cookie buff reminder" -> v.setValue(ConfigManager.cookieBuffReminderEnabled);
-                        case "god potion reminder" -> v.setValue(ConfigManager.godPotionReminderEnabled);
-                        case "meowalert" -> v.setValue(ConfigManager.meowAlertEnabled);
+                        case "cookie buff reminder" -> v.setValue(ConfigManager.reminderCookieBuffEnabled);
+                        case "god potion reminder" -> v.setValue(ConfigManager.reminderGodPotionEnabled);
+                        case "meowalert" -> v.setValue(ConfigManager.reminderMeowAlertEnabled);
                     }
                 }
             }
@@ -81,13 +87,15 @@ public class ModuleInitializer {
     private static void initializePlayerESP() {
         Module playerEsp = ModuleManager.getModuleByName("Nametag");
         if (playerEsp != null) {
-            playerEsp.setEnabled(ConfigManager.playerEspEnabled);
+            playerEsp.setEnabled(ConfigManager.nametagEnabled);
             for (Value v : playerEsp.getValues()) {
                 if (PLAYERESP_OPTIONS.contains(v.getName())) {
                     switch (v.getName()) {
-                        case "show distance" -> v.setValue(ConfigManager.playerEspShowDistance);
-                        case "show own nametag" -> v.setValue(ConfigManager.playerEspShowOwnNametag);
-                        case "force pink color" -> v.setValue(ConfigManager.playerEspForcePinkColor);
+                        case "show distance" -> v.setValue(ConfigManager.nametagShowDistance);
+                        case "show own nametag" -> v.setValue(ConfigManager.nametagShowOwnNametag);
+                        case "force pink color" -> v.setValue(ConfigManager.nametagForcePinkColor);
+                        case "focus player nametag" -> v.setValue(ConfigManager.nametagFocusPlayerNametag);
+                        case "transparentize other tags" -> v.setValue(ConfigManager.nametagTransparentizeOtherTags);
                     }
                 }
             }

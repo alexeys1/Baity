@@ -20,9 +20,8 @@ import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.phys.Vec3;
 
 @Mixin(ArmorStandRenderer.class)
-public class SkyblockDamageMixin {
+public class DmgSplashMixin {
     
-   
     @Unique
     private static final Pattern DAMAGE_PATTERN = Pattern.compile("[✧✯]?(\\d{1,3}(?:,\\d{3})*(?:\\.\\d+)?[kKmMbB]?[⚔+✧❤♞☄✷ﬗ✯]*)");
     
@@ -113,3 +112,4 @@ public class SkyblockDamageMixin {
         return Double.parseDouble(cleaned) * multiplier;
     }
 }
+

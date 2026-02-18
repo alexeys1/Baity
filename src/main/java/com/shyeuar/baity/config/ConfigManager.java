@@ -12,15 +12,17 @@ public class ConfigManager {
     public static boolean crosshairMode = true;
     public static boolean guiEnabled = true;
     public static int guiKeyCode = 345;
-    public static boolean playerEspEnabled = false;
-    public static boolean playerEspShowDistance = true;
-    public static boolean playerEspShowOwnNametag = false;
-    public static boolean playerEspForcePinkColor = true;
-    public static boolean pepCatEnabled = true;
+    public static boolean nametagEnabled = false;
+    public static boolean nametagShowDistance = false;
+    public static boolean nametagShowOwnNametag = true;
+    public static boolean nametagForcePinkColor = true;
+    public static boolean nametagFocusPlayerNametag = false;
+    public static boolean nametagTransparentizeOtherTags = false;
+    public static boolean pepCatEnabled = false;
     public static boolean reminderEnabled = false;
-    public static boolean cookieBuffReminderEnabled = true;
-    public static boolean godPotionReminderEnabled = true;
-    public static boolean meowAlertEnabled = true;
+    public static boolean reminderCookieBuffEnabled = true;
+    public static boolean reminderGodPotionEnabled = true;
+    public static boolean reminderMeowAlertEnabled = true;
     
     public static boolean customHandHoldingEnabled = false;
     public static double swingDuration = 6;
@@ -36,7 +38,7 @@ public class ConfigManager {
     public static boolean radialMenuEnabled = true;
     public static int radialMenuKeybind = 4;
     
-    public static boolean fancyDmgSplashEnabled = true;
+    public static boolean fancyDmgSplashEnabled = false;
     public static boolean fancyDmgSplashGenshinReaction = false;
     public static boolean fancyDmgSplashCompactDamageNumber = true;
     public static int fancyDmgSplashColorPalette = 0;
@@ -44,7 +46,7 @@ public class ConfigManager {
     public static int fancyDmgSplashCritGradientEnd = 0xFF5555;
     public static int fancyDmgSplashNormalDamageColor = 0xFFFFFF;
     
-    public static boolean noSwimChangeEnabled = true; 
+    public static boolean noSwimChangeEnabled = false; 
     
     public static boolean cullingEnabled = false;
     public static boolean cullingHideDyingMob = false;
@@ -57,7 +59,9 @@ public class ConfigManager {
     
     public static boolean noSwapAnimationEnabled = false;
     
-    public static boolean nodebuffEnabled = true;
+    public static boolean noTextShadowEnabled = false;
+    
+    public static boolean nodebuffEnabled = false;
     public static boolean nodebuffRemoveNausea = true;
     public static boolean nodebuffRemoveBlindness = true;
     
@@ -70,7 +74,7 @@ public class ConfigManager {
     public static boolean highlightsShulkerEnabled = false;
     public static boolean highlightsInvisibleBugEnabled = false;
     
-    public static boolean fancyCreeperVeilEnabled = true;
+    public static boolean fancyCreeperVeilEnabled = false;
     
     private static final String BAITY_DIR = "baity";
     private static final String CONFIG_FILE = "baity/config.txt";
@@ -103,17 +107,23 @@ public class ConfigManager {
             c -> ConfigManager.guiKeyCode,
             (c, v) -> ConfigManager.guiKeyCode = (Integer) v);
         registerField("Nametag", Boolean.class,
-            c -> ConfigManager.playerEspEnabled,
-            (c, v) -> ConfigManager.playerEspEnabled = (Boolean) v);
+            c -> ConfigManager.nametagEnabled,
+            (c, v) -> ConfigManager.nametagEnabled = (Boolean) v);
         registerField("  ShowDistance", Boolean.class,
-            c -> ConfigManager.playerEspShowDistance,
-            (c, v) -> ConfigManager.playerEspShowDistance = (Boolean) v);
+            c -> ConfigManager.nametagShowDistance,
+            (c, v) -> ConfigManager.nametagShowDistance = (Boolean) v);
         registerField("  ShowOwnNametag", Boolean.class,
-            c -> ConfigManager.playerEspShowOwnNametag,
-            (c, v) -> ConfigManager.playerEspShowOwnNametag = (Boolean) v);
+            c -> ConfigManager.nametagShowOwnNametag,
+            (c, v) -> ConfigManager.nametagShowOwnNametag = (Boolean) v);
         registerField("  ForcePinkColor", Boolean.class,
-            c -> ConfigManager.playerEspForcePinkColor,
-            (c, v) -> ConfigManager.playerEspForcePinkColor = (Boolean) v);
+            c -> ConfigManager.nametagForcePinkColor,
+            (c, v) -> ConfigManager.nametagForcePinkColor = (Boolean) v);
+        registerField("  FocusPlayerNametag", Boolean.class,
+            c -> ConfigManager.nametagFocusPlayerNametag,
+            (c, v) -> ConfigManager.nametagFocusPlayerNametag = (Boolean) v);
+        registerField("  TransparentizeOtherTags", Boolean.class,
+            c -> ConfigManager.nametagTransparentizeOtherTags,
+            (c, v) -> ConfigManager.nametagTransparentizeOtherTags = (Boolean) v);
         registerField("PepCat", Boolean.class,
             c -> ConfigManager.pepCatEnabled,
             (c, v) -> ConfigManager.pepCatEnabled = (Boolean) v);
@@ -121,14 +131,14 @@ public class ConfigManager {
             c -> ConfigManager.reminderEnabled,
             (c, v) -> ConfigManager.reminderEnabled = (Boolean) v);
         registerField("CookieBuffReminder", Boolean.class,
-            c -> ConfigManager.cookieBuffReminderEnabled,
-            (c, v) -> ConfigManager.cookieBuffReminderEnabled = (Boolean) v);
+            c -> ConfigManager.reminderCookieBuffEnabled,
+            (c, v) -> ConfigManager.reminderCookieBuffEnabled = (Boolean) v);
         registerField("GodPotionReminder", Boolean.class,
-            c -> ConfigManager.godPotionReminderEnabled,
-            (c, v) -> ConfigManager.godPotionReminderEnabled = (Boolean) v);
+            c -> ConfigManager.reminderGodPotionEnabled,
+            (c, v) -> ConfigManager.reminderGodPotionEnabled = (Boolean) v);
         registerField("MeowAlert", Boolean.class,
-            c -> ConfigManager.meowAlertEnabled,
-            (c, v) -> ConfigManager.meowAlertEnabled = (Boolean) v);
+            c -> ConfigManager.reminderMeowAlertEnabled,
+            (c, v) -> ConfigManager.reminderMeowAlertEnabled = (Boolean) v);
         registerField("CustomHandHolding", Boolean.class,
             c -> ConfigManager.customHandHoldingEnabled,
             (c, v) -> ConfigManager.customHandHoldingEnabled = (Boolean) v);
@@ -210,6 +220,9 @@ public class ConfigManager {
         registerField("NoSwapAnimation", Boolean.class,
             c -> ConfigManager.noSwapAnimationEnabled,
             (c, v) -> ConfigManager.noSwapAnimationEnabled = (Boolean) v);
+        registerField("NoTextShadow", Boolean.class,
+            c -> ConfigManager.noTextShadowEnabled,
+            (c, v) -> ConfigManager.noTextShadowEnabled = (Boolean) v);
         registerField("Nodebuff", Boolean.class,
             c -> ConfigManager.nodebuffEnabled,
             (c, v) -> ConfigManager.nodebuffEnabled = (Boolean) v);
@@ -293,20 +306,28 @@ public class ConfigManager {
                 String content = java.nio.file.Files.readString(newConfigPath).trim();
                 String[] lines = content.split("\n");
                 
+                Map<String, String> legacyKeyAliases = new HashMap<>();
+                legacyKeyAliases.put("  TransparentNormalTag", "  TransparentizeOtherTags");
+                
                 for (String line : lines) {
                     if (line.trim().isEmpty()) continue;
                     
-                    ConfigManager instance = null; 
-                    for (Map.Entry<String, SettingField> entry : CONFIG_FIELDS.entrySet()) {
-                        String key = entry.getKey();
-                        if (line.startsWith(key + ":")) {
-                            SettingField field = entry.getValue();
-                            String valueStr = line.substring(key.length() + 1);
+                    int colonIdx = line.indexOf(':');
+                    if (colonIdx <= 0) continue;
+                    
+                    String key = line.substring(0, colonIdx);
+                    String valueStr = line.substring(colonIdx + 1);
+                    
+                    if (!CONFIG_FIELDS.containsKey(key) && legacyKeyAliases.containsKey(key)) {
+                        key = legacyKeyAliases.get(key);
+                    }
+                    
+                    SettingField field = CONFIG_FIELDS.get(key);
+                    if (field == null) continue;
+                    
+                    ConfigManager instance = null;
                             Object value = parseValue(valueStr, field.getType());
                             field.setValue(instance, value);
-                            break;
-                        }
-                    }
                 }
             }
         } catch (java.io.IOException e) {

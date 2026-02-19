@@ -67,7 +67,11 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         }
         
         if (this.minecraft != null) {
-            state.setGuiScale(this.minecraft.options.guiScale().get());
+            int guiScaleOption = this.minecraft.options.guiScale().get();
+            float actualGuiScale = (guiScaleOption <= 0) 
+                ? this.minecraft.getWindow().getGuiScale() 
+                : guiScaleOption;
+            state.setGuiScale(actualGuiScale);
         }
         
         ConfigSynchronizer.syncModuleStates();

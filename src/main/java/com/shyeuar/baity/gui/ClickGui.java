@@ -30,6 +30,7 @@ import org.jetbrains.annotations.NotNull;
 public class ClickGui extends BaseOwoScreen<FlowLayout> {
     
     private final ClickGuiState state;
+    private final boolean restoredFromSession;
     private final TimerUtils valuetimer;
     private final ClickGuiInputHandler inputHandler;
     private ClickGuiRootComponent rootComponent;
@@ -39,6 +40,9 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         new com.shyeuar.baity.gui.render.ModuleStyleRenderer.TooltipInfo();
     
     private static ClickGui currentInstance;
+    private static ClickGuiState lastSessionState;
+    private static long lastSessionClosedAt;
+    private static final long SESSION_TIMEOUT_MS = 5 * 60_000L;
     
     public static ClickGui getInstance() {
         return currentInstance;
@@ -46,7 +50,14 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     
     public ClickGui() {
         super(Component.literal("Baity ClickGui"));
-        this.state = new ClickGuiState();
+        long now = System.currentTimeMillis();
+        if (lastSessionState != null && now - lastSessionClosedAt <= SESSION_TIMEOUT_MS) {
+            this.state = lastSessionState;
+            this.restoredFromSession = true;
+        } else {
+            this.state = new ClickGuiState();
+            this.restoredFromSession = false;
+        }
         this.valuetimer = new TimerUtils();
         this.inputHandler = new ClickGuiInputHandler(state, valuetimer, this::handleTriggerValueClick);
         currentInstance = this;
@@ -64,6 +75,12 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         
         if (ModuleManager.getModules().isEmpty()) {
             ModuleManager.init();
+        }
+
+        if (!restoredFromSession) {
+            for (Module module : ModuleManager.getModules()) {
+                module.setExpanded(false);
+            }
         }
         
         if (this.minecraft != null) {
@@ -184,7 +201,16 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             }
             state.setEditingSlider(null);
         }
+        lastSessionState = this.state;
+        lastSessionClosedAt = System.currentTimeMillis();
         super.onClose();
+    }
+
+    @Override
+    public void removed() {
+        lastSessionState = this.state;
+        lastSessionClosedAt = System.currentTimeMillis();
+        super.removed();
     }
     
     private String getTooltipText(String name) {

@@ -9,17 +9,14 @@ import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
-import java.util.Set;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.fog.FogData;
@@ -29,60 +26,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.material.FogType;
 
 public class CullingMixin {
-    @Mixin(net.minecraft.client.renderer.entity.ArmorStandRenderer.class)
-    public static class HideNonStarredMixin {
-        
-        @Unique
-        private static final Set<String> DUNGEON_MOB_NAMES = Set.of(
-            "Lurker", "Dreadlord", "Souleater", "Zombie", "Skeleton",
-            "Skeletor", "Sniper", "Super Archer", "Spider", "Fels", "Withermancer"
-        );
-        
-        @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/decoration/ArmorStand;Lnet/minecraft/client/renderer/entity/state/ArmorStandRenderState;F)V",
-                at = @At("TAIL"))
-        private void baity$hideNonStarredNametag(net.minecraft.world.entity.decoration.ArmorStand armorStand,
-                net.minecraft.client.renderer.entity.state.ArmorStandRenderState state, float tickDelta, CallbackInfo ci) {
-            
-            Module m = ModuleManager.getModuleByName("Culling");
-            if (m == null || !m.isEnabled()) return;
-            if (!ConfigManager.cullingHideNonStarredNametag) return;
-            if (!checkInDungeon()) return;
-            
-            if (state.nameTag == null) return;
-            
-            String nameText = state.nameTag.getString();
-            
-            if (!nameText.contains("✯ ") && nameText.contains("❤") && containsDungeonMobName(nameText)) {
-                state.nameTag = null;
-            }
-        }
-        
-        @Unique
-        private static boolean containsDungeonMobName(String text) {
-            for (String mobName : DUNGEON_MOB_NAMES) {
-                if (text.contains(mobName)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-        
-        @Unique
-        private static boolean checkInDungeon() {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.getConnection() == null) return false;
-            for (var entry : mc.getConnection().getOnlinePlayers()) {
-                if (entry.getTabListDisplayName() != null) {
-                    String text = entry.getTabListDisplayName().getString().trim();
-                    if (text.startsWith("Dungeon:") || (text.startsWith("Area:") && text.contains("Catacombs"))) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-    }
-   
     @Mixin(value = FogRenderer.class, priority = 1500)
     public static class RemoveWaterFogMixin {
         

@@ -860,11 +860,9 @@ public class ClickGuiInputHandler {
                 }
             } else if (style == ValueStyle.COLOR_PALETTE && value instanceof com.shyeuar.baity.gui.value.ColorPaletteValue) {
                 com.shyeuar.baity.gui.value.ColorPaletteValue paletteValue = (com.shyeuar.baity.gui.value.ColorPaletteValue) value;
-                int containerX1Local = 30;
-                int containerX2Local = (int)(ClickGuiState.WIDTH - 30);
                 
                 int hoveredIndex = com.shyeuar.baity.gui.render.ValueStyleRenderer.getHoveredColorIndex(
-                    paletteValue, containerX1Local + 4, subModY, containerX2Local - 4, dims.subOptionHeight,
+                    paletteValue, containerX1 + 4, subModY, containerX2 - 4, dims.subOptionHeight,
                     coords.mouseX, coords.mouseY);
                 
                 if (hoveredIndex >= 0) {
@@ -876,7 +874,6 @@ public class ClickGuiInputHandler {
                     timer.reset();
                     return true;
                 }
-                subModY += dims.subOptionHeight;
             } else {
                 if (GuiRenderUtil.isHovered(containerX1 + 4, (int)subModY, 
                                            containerX2 - 4, (int)(subModY + dims.subOptionHeight), 

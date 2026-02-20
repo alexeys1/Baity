@@ -76,6 +76,8 @@ public class ConfigManager {
     
     public static boolean fancyCreeperVeilEnabled = false;
     
+    public static boolean twoDdroppedItemEnabled = false;
+    
     private static final String BAITY_DIR = "baity";
     private static final String CONFIG_FILE = "baity/config.txt";
 
@@ -256,6 +258,9 @@ public class ConfigManager {
         registerField("FancyCreeperVeil", Boolean.class,
             c -> ConfigManager.fancyCreeperVeilEnabled,
             (c, v) -> ConfigManager.fancyCreeperVeilEnabled = (Boolean) v);
+        registerField("2DdroppedItem", Boolean.class,
+            c -> ConfigManager.twoDdroppedItemEnabled,
+            (c, v) -> ConfigManager.twoDdroppedItemEnabled = (Boolean) v);
     }
     
     private static void registerField(String key, Class<?> type,

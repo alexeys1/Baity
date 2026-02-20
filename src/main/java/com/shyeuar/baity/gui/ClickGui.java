@@ -78,6 +78,13 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         }
 
         if (!restoredFromSession) {
+            for (com.shyeuar.baity.gui.value.ModuleCategory category : com.shyeuar.baity.gui.value.ModuleCategory.values()) {
+                java.util.List<Module> categoryModules = ModuleManager.getModulesByCategory(category);
+                if (!categoryModules.isEmpty()) {
+                    state.setSelectedCategory(category);
+                    break;
+                }
+            }
             for (Module module : ModuleManager.getModules()) {
                 module.setExpanded(false);
             }

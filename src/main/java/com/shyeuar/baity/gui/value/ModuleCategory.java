@@ -5,9 +5,9 @@ import net.fabricmc.api.Environment;
 
 @Environment(EnvType.CLIENT)
 public enum ModuleCategory {
-    FUN("Fun"),
     RENDER("Render"),
     QOL("Qol"),
+    MISC("Misc"),
     HUD("Hud");
 
     private final String displayName;

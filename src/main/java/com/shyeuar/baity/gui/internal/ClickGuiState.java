@@ -22,7 +22,7 @@ public class ClickGuiState {
     
     private float guiScale = 1.0f;
     
-    private ModuleCategory selectedCategory = ModuleCategory.FUN;
+    private ModuleCategory selectedCategory = ModuleCategory.MISC;
     
     private float scrollOffset = 0f;
     public static final float LIST_TOP_PADDING = 60f;

@@ -25,7 +25,7 @@ public class ModuleManager {
         initTooltips();
         
         ModuleRegistry.registerModuleWithValues(
-            "BlockAnimation", "BlockAnimation", ModuleCategory.FUN,
+            "BlockAnimation", "BlockAnimation", ModuleCategory.MISC,
             () -> ConfigManager.blockAnimationMode,
             val -> ConfigManager.blockAnimationMode = val,
             new Option[]{},
@@ -33,19 +33,19 @@ public class ModuleManager {
         );
         
         ModuleRegistry.registerModuleWithValues(
-            "CustomHandHolding", "CustomHandHolding", ModuleCategory.FUN,
+            "CustomHandHolding", "CustomHandHolding", ModuleCategory.MISC,
             () -> ConfigManager.customHandHoldingEnabled,
             val -> ConfigManager.customHandHoldingEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new com.shyeuar.baity.gui.value.SliderValue("position x", "position x", 0, -2.5, 1.5, 0.05, ModuleCategory.FUN),
-                new com.shyeuar.baity.gui.value.SliderValue("position y", "position y", 0, -1.5, 1.5, 0.05, ModuleCategory.FUN),
-                new com.shyeuar.baity.gui.value.SliderValue("position z", "position z", 0, -1.5, 3.0, 0.05, ModuleCategory.FUN),
-                withSeparator(new com.shyeuar.baity.gui.value.SliderValue("rotation x", "rotation x", 0, -180, 180, 1, ModuleCategory.FUN)),
-                new com.shyeuar.baity.gui.value.SliderValue("rotation y", "rotation y", 0, -180, 180, 1, ModuleCategory.FUN),
-                new com.shyeuar.baity.gui.value.SliderValue("rotation z", "rotation z", 0, -180, 180, 1, ModuleCategory.FUN),
-                withSeparator(new com.shyeuar.baity.gui.value.SliderValue("scale", "size", 1, 0.1, 3.0, 0.05, ModuleCategory.FUN)),
-                new com.shyeuar.baity.gui.value.SliderValue("swing duration", "swing duration", 6, 1, 20, 1, ModuleCategory.FUN),
-                new com.shyeuar.baity.gui.value.Option("no swing", "no swing", false, ModuleCategory.FUN)
+                new com.shyeuar.baity.gui.value.SliderValue("position x", "position x", 0, -2.5, 1.5, 0.05, ModuleCategory.MISC),
+                new com.shyeuar.baity.gui.value.SliderValue("position y", "position y", 0, -1.5, 1.5, 0.05, ModuleCategory.MISC),
+                new com.shyeuar.baity.gui.value.SliderValue("position z", "position z", 0, -1.5, 3.0, 0.05, ModuleCategory.MISC),
+                withSeparator(new com.shyeuar.baity.gui.value.SliderValue("rotation x", "rotation x", 0, -180, 180, 1, ModuleCategory.MISC)),
+                new com.shyeuar.baity.gui.value.SliderValue("rotation y", "rotation y", 0, -180, 180, 1, ModuleCategory.MISC),
+                new com.shyeuar.baity.gui.value.SliderValue("rotation z", "rotation z", 0, -180, 180, 1, ModuleCategory.MISC),
+                withSeparator(new com.shyeuar.baity.gui.value.SliderValue("scale", "size", 1, 0.1, 3.0, 0.05, ModuleCategory.MISC)),
+                new com.shyeuar.baity.gui.value.SliderValue("swing duration", "swing duration", 6, 1, 20, 1, ModuleCategory.MISC),
+                new com.shyeuar.baity.gui.value.Option("no swing", "no swing", false, ModuleCategory.MISC)
             },
                 new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
@@ -97,26 +97,26 @@ public class ModuleManager {
         );
         
         ModuleRegistry.registerSimpleModule(
-            "FancyCreeperVeil", "FancyCreeperVeil", ModuleCategory.FUN,
+            "FancyCreeperVeil", "FancyCreeperVeil", ModuleCategory.MISC,
             () -> ConfigManager.fancyCreeperVeilEnabled,
             val -> ConfigManager.fancyCreeperVeilEnabled = (Boolean) val
         );
         
         ModuleRegistry.registerSimpleModule(
-            "PepCat", "PepCat", ModuleCategory.FUN,
+            "PepCat", "PepCat", ModuleCategory.MISC,
             () -> ConfigManager.pepCatEnabled,
             val -> ConfigManager.pepCatEnabled = val
         );
         
         ModuleRegistry.registerModuleWithValues(
-            "SmolPeople", "SmolPeople", ModuleCategory.FUN,
+            "SmolPeople", "SmolPeople", ModuleCategory.MISC,
             () -> ConfigManager.smolpeopleMode,
             val -> ConfigManager.smolpeopleMode = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new Option("crosshair", "crosshair", true, ModuleCategory.FUN),
+                new Option("crosshair", "crosshair", true, ModuleCategory.MISC),
                 new com.shyeuar.baity.gui.value.SliderValue(
                         "limb swing speed", "Limb Swing Speed",
-                        2.5, 0.5, 5.0, 0.1, ModuleCategory.FUN)
+                        2.5, 0.5, 5.0, 0.1, ModuleCategory.MISC)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
@@ -222,7 +222,7 @@ public class ModuleManager {
         
 
         ModuleRegistry.registerSimpleModule(
-            "3DSkins", "3DSkins", ModuleCategory.FUN,
+            "3DSkins", "3DSkins", ModuleCategory.MISC,
             () -> ConfigManager.skinLayer3DEnabled,
             val -> ConfigManager.skinLayer3DEnabled = val
         );
@@ -284,19 +284,19 @@ public class ModuleManager {
         );
         
         ModuleRegistry.registerSimpleModule(
-            "NoHurtCam", "NoHurtCam", ModuleCategory.RENDER,
+            "NoHurtCam", "NoHurtCam", ModuleCategory.QOL,
             () -> ConfigManager.noHurtCamEnabled,
             val -> ConfigManager.noHurtCamEnabled = val
         );
         
         ModuleRegistry.registerSimpleModule(
-            "NoSwapAnimation", "NoSwapAnimation", ModuleCategory.RENDER,
+            "NoSwapAnimation", "NoSwapAnimation", ModuleCategory.MISC,
             () -> ConfigManager.noSwapAnimationEnabled,
             val -> ConfigManager.noSwapAnimationEnabled = val
         );
         
         ModuleRegistry.registerSimpleModule(
-            "NoTextShadow", "NoTextShadow", ModuleCategory.RENDER,
+            "NoTextShadow", "NoTextShadow", ModuleCategory.MISC,
             () -> ConfigManager.noTextShadowEnabled,
             val -> ConfigManager.noTextShadowEnabled = val
         );
@@ -384,6 +384,12 @@ public class ModuleManager {
                 )
             }
         );
+        
+        ModuleRegistry.registerSimpleModule(
+            "2DdroppedItem", "2DdroppedItem", ModuleCategory.MISC,
+            () -> ConfigManager.twoDdroppedItemEnabled,
+            val -> ConfigManager.twoDdroppedItemEnabled = val
+        );
     }
     
     private static <T extends com.shyeuar.baity.gui.value.Value> T withSeparator(T value) {
@@ -397,7 +403,7 @@ public class ModuleManager {
     
     private static void initTooltips() {
         TooltipManager.registerTooltip("SmolPeople", "Make your character smaller and cuter.", 0xFFFFFF);
-        TooltipManager.registerTooltip("BlockAnimation", "Restored the blocking animation of version 1.7.", 0xFFFFFF);
+        TooltipManager.registerTooltip("BlockAnimation", "Restore the blocking animation of version 1.7.", 0xFFFFFF);
         TooltipManager.registerTooltip("PepCat", "Play an animation and give pep talk when you died. It's a skill issue!", 0xFFFFFF);
         TooltipManager.registerTooltip("RadialMenu", "A roulette tool that invokes a shortcut command.", 0xFFFFFF);
         TooltipManager.registerTooltip("meowalert", 
@@ -405,9 +411,11 @@ public class ModuleManager {
                 .append(MessageUtils.createColoredText("ᯠ₋ ̫ ₋.ᯄ ੭", 0xFFC0CB))
                 .append(MessageUtils.createColoredText("meow~", 0xFFC0CB))
                 .append(MessageUtils.createColoredText(" when you are mentioned in chat.", 0xFFFFFF)));
-        TooltipManager.registerTooltip("Muffler", "Disable certain annoying sounds.", 0xFFFFFF);
-        TooltipManager.registerTooltip("FancyCreeperVeil", "Change the wither cloak shield model to a more fancy one.", 0xFFFFFF);
+        TooltipManager.registerTooltip("Muffler", "Mute the annoying sounds.", 0xFFFFFF);
+        TooltipManager.registerTooltip("FancyCreeperVeil", "Replace the wither cloak ability creeper model to a fancy one.", 0xFFFFFF);
         TooltipManager.registerTooltip("NoSwimChange", "Only disables the swimming pose and eye height change on your client.", 0xFFFFFF);
+        TooltipManager.registerTooltip("NoSwapAnimation", "Disable the animation of hotbar change.", 0xFFFFFF);
+        TooltipManager.registerTooltip("2DdroppedItem", "Render dropped items as 2D sprites.", 0xFFFFFF);
     }
     
     public static List<Module> getModules() {
@@ -417,6 +425,7 @@ public class ModuleManager {
     public static List<Module> getModulesByCategory(ModuleCategory category) {
         return modules.stream()
                 .filter(module -> module.getCategory() == category)
+                .sorted(java.util.Comparator.comparing(Module::getName))
                 .collect(java.util.stream.Collectors.toList());
     }
     

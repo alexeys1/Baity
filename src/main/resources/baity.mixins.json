@@ -48,7 +48,8 @@
     "InvisibleBugHighlightsMixin$EntityRemovalMixin",
     "FancyCreeperVeilMixin",
     "TagBackgroundMixin",
-    "NoTextShadowMixin"
+    "NoTextShadowMixin",
+    "DroppedItem2DMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -29,3 +29,9 @@ We would like to thank the owo-lib maintainers and contributors for their work.
 
 本项目使用了 Wisp Forest 提供的优秀 UI 与渲染工具库 [owo-lib](https://github.com/wisp-forest/owo-lib)。  
 在此对 owo-lib 的维护者和贡献者表示感谢。
+
+## Third-Party Notices / 第三方声明
+
+For third-party resources used in this project (including data sources and inspirations), please see [NOTICES.md](NOTICES.md).
+
+关于本项目中使用的第三方资源（包括数据来源与参考项目），请参阅 [NOTICES.md](NOTICES.md)。

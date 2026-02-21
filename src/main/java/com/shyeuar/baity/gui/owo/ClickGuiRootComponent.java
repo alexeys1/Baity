@@ -145,6 +145,7 @@ public class ClickGuiRootComponent extends BaseComponent {
         }
         
         renderWatermark(adapter, client);
+        renderHudButton(adapter, client, coords.mouseX, coords.mouseY);
         
         updateVersionCheckStatus();
         renderVersion(adapter, client, coords.mouseX, coords.mouseY);
@@ -274,8 +275,9 @@ public class ClickGuiRootComponent extends BaseComponent {
         float iconPadding = 4;
         float searchX = ClickGuiState.SIDEBAR_WIDTH + 20;
         float searchY = 15;
-        float searchWidth = ClickGuiState.CONTENT_WIDTH - 40;
         float searchHeight = 20;
+        
+        float searchWidth = ClickGuiState.CONTENT_WIDTH - 40;
         
         ResourceLocation searchIcon = ResourceLocation.fromNamespaceAndPath("baity", "textures/gui/search.png");
         int iconX = (int)(searchX + iconPadding);
@@ -308,6 +310,40 @@ public class ClickGuiRootComponent extends BaseComponent {
         float lineY = searchY + searchHeight - 1;
         int lineColor = new java.awt.Color(150, 150, 150, 200).getRGB();
         guiGraphics.fill((int)searchX, (int)lineY, (int)(searchX + searchWidth), (int)(lineY + 1), lineColor);
+    }
+    
+    private void renderHudButton(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
+        int githubIconSize = 20;
+        int githubPadding = 8;
+        int githubIconY = (int)(ClickGuiState.HEIGHT - githubIconSize - githubPadding);
+        float githubIconCenterY = githubIconY + githubIconSize / 2.0f;
+        
+        float hudButtonWidth = 30;
+        float hudButtonHeight = 16;
+        float distanceFromDivider = 10;
+        float hudButtonX = ClickGuiState.SIDEBAR_WIDTH - distanceFromDivider - hudButtonWidth;
+        float hudButtonY = githubIconCenterY - hudButtonHeight / 2.0f;
+        
+        boolean hudButtonHovered = mouseX >= hudButtonX && mouseX <= hudButtonX + hudButtonWidth &&
+                                   mouseY >= hudButtonY && mouseY <= hudButtonY + hudButtonHeight;
+        
+        int hudButtonBgColor = hudButtonHovered ? 
+            new java.awt.Color(255, 255, 255, 24).getRGB() : 
+            theme.BG_2.getRGB();
+        
+        com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, 
+            (int)hudButtonX, (int)hudButtonY, 
+            (int)(hudButtonX + hudButtonWidth), (int)(hudButtonY + hudButtonHeight), 
+            hudButtonBgColor, 0f);
+        
+        String hudButtonText = "HUD";
+        int hudTextWidth = client.font.width(hudButtonText);
+        int hudTextX = (int)(hudButtonX + (hudButtonWidth - hudTextWidth) / 2);
+        int hudTextY = (int)(hudButtonY + (hudButtonHeight - client.font.lineHeight) / 2);
+        guiGraphics.drawString(client.font, hudButtonText, hudTextX, hudTextY, theme.FONT.getRGB(), false);
+        
+        // Store HUD button bounds in state for click detection
+        state.setHudButtonBounds((int)hudButtonX, (int)hudButtonY, (int)hudButtonWidth, (int)hudButtonHeight);
     }
     
     private void renderPlaceholder(OwoRenderAdapter adapter, Minecraft client, float modY, float contentX, float contentWidth) {
@@ -689,26 +725,35 @@ public class ClickGuiRootComponent extends BaseComponent {
         String checkStatus = state.getVersionCheckStatus();
         long startTime = state.getVersionCheckStartTime();
         boolean isError = false;
-        if (checkStatus != null && startTime > 0 &&
-            currentTime - startTime < 2000) {
-            showFeedback = true;
-            if ("latest".equals(checkStatus)) {
-                displayText = "It's already the latest version！";
-            } else if ("error".equals(checkStatus)) {
-                String errorMsg = state.getLatestVersion();
-                if (errorMsg != null && errorMsg.equals("Unknown error")) {
-                    displayText = "Unknown error";
-                    isError = true;
+        boolean isAutoCheck = state.isAutoCheck();
+        long displayDuration = (isAutoCheck && "update_available".equals(checkStatus)) ? 6000 : 2000;
+        if (checkStatus != null && startTime > 0) {
+            long elapsed = currentTime - startTime;
+            if (elapsed < displayDuration) {
+                if ("latest".equals(checkStatus)) {
+                    if (!isAutoCheck) {
+                        showFeedback = true;
+                        displayText = "It's already the latest version！";
+                    }
                 } else {
-                    displayText = "It's already the latest version！Network error！";
-                    isError = true;
-                }
-            } else if ("update_available".equals(checkStatus)) {
-                String latest = state.getLatestVersion();
-                if (latest != null) {
-                    displayText = "Available updates！Check " + latest + "！";
-                } else {
-                    displayText = "Available updates！";
+                    showFeedback = true;
+                    if ("error".equals(checkStatus)) {
+                        String errorMsg = state.getLatestVersion();
+                        if (errorMsg != null && errorMsg.equals("Unknown error")) {
+                            displayText = "Unknown error";
+                            isError = true;
+                        } else {
+                            displayText = "It's already the latest version！Network error！";
+                            isError = true;
+                        }
+                    } else if ("update_available".equals(checkStatus)) {
+                        String latest = state.getLatestVersion();
+                        if (latest != null) {
+                            displayText = "Available updates！Check " + latest + "！";
+                        } else {
+                            displayText = "Available updates！";
+                        }
+                    }
                 }
             }
         }
@@ -825,10 +870,13 @@ public class ClickGuiRootComponent extends BaseComponent {
         long currentTime = System.currentTimeMillis();
         String checkStatus = state.getVersionCheckStatus();
         long startTime = state.getVersionCheckStartTime();
+        boolean isAutoCheck = state.isAutoCheck();
+        long displayDuration = (isAutoCheck && "update_available".equals(checkStatus)) ? 6000 : 2000;
         if (checkStatus != null && startTime > 0 && 
-            currentTime - startTime >= 2000) {
+            currentTime - startTime >= displayDuration) {
             state.setVersionCheckStatus(null);
             state.setLatestVersion(null);
+            state.setAutoCheck(false);
         }
     }
     

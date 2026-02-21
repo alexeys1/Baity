@@ -106,6 +106,63 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             int screenH = this.minecraft.getWindow().getGuiScaledHeight();
             ClickGuiLayout.initializeWindowPosition(state, screenW, screenH);
         }
+        
+        if (!restoredFromSession) {
+            triggerAutoVersionCheck();
+        }
+    }
+    
+    private void triggerAutoVersionCheck() {
+        if (state.isVersionChecking()) {
+            return;
+        }
+        
+        String currentVersion = net.fabricmc.loader.api.FabricLoader.getInstance()
+            .getModContainer("baity")
+            .map(container -> container.getMetadata().getVersion().getFriendlyString())
+            .orElse("Unknown");
+        
+        state.setVersionChecking(true);
+        state.setVersionCheckStatus(null);
+        state.setLatestVersion(null);
+        state.setAutoCheck(true);
+        state.setVersionCheckStartTime(System.currentTimeMillis());
+        
+        Minecraft mc = this.minecraft;
+        com.shyeuar.baity.utils.VersionCheckUtils.checkVersionAsync(currentVersion).thenAccept(result -> {
+            if (mc != null && mc.level != null) {
+                mc.schedule(() -> {
+                    state.setVersionChecking(false);
+                    if (result.hasError) {
+                        state.setVersionCheckStatus(null);
+                        state.setAutoCheck(false);
+                        return;
+                    }
+                    
+                    if (result.isLatest) {
+                        state.setVersionCheckStatus("latest");
+                    } else {
+                        state.setVersionCheckStatus("update_available");
+                        state.setLatestVersion(result.latestVersion);
+                    }
+                    state.setVersionCheckStartTime(System.currentTimeMillis());
+                });
+            } else {
+                state.setVersionChecking(false);
+                state.setAutoCheck(false);
+            }
+        }).exceptionally(throwable -> {
+            if (this.minecraft != null && this.minecraft.level != null) {
+                this.minecraft.schedule(() -> {
+                    state.setVersionChecking(false);
+                    state.setAutoCheck(false);
+                });
+            } else {
+                state.setVersionChecking(false);
+                state.setAutoCheck(false);
+            }
+            return null;
+        });
     }
     
     @Override

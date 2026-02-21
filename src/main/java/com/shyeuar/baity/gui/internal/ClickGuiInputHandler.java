@@ -40,6 +40,11 @@ public class ClickGuiInputHandler {
         
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
         
+        if (button == 0 && state.isHudButtonHovered(coords.mouseX, coords.mouseY)) {
+            Minecraft.getInstance().setScreen(new com.shyeuar.baity.gui.hud.HudPositionEditor());
+            return true;
+        }
+        
         if (state.isEditingSlider() && button == 0) {
             ClickGuiState.SliderInputInfo editInfo = state.getEditingSlider();
             if (editInfo != null) {
@@ -431,6 +436,7 @@ public class ClickGuiInputHandler {
             state.setVersionChecking(true);
             state.setVersionCheckStatus(null);
             state.setLatestVersion(null);
+            state.setAutoCheck(false);
             state.setVersionCheckStartTime(System.currentTimeMillis());
             Minecraft mc = client;
             VersionCheckUtils.checkVersionAsync(currentVersion).thenAccept(result -> {

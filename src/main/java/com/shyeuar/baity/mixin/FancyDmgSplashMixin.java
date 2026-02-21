@@ -51,6 +51,8 @@ public class FancyDmgSplashMixin {
         String customName = armorStand.getCustomName().getString();
         if (customName == null || customName.isEmpty()) return;
 
+        if (!isDamageNumberOnly(customName)) return;
+
         Matcher matcher = DAMAGE_PATTERN.matcher(customName);
         if (!matcher.matches()) return;
 
@@ -85,6 +87,33 @@ public class FancyDmgSplashMixin {
 
         FancyDmgSplash.addDamageNumber(damage, targetPos, formattedText);
         armorStand.remove(Entity.RemovalReason.DISCARDED);
+    }
+
+    @Unique
+    private static boolean isDamageNumberOnly(String text) {
+        if (text == null || text.isEmpty()) return false;
+        
+        if (text.contains(",")) return true;
+        
+        if (java.util.regex.Pattern.compile("\\d[kKmMbB]").matcher(text).find()) return true;
+        
+        if (text.contains("⚔") || text.contains("✧") || text.contains("✯") ||
+            text.contains("❤") || text.contains("♞") || text.contains("☄") ||
+            text.contains("✷") || text.contains("ﬗ") || text.contains("+")) {
+            return true;
+        }
+        
+        if (!text.contains(".")) {
+            String numericOnly = text.replaceAll("[^\\d]", "");
+            if (!numericOnly.isEmpty()) {
+                try {
+                    Long.parseLong(numericOnly);
+                    return true;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        
+        return false;
     }
 
     @Unique

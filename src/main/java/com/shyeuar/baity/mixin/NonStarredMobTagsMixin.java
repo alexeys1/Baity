@@ -80,6 +80,7 @@ public class NonStarredMobTagsMixin {
         if (comp == null) return;
 
         String raw = comp.getString();
+        if (com.shyeuar.baity.features.fishing.FishHookTimer.isFishingTimerArmorStand(raw)) return;
         Matcher matcher = NAME_TAG_PATTERN.matcher(raw);
         if (!matcher.matches()) return;
 

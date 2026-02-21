@@ -390,6 +390,18 @@ public class ModuleManager {
             () -> ConfigManager.twoDdroppedItemEnabled,
             val -> ConfigManager.twoDdroppedItemEnabled = val
         );
+
+        ModuleRegistry.registerSimpleModule(
+            "EnchantChroma", "EnchantChroma", ModuleCategory.MISC,
+            () -> ConfigManager.enchantChromaEnabled,
+            val -> ConfigManager.enchantChromaEnabled = val
+        );
+        
+        ModuleRegistry.registerSimpleModule(
+            "FishHookTimer", "FishHookTimer", ModuleCategory.QOL,
+            () -> ConfigManager.fishHookTimerEnabled,
+            val -> ConfigManager.fishHookTimerEnabled = val
+        );
     }
     
     private static <T extends com.shyeuar.baity.gui.value.Value> T withSeparator(T value) {
@@ -411,6 +423,14 @@ public class ModuleManager {
                 .append(MessageUtils.createColoredText("ᯠ₋ ̫ ₋.ᯄ ੭", 0xFFC0CB))
                 .append(MessageUtils.createColoredText("meow~", 0xFFC0CB))
                 .append(MessageUtils.createColoredText(" when you are mentioned in chat.", 0xFFFFFF)));
+        TooltipManager.registerTooltip("EnchantChroma",
+            MessageUtils.createColoredText("If it doesn't work, please check ", 0xFFFF00)
+                .append(MessageUtils.createColoredText("baity\\EnchantChroma_Data_Setup_Guide.txt", 0xADFF2F))
+                .append(MessageUtils.createColoredText(".", 0xFFFF00)));
+        TooltipManager.registerTooltip("FishHookTimer",
+            MessageUtils.createColoredText("Tip: You can DIY the timer UI by resources. Check ", 0xFFFF00)
+                .append(MessageUtils.createColoredText("baity\\FishHookTimer_DIY_UI_Setup_Guide.txt", 0xADFF2F))
+                .append(MessageUtils.createColoredText(".", 0xFFFF00)));
         TooltipManager.registerTooltip("Muffler", "Mute the annoying sounds.", 0xFFFFFF);
         TooltipManager.registerTooltip("FancyCreeperVeil", "Replace the wither cloak ability creeper model to a fancy one.", 0xFFFFFF);
         TooltipManager.registerTooltip("NoSwimChange", "Only disables the swimming pose and eye height change on your client.", 0xFFFFFF);

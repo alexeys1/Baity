@@ -1,0 +1,38 @@
+{
+  "fishing_timer_0": {
+    "sounds": ["fishtimer:fishing_timer_0"]
+  },
+  "fishing_timer_1": {
+    "sounds": ["fishtimer:fishing_timer_1"]
+  },
+  "fishing_timer_2": {
+    "sounds": ["fishtimer:fishing_timer_2"]
+  },
+  "fishing_timer_3": {
+    "sounds": ["fishtimer:fishing_timer_3"]
+  },
+  "fishing_timer_4": {
+    "sounds": ["fishtimer:fishing_timer_4"]
+  },
+  "fishing_timer_5": {
+    "sounds": ["fishtimer:fishing_timer_5"]
+  },
+  "fishing_timer_6": {
+    "sounds": ["fishtimer:fishing_timer_6"]
+  },
+  "fishing_timer_7": {
+    "sounds": ["fishtimer:fishing_timer_7"]
+  },
+  "fishing_timer_8": {
+    "sounds": ["fishtimer:fishing_timer_8"]
+  },
+  "fishing_timer_9": {
+    "sounds": ["fishtimer:fishing_timer_9"]
+  },
+  "fishing_timer_10": {
+    "sounds": ["fishtimer:fishing_timer_10"]
+  },
+  "fishing_timer_11": {
+    "sounds": ["fishtimer:fishing_timer_11"]
+  }
+}

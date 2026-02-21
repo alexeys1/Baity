@@ -15,6 +15,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.Minecraft;
 import com.shyeuar.baity.features.radialmenu.RadialMenu;
 import com.shyeuar.baity.utils.SoundUtils;
@@ -36,6 +37,10 @@ public class Baity implements ClientModInitializer {
         }
         
         ModuleInitializer.initializeModules();
+
+        com.shyeuar.baity.features.enchantchroma.EnchantChromaProcessor.register();
+        
+        com.shyeuar.baity.features.fishing.FishHookTimer.init();
         
         com.shyeuar.baity.features.blockanimation.BlockAnimationManager.register();
         
@@ -63,6 +68,8 @@ public class Baity implements ClientModInitializer {
             KeybindManager.handleModuleKeybinds(client, windowHandle);
             
             RadialMenu.tick(client);
+            
+            com.shyeuar.baity.features.fishing.FishHookTimer.getInstance().tick();
         });
         
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> dispatcher.register(ClientCommandManager.literal("baity")
@@ -77,6 +84,11 @@ public class Baity implements ClientModInitializer {
         WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.highlights.InvisibleBugHighlights());
         
         WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.FancyCreeperVeil());
+        
+        HudRenderCallback.EVENT.register((guiGraphics, tickDelta) -> {
+            var timer = com.shyeuar.baity.features.fishing.FishHookTimer.getInstance();
+            if (timer.shouldRender()) timer.render(guiGraphics, 0.0f);
+        });
     }
     
     public static final net.minecraft.sounds.SoundEvent LAUGHTER_SOUND = registerSoundEvent("sounds.laughter");

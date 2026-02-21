@@ -78,6 +78,13 @@ public class ConfigManager {
     
     public static boolean twoDdroppedItemEnabled = false;
     
+    public static boolean enchantChromaEnabled = false;
+    
+    public static boolean fishHookTimerEnabled = false;
+    public static double fishHookTimerX = 0.5;
+    public static double fishHookTimerY = 0.6;
+    public static float fishHookTimerScale = 1.5f;
+    
     private static final String BAITY_DIR = "baity";
     private static final String CONFIG_FILE = "baity/config.txt";
 
@@ -261,6 +268,21 @@ public class ConfigManager {
         registerField("2DdroppedItem", Boolean.class,
             c -> ConfigManager.twoDdroppedItemEnabled,
             (c, v) -> ConfigManager.twoDdroppedItemEnabled = (Boolean) v);
+        registerField("EnchantChroma", Boolean.class,
+            c -> ConfigManager.enchantChromaEnabled,
+            (c, v) -> ConfigManager.enchantChromaEnabled = (Boolean) v);
+        registerField("FishHookTimer", Boolean.class,
+            c -> ConfigManager.fishHookTimerEnabled,
+            (c, v) -> ConfigManager.fishHookTimerEnabled = (Boolean) v);
+        registerField("FishHookTimerX", Double.class,
+            c -> ConfigManager.fishHookTimerX,
+            (c, v) -> ConfigManager.fishHookTimerX = (Double) v);
+        registerField("FishHookTimerY", Double.class,
+            c -> ConfigManager.fishHookTimerY,
+            (c, v) -> ConfigManager.fishHookTimerY = (Double) v);
+        registerField("FishHookTimerScale", Float.class,
+            c -> ConfigManager.fishHookTimerScale,
+            (c, v) -> ConfigManager.fishHookTimerScale = (Float) v);
     }
     
     private static void registerField(String key, Class<?> type,
@@ -347,6 +369,8 @@ public class ConfigManager {
             return Integer.parseInt(valueStr);
         } else if (type == Double.class) {
             return Double.parseDouble(valueStr);
+        } else if (type == Float.class) {
+            return Float.parseFloat(valueStr);
         } else if (type == String.class) {
             return valueStr;
         }

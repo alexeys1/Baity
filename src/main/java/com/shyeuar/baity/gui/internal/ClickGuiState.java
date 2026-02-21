@@ -50,11 +50,17 @@ public class ClickGuiState {
     private long versionCheckStartTime = 0;
     private boolean isVersionChecking = false;
     private boolean isVersionHovered = false;
+    private boolean isAutoCheck = false;
     
     private String hoveredTooltip = null;
     private net.minecraft.network.chat.Component hoveredTooltipText = null;
     private int tooltipX = 0;
     private int tooltipY = 0;
+    
+    private int hudButtonX = 0;
+    private int hudButtonY = 0;
+    private int hudButtonWidth = 0;
+    private int hudButtonHeight = 0;
     
     public float getWindowX() { return windowX; }
     public void setWindowX(float x) { windowX = x; }
@@ -122,6 +128,18 @@ public class ClickGuiState {
     public int getTooltipY() { return tooltipY; }
     public void setTooltipY(int y) { tooltipY = y; }
     
+    public void setHudButtonBounds(int x, int y, int width, int height) {
+        hudButtonX = x;
+        hudButtonY = y;
+        hudButtonWidth = width;
+        hudButtonHeight = height;
+    }
+    
+    public boolean isHudButtonHovered(float mouseX, float mouseY) {
+        return mouseX >= hudButtonX && mouseX <= hudButtonX + hudButtonWidth &&
+               mouseY >= hudButtonY && mouseY <= hudButtonY + hudButtonHeight;
+    }
+    
     public String getVersionCheckStatus() { return versionCheckStatus; }
     public void setVersionCheckStatus(String status) { versionCheckStatus = status; }
     
@@ -136,6 +154,9 @@ public class ClickGuiState {
     
     public boolean isVersionHovered() { return isVersionHovered; }
     public void setVersionHovered(boolean hovered) { isVersionHovered = hovered; }
+    
+    public boolean isAutoCheck() { return isAutoCheck; }
+    public void setAutoCheck(boolean autoCheck) { isAutoCheck = autoCheck; }
     
     public String getSearchText() { return searchText; }
     public void setSearchText(String text) { searchText = text; }

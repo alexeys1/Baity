@@ -107,7 +107,9 @@ public class Reminder {
             }
             
             String afterColon = fullMessage.substring(colonIndex + 1).trim();
-            if (messageContainsName(afterColon, playerName) || afterColon.contains(playerUUID)) {
+            String lowerAfterColon = afterColon.toLowerCase();
+            String lowerPlayerName = playerName.toLowerCase();
+            if (lowerAfterColon.contains(lowerPlayerName)) {
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastMeowTimestamp > MEOW_COOLDOWN) {
                     lastMeowTimestamp = currentTime;

@@ -28,6 +28,7 @@ public class Baity implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        com.shyeuar.baity.config.BaityConfigDir.init();
         CustomTotemItem.register();
         
         ConfigManager.loadConfig();

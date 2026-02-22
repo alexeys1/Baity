@@ -68,7 +68,7 @@ public class FishHookTimer implements HudElement {
     
     private static void ensureGuideExists() {
         try {
-            java.nio.file.Path baityDir = net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("baity");
+            java.nio.file.Path baityDir = com.shyeuar.baity.config.BaityConfigDir.getBaityConfigDir();
             java.nio.file.Path guidePath = baityDir.resolve("FishHookTimer_DIY_UI_Setup_Guide.txt");
             if (!java.nio.file.Files.isRegularFile(guidePath)) {
                 java.nio.file.Files.createDirectories(baityDir);

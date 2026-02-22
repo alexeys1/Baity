@@ -85,8 +85,7 @@ public class ConfigManager {
     public static double fishHookTimerY = 0.6;
     public static float fishHookTimerScale = 1.5f;
     
-    private static final String BAITY_DIR = "baity";
-    private static final String CONFIG_FILE = "baity/config.txt";
+    private static final String CONFIG_FILE_NAME = "config.txt";
 
     private static final Map<String, SettingField> CONFIG_FIELDS = new HashMap<>();
     
@@ -293,12 +292,12 @@ public class ConfigManager {
 
     public static void saveConfig() {
         try {
-            java.nio.file.Path baityDir = java.nio.file.Paths.get(BAITY_DIR);
+            java.nio.file.Path baityDir = BaityConfigDir.getBaityConfigDir();
             if (!java.nio.file.Files.exists(baityDir)) {
                 java.nio.file.Files.createDirectories(baityDir);
             }
             
-            java.nio.file.Path configPath = java.nio.file.Paths.get(CONFIG_FILE);
+            java.nio.file.Path configPath = baityDir.resolve(CONFIG_FILE_NAME);
             StringBuilder config = new StringBuilder();
             
             ConfigManager instance = null; 
@@ -317,16 +316,23 @@ public class ConfigManager {
 
     public static void loadConfig() {
         try {
-            java.nio.file.Path baityDir = java.nio.file.Paths.get(BAITY_DIR);
+            BaityConfigDir.init();
+            java.nio.file.Path baityDir = BaityConfigDir.getBaityConfigDir();
             if (!java.nio.file.Files.exists(baityDir)) {
                 java.nio.file.Files.createDirectories(baityDir);
             }
             
             java.nio.file.Path oldConfigPath = java.nio.file.Paths.get("baity_config.txt");
-            java.nio.file.Path newConfigPath = java.nio.file.Paths.get(CONFIG_FILE);
+            java.nio.file.Path newConfigPath = baityDir.resolve(CONFIG_FILE_NAME);
             if (java.nio.file.Files.exists(oldConfigPath) && !java.nio.file.Files.exists(newConfigPath)) {
                 java.nio.file.Files.move(oldConfigPath, newConfigPath);
-                System.out.println("[Baity] Migrated config to new location: " + CONFIG_FILE);
+                System.out.println("[Baity] Migrated config to new location: " + newConfigPath);
+            }
+            
+            java.nio.file.Path oldBaityConfigPath = java.nio.file.Paths.get("baity/config.txt");
+            if (java.nio.file.Files.exists(oldBaityConfigPath) && !java.nio.file.Files.exists(newConfigPath)) {
+                java.nio.file.Files.move(oldBaityConfigPath, newConfigPath);
+                System.out.println("[Baity] Migrated config from old baity directory: " + newConfigPath);
             }
             
             if (java.nio.file.Files.exists(newConfigPath)) {

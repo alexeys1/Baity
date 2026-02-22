@@ -730,28 +730,28 @@ public class ClickGuiRootComponent extends BaseComponent {
         if (checkStatus != null && startTime > 0) {
             long elapsed = currentTime - startTime;
             if (elapsed < displayDuration) {
-                if ("latest".equals(checkStatus)) {
+            if ("latest".equals(checkStatus)) {
                     if (!isAutoCheck) {
                         showFeedback = true;
-                        displayText = "It's already the latest version！";
+                displayText = "It's already the latest version！";
                     }
                 } else {
                     showFeedback = true;
                     if ("error".equals(checkStatus)) {
-                        String errorMsg = state.getLatestVersion();
-                        if (errorMsg != null && errorMsg.equals("Unknown error")) {
-                            displayText = "Unknown error";
-                            isError = true;
-                        } else {
-                            displayText = "It's already the latest version！Network error！";
-                            isError = true;
-                        }
-                    } else if ("update_available".equals(checkStatus)) {
-                        String latest = state.getLatestVersion();
-                        if (latest != null) {
-                            displayText = "Available updates！Check " + latest + "！";
-                        } else {
-                            displayText = "Available updates！";
+                String errorMsg = state.getLatestVersion();
+                if (errorMsg != null && errorMsg.equals("Unknown error")) {
+                    displayText = "Unknown error";
+                    isError = true;
+                } else {
+                    displayText = "It's already the latest version！Network error！";
+                    isError = true;
+                }
+            } else if ("update_available".equals(checkStatus)) {
+                String latest = state.getLatestVersion();
+                if (latest != null) {
+                    displayText = "Available updates！Check " + latest + "！";
+                } else {
+                    displayText = "Available updates！";
                         }
                     }
                 }

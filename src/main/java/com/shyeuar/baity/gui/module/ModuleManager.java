@@ -256,13 +256,13 @@ public class ModuleManager {
         );
         
         ModuleRegistry.registerModuleWithValues(
-            "FancyDmgSplash", "FancyDmgSplash", ModuleCategory.RENDER,
+            "FancyDmgSplash", "FancyDmgSplash", ModuleCategory.MISC,
             () -> ConfigManager.fancyDmgSplashEnabled,
             val -> ConfigManager.fancyDmgSplashEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new Option("genshin elemental reaction", "genshin elemental reaction", false, ModuleCategory.RENDER),
-                new Option("compact damage number", "compact damage number", true, ModuleCategory.RENDER),
-                new com.shyeuar.baity.gui.value.ColorPaletteValue("color palette", "color palette", ModuleCategory.RENDER)
+                new Option("genshin elemental reaction", "genshin elemental reaction", false, ModuleCategory.MISC),
+                new Option("compact damage number", "compact damage number", true, ModuleCategory.MISC),
+                new com.shyeuar.baity.gui.value.ColorPaletteValue("color palette", "color palette", ModuleCategory.MISC)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
@@ -290,13 +290,13 @@ public class ModuleManager {
         );
         
         ModuleRegistry.registerSimpleModule(
-            "NoSwapAnimation", "NoSwapAnimation", ModuleCategory.MISC,
+            "NoSwapAnimation", "NoSwapAnimation", ModuleCategory.RENDER,
             () -> ConfigManager.noSwapAnimationEnabled,
             val -> ConfigManager.noSwapAnimationEnabled = val
         );
         
         ModuleRegistry.registerSimpleModule(
-            "NoTextShadow", "NoTextShadow", ModuleCategory.MISC,
+            "NoTextShadow", "NoTextShadow", ModuleCategory.RENDER,
             () -> ConfigManager.noTextShadowEnabled,
             val -> ConfigManager.noTextShadowEnabled = val
         );
@@ -386,13 +386,13 @@ public class ModuleManager {
         );
         
         ModuleRegistry.registerSimpleModule(
-            "2DdroppedItem", "2DdroppedItem", ModuleCategory.MISC,
+            "2DdroppedItem", "2DdroppedItem", ModuleCategory.RENDER,
             () -> ConfigManager.twoDdroppedItemEnabled,
             val -> ConfigManager.twoDdroppedItemEnabled = val
         );
 
         ModuleRegistry.registerSimpleModule(
-            "EnchantChroma", "EnchantChroma", ModuleCategory.MISC,
+            "EnchantChroma", "EnchantChroma", ModuleCategory.QOL,
             () -> ConfigManager.enchantChromaEnabled,
             val -> ConfigManager.enchantChromaEnabled = val
         );

@@ -27,6 +27,7 @@ public class Baity implements ClientModInitializer {
     public static boolean openGuiNextTick = false;
 
     @Override
+    @SuppressWarnings("deprecation")
     public void onInitializeClient() {
         com.shyeuar.baity.config.BaityConfigDir.init();
         CustomTotemItem.register();

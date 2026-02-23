@@ -78,8 +78,6 @@ public class ConfigManager {
     
     public static boolean twoDdroppedItemEnabled = false;
     
-    public static boolean enchantChromaEnabled = false;
-    
     public static boolean fishHookTimerEnabled = false;
     public static double fishHookTimerX = 0.5;
     public static double fishHookTimerY = 0.6;
@@ -267,9 +265,6 @@ public class ConfigManager {
         registerField("2DdroppedItem", Boolean.class,
             c -> ConfigManager.twoDdroppedItemEnabled,
             (c, v) -> ConfigManager.twoDdroppedItemEnabled = (Boolean) v);
-        registerField("EnchantChroma", Boolean.class,
-            c -> ConfigManager.enchantChromaEnabled,
-            (c, v) -> ConfigManager.enchantChromaEnabled = (Boolean) v);
         registerField("FishHookTimer", Boolean.class,
             c -> ConfigManager.fishHookTimerEnabled,
             (c, v) -> ConfigManager.fishHookTimerEnabled = (Boolean) v);
@@ -316,7 +311,6 @@ public class ConfigManager {
 
     public static void loadConfig() {
         try {
-            BaityConfigDir.init();
             java.nio.file.Path baityDir = BaityConfigDir.getBaityConfigDir();
             if (!java.nio.file.Files.exists(baityDir)) {
                 java.nio.file.Files.createDirectories(baityDir);

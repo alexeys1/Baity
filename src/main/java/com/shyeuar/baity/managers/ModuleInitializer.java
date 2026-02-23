@@ -30,7 +30,6 @@ public class ModuleInitializer {
         initializeFancyDmgSplash();
         initializeHighlights();
         initializeNodebuff();
-        initializeEnchantChroma();
         
         com.shyeuar.baity.gui.sync.ConfigSynchronizer.syncModuleStates();
         
@@ -148,11 +147,4 @@ public class ModuleInitializer {
         }
     }
 
-    private static void initializeEnchantChroma() {
-        Module enchantChroma = ModuleManager.getModuleByName("EnchantChroma");
-        if (enchantChroma != null) {
-            enchantChroma.setEnabled(ConfigManager.enchantChromaEnabled);
-        }
-        com.shyeuar.baity.features.enchantchroma.EnchantChroma.init();
-    }
 }

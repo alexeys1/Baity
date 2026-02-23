@@ -38,8 +38,6 @@ public class Baity implements ClientModInitializer {
         }
         
         ModuleInitializer.initializeModules();
-
-        com.shyeuar.baity.features.enchantchroma.EnchantChromaProcessor.register();
         
         com.shyeuar.baity.features.fishing.FishHookTimer.init();
         

@@ -392,12 +392,6 @@ public class ModuleManager {
         );
 
         ModuleRegistry.registerSimpleModule(
-            "EnchantChroma", "EnchantChroma", ModuleCategory.QOL,
-            () -> ConfigManager.enchantChromaEnabled,
-            val -> ConfigManager.enchantChromaEnabled = val
-        );
-        
-        ModuleRegistry.registerSimpleModule(
             "FishHookTimer", "FishHookTimer", ModuleCategory.QOL,
             () -> ConfigManager.fishHookTimerEnabled,
             val -> ConfigManager.fishHookTimerEnabled = val
@@ -423,10 +417,6 @@ public class ModuleManager {
                 .append(MessageUtils.createColoredText("ᯠ₋ ̫ ₋.ᯄ ੭", 0xFFC0CB))
                 .append(MessageUtils.createColoredText("meow~", 0xFFC0CB))
                 .append(MessageUtils.createColoredText(" when you are mentioned in chat.", 0xFFFFFF)));
-        TooltipManager.registerTooltip("EnchantChroma",
-            MessageUtils.createColoredText("If it doesn't work, please check ", 0xFFFF00)
-                .append(MessageUtils.createColoredText("config\\baity\\EnchantChroma_Data_Setup_Guide.txt", 0xADFF2F))
-                .append(MessageUtils.createColoredText(".", 0xFFFF00)));
         TooltipManager.registerTooltip("FishHookTimer",
             MessageUtils.createColoredText("Tip: You can DIY the timer UI by resources. Check ", 0xFFFF00)
                 .append(MessageUtils.createColoredText("config\\baity\\FishHookTimer_DIY_UI_Setup_Guide.txt", 0xADFF2F))

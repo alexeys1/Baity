@@ -120,19 +120,6 @@ public class Reminder {
         meowAlertRegistered = true;
     }
     
-    private boolean messageContainsName(String message, String name) {
-        if (message == null || name == null || name.isEmpty()) return false;
-        String lowerMessage = message.toLowerCase();
-        String lowerName = name.toLowerCase();
-        int index = lowerMessage.indexOf(lowerName);
-        if (index == -1) return false;
-        int before = index - 1;
-        int after = index + lowerName.length();
-        boolean validBefore = before < 0 || !Character.isLetterOrDigit(lowerMessage.charAt(before));
-        boolean validAfter = after >= lowerMessage.length() || !Character.isLetterOrDigit(lowerMessage.charAt(after));
-        return validBefore && validAfter;
-    }
-    
     private void playMeowSound(net.minecraft.client.player.LocalPlayer player) {
         player.playSound(net.minecraft.sounds.SoundEvents.CAT_AMBIENT, MEOW_VOLUME * 5.0f, MEOW_PITCH);
         player.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, MEOW_VOLUME * 5.0f, 5.0f);

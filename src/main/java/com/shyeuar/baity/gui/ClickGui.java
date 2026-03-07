@@ -181,7 +181,9 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             rootComponent.setGuiGraphics(graphics);
         }
         
-        super.render(graphics, mouseX, mouseY, delta);
+        if (graphics != null) {
+            super.render(graphics, mouseX, mouseY, delta);
+        }
     }
     
     @Override

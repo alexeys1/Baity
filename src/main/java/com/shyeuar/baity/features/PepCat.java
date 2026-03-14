@@ -73,15 +73,37 @@ public class PepCat {
         }
     }
     
-    private static final char DEATH_SKULL_EMOJI = '\u2620';
-    
+    private static final String[] ENGLISH_SECOND_PERSON_DEATH_SUBSTRINGS = new String[]{
+        "you died",
+        "you were killed by",
+        "you were slain by",
+        "you were blown up by",
+        "you fell into the void",
+        "you fell to your death",
+        "you starved to death",
+        "you burned to death",
+        "you were burnt to a crisp",
+        "you drowned",
+        "you hit the ground too hard",
+        "you were shot by",
+        "you were slain",
+        "you were killed"
+    };
+
     private static boolean isCurrentPlayerDeathMessage(Component message) {
-        Minecraft client = Minecraft.getInstance();
-        if (client.player == null) return false;
-        
         String messageText = message.getString();
-        
-        return messageText.indexOf(DEATH_SKULL_EMOJI) >= 0;
+
+        if (messageText.indexOf(':') >= 0) {
+            return false;
+        }
+
+        String lower = messageText.toLowerCase(java.util.Locale.ROOT);
+        for (String pattern : ENGLISH_SECOND_PERSON_DEATH_SUBSTRINGS) {
+            if (lower.contains(pattern)) {
+                return true;
+            }
+        }
+        return false;
     }
     
     private static void onPlayerDeath(LocalPlayer player) {

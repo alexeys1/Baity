@@ -73,59 +73,15 @@ public class PepCat {
         }
     }
     
+    private static final char DEATH_SKULL_EMOJI = '\u2620';
+    
     private static boolean isCurrentPlayerDeathMessage(Component message) {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return false;
         
         String messageText = message.getString();
-        return isSecondPersonEnglishDeathMessage(messageText);
-    }
-    
-    private static final String[] ENGLISH_SECOND_PERSON_DEATH_PREFIXES = {
-        "you died",
-        "you were killed",
-        "you were slain",
-        "you were shot",
-        "you were blown up",
-        "you were pricked",
-        "you were squashed",
-        "you were crushed",
-        "you were impaled",
-        "you were doomed to fall",
-        "you were struck by lightning",
-        "you were doomed to fall by",
-        "you were slain by",
-        "you were killed by",
-        "you were slain as",
-        "you were knocked into the void",
-        "you were consumed",
-        "you were incinerated",
-        "you fell",
-        "you hit the ground too hard",
-        "you discovered the floor was lava",
-        "you drowned",
-        "you suffocated",
-        "you suffocated in a wall",
-        "you burned",
-        "you burned to death",
-        "you went up in flames",
-        "you tried to swim in lava",
-        "you blew up",
-        "you froze to death",
-    };
-    
-    private static boolean isSecondPersonEnglishDeathMessage(String rawMessage) {
-        if (rawMessage == null || rawMessage.isEmpty()) {
-            return false;
-        }
         
-        String normalized = rawMessage.toLowerCase();
-        for (String fragment : ENGLISH_SECOND_PERSON_DEATH_PREFIXES) {
-            if (normalized.contains(fragment)) {
-                return true;
-            }
-        }
-        return false;
+        return messageText.indexOf(DEATH_SKULL_EMOJI) >= 0;
     }
     
     private static void onPlayerDeath(LocalPlayer player) {

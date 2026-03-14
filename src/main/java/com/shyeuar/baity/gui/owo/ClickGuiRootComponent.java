@@ -336,7 +336,7 @@ public class ClickGuiRootComponent extends BaseComponent {
             (int)(hudButtonX + hudButtonWidth), (int)(hudButtonY + hudButtonHeight), 
             hudButtonBgColor, 0f);
         
-        String hudButtonText = "HUD";
+        String hudButtonText = "UI";
         int hudTextWidth = client.font.width(hudButtonText);
         int hudTextX = (int)(hudButtonX + (hudButtonWidth - hudTextWidth) / 2);
         int hudTextY = (int)(hudButtonY + (hudButtonHeight - client.font.lineHeight) / 2);

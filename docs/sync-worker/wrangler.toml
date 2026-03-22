@@ -1,0 +1,10 @@
+name = "baity-presence-sync"
+main = "worker.js"
+compatibility_date = "2024-11-29"
+
+[vars]
+BAITY_ALLOW_ORIGIN = "*"
+
+[[kv_namespaces]]
+binding = "PRESENCE_KV"
+id = "7f4de6848963451a80134e0fb8845832"

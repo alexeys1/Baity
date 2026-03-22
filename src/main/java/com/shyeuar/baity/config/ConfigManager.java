@@ -97,11 +97,18 @@ public class ConfigManager {
     public static double fishHookTimerY = 0.6;
     public static float fishHookTimerScale = 1.5f;
 
-    public static boolean chromaOwnNameEnabled = false;
-    public static double chromaOwnNameChromaLightness = 0.8;
-    public static double chromaOwnNameChromaChroma = 0.2;
-    public static double chromaOwnNameChromaSize = 3.1;
-    public static double chromaOwnNameChromaSpeed = 1.0;
+    public static boolean nickTweaksEnabled = false;
+    public static boolean nickTweaksChromaEnabled = true;
+    public static double nickTweaksChromaLightness = 0.8;
+    public static double nickTweaksChromaChroma = 0.2;
+    public static double nickTweaksChromaSize = 3.1;
+    public static double nickTweaksChromaSpeed = 1.0;
+    public static boolean nickTweaksChromaGroupExpanded = false;
+    public static int nickTweaksGradientStartColor = 0xFF4D4D;
+    public static int nickTweaksGradientEndColor = 0xC299FF;
+    public static String baityPresenceSyncUrl = "https://raw.githubusercontent.com/raueyhs/baity-sync-data/main/data/v1/users.json";
+    public static String baityPresenceReportUrl = "";
+    public static String baityPresenceReportToken = "";
     
     private static final String CONFIG_FILE_NAME = "config.txt";
 
@@ -332,21 +339,42 @@ public class ConfigManager {
         registerField("FishHookTimerScale", Float.class,
             c -> ConfigManager.fishHookTimerScale,
             (c, v) -> ConfigManager.fishHookTimerScale = (Float) v);
-        registerField("ChromaOwnName", Boolean.class,
-            c -> ConfigManager.chromaOwnNameEnabled,
-            (c, v) -> ConfigManager.chromaOwnNameEnabled = (Boolean) v);
-        registerField("ChromaOwnNameChromaLightness", Double.class,
-            c -> ConfigManager.chromaOwnNameChromaLightness,
-            (c, v) -> ConfigManager.chromaOwnNameChromaLightness = (Double) v);
-        registerField("ChromaOwnNameChromaChroma", Double.class,
-            c -> ConfigManager.chromaOwnNameChromaChroma,
-            (c, v) -> ConfigManager.chromaOwnNameChromaChroma = (Double) v);
-        registerField("ChromaOwnNameChromaSize", Double.class,
-            c -> ConfigManager.chromaOwnNameChromaSize,
-            (c, v) -> ConfigManager.chromaOwnNameChromaSize = (Double) v);
-        registerField("ChromaOwnNameChromaSpeed", Double.class,
-            c -> ConfigManager.chromaOwnNameChromaSpeed,
-            (c, v) -> ConfigManager.chromaOwnNameChromaSpeed = (Double) v);
+        registerField("NickTweaks", Boolean.class,
+            c -> ConfigManager.nickTweaksEnabled,
+            (c, v) -> ConfigManager.nickTweaksEnabled = (Boolean) v);
+        registerField("NickTweaksChromaEnabled", Boolean.class,
+            c -> ConfigManager.nickTweaksChromaEnabled,
+            (c, v) -> ConfigManager.nickTweaksChromaEnabled = (Boolean) v);
+        registerField("NickTweaksChromaLightness", Double.class,
+            c -> ConfigManager.nickTweaksChromaLightness,
+            (c, v) -> ConfigManager.nickTweaksChromaLightness = (Double) v);
+        registerField("NickTweaksChromaChroma", Double.class,
+            c -> ConfigManager.nickTweaksChromaChroma,
+            (c, v) -> ConfigManager.nickTweaksChromaChroma = (Double) v);
+        registerField("NickTweaksChromaSize", Double.class,
+            c -> ConfigManager.nickTweaksChromaSize,
+            (c, v) -> ConfigManager.nickTweaksChromaSize = (Double) v);
+        registerField("NickTweaksChromaSpeed", Double.class,
+            c -> ConfigManager.nickTweaksChromaSpeed,
+            (c, v) -> ConfigManager.nickTweaksChromaSpeed = (Double) v);
+        registerField("NickTweaksChromaGroupExpanded", Boolean.class,
+            c -> ConfigManager.nickTweaksChromaGroupExpanded,
+            (c, v) -> ConfigManager.nickTweaksChromaGroupExpanded = (Boolean) v);
+        registerField("NickTweaksGradientStartColor", Integer.class,
+            c -> ConfigManager.nickTweaksGradientStartColor,
+            (c, v) -> ConfigManager.nickTweaksGradientStartColor = (Integer) v);
+        registerField("NickTweaksGradientEndColor", Integer.class,
+            c -> ConfigManager.nickTweaksGradientEndColor,
+            (c, v) -> ConfigManager.nickTweaksGradientEndColor = (Integer) v);
+        registerField("BaityPresenceSyncUrl", String.class,
+            c -> ConfigManager.baityPresenceSyncUrl,
+            (c, v) -> ConfigManager.baityPresenceSyncUrl = (String) v);
+        registerField("BaityPresenceReportUrl", String.class,
+            c -> ConfigManager.baityPresenceReportUrl,
+            (c, v) -> ConfigManager.baityPresenceReportUrl = (String) v);
+        registerField("BaityPresenceReportToken", String.class,
+            c -> ConfigManager.baityPresenceReportToken,
+            (c, v) -> ConfigManager.baityPresenceReportToken = (String) v);
     }
     
     private static void registerField(String key, Class<?> type,
@@ -424,11 +452,16 @@ public class ConfigManager {
                 
                 Map<String, String> legacyKeyAliases = new HashMap<>();
                 legacyKeyAliases.put("  TransparentNormalTag", "  TransparentizeOtherTags");
-                legacyKeyAliases.put("ColorOwnName", "ChromaOwnName");
-                legacyKeyAliases.put("ColorOwnNameChromaLightness", "ChromaOwnNameChromaLightness");
-                legacyKeyAliases.put("ColorOwnNameChromaChroma", "ChromaOwnNameChromaChroma");
-                legacyKeyAliases.put("ColorOwnNameChromaSize", "ChromaOwnNameChromaSize");
-                legacyKeyAliases.put("ColorOwnNameChromaSpeed", "ChromaOwnNameChromaSpeed");
+                legacyKeyAliases.put("ColorOwnName", "NickTweaks");
+                legacyKeyAliases.put("ColorOwnNameChromaLightness", "NickTweaksChromaLightness");
+                legacyKeyAliases.put("ColorOwnNameChromaChroma", "NickTweaksChromaChroma");
+                legacyKeyAliases.put("ColorOwnNameChromaSize", "NickTweaksChromaSize");
+                legacyKeyAliases.put("ColorOwnNameChromaSpeed", "NickTweaksChromaSpeed");
+                legacyKeyAliases.put("ChromaOwnName", "NickTweaks");
+                legacyKeyAliases.put("ChromaOwnNameChromaLightness", "NickTweaksChromaLightness");
+                legacyKeyAliases.put("ChromaOwnNameChromaChroma", "NickTweaksChromaChroma");
+                legacyKeyAliases.put("ChromaOwnNameChromaSize", "NickTweaksChromaSize");
+                legacyKeyAliases.put("ChromaOwnNameChromaSpeed", "NickTweaksChromaSpeed");
                 
                 for (String line : lines) {
                     if (line.trim().isEmpty()) continue;

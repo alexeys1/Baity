@@ -2,6 +2,7 @@ package com.shyeuar.baity.features.smolpeople;
 
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.config.BaityConfigDir;
+import com.shyeuar.baity.sync.BaityPresenceSync;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -50,12 +51,21 @@ public final class SmolFriendManager {
         if (mc.player != null && entityId == mc.player.getId()) {
             return true;
         }
+
+        Player targetPlayer = getPlayerByEntityId(entityId);
+        if (targetPlayer == null) {
+            return false;
+        }
+
+        if (BaityPresenceSync.isSmolEnabledFor(targetPlayer.getUUID())) {
+            return true;
+        }
+
         if (!ConfigManager.smolFriendsEnabled) {
             return false;
         }
 
-        Player targetPlayer = getPlayerByEntityId(entityId);
-        return targetPlayer != null && isFriend(targetPlayer.getName().getString());
+        return isFriend(targetPlayer.getName().getString());
     }
 
     public static Player getPlayerByEntityId(int entityId) {

@@ -5,6 +5,7 @@ import com.shyeuar.baity.gui.ClickGui;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.managers.KeybindManager;
 import com.shyeuar.baity.managers.ModuleInitializer;
+import com.shyeuar.baity.sync.BaityPresenceSync;
 import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.items.CustomTotemItem;
 import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
@@ -41,6 +42,7 @@ public class Baity implements ClientModInitializer {
         }
         
         ModuleInitializer.initializeModules();
+        BaityPresenceSync.init();
         
         com.shyeuar.baity.features.fishing.FishHookTimer.init();
         com.shyeuar.baity.features.chat.ChatChannelSwitcher.init();
@@ -72,6 +74,7 @@ public class Baity implements ClientModInitializer {
             KeybindManager.handleModuleKeybinds(client, windowHandle);
             
             RadialMenu.tick(client);
+            BaityPresenceSync.tick();
             
             com.shyeuar.baity.features.fishing.FishHookTimer.getInstance().tick();
         });

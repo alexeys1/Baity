@@ -3,6 +3,7 @@ package com.shyeuar.baity.gui.sync;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.gui.value.Value;
+import com.shyeuar.baity.gui.value.ValueTreeUtils;
 import com.shyeuar.baity.config.ConfigManager;
 
 import java.util.HashMap;
@@ -45,11 +46,9 @@ public class ConfigSynchronizer {
         for (ConfigLink<Object> config : valueConfigMap.values()) {
             Module module = ModuleManager.getModuleByName(config.getModuleName());
             if (module != null) {
-                for (Value value : module.getValues()) {
-                    if (value.getName().equals(config.getValueName())) {
-                        value.setValue(config.getConfigValue());
-                        break;
-                    }
+                Value value = ValueTreeUtils.findByName(module, config.getValueName());
+                if (value != null) {
+                    value.setValue(config.getConfigValue());
                 }
             }
         }
@@ -72,14 +71,12 @@ public class ConfigSynchronizer {
             
             Module module = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName(moduleName);
             if (module != null) {
-                for (com.shyeuar.baity.gui.value.Value v : module.getValues()) {
-                    if (v.getName().equals(valueName) && v instanceof com.shyeuar.baity.gui.value.ButtonValue) {
-                        com.shyeuar.baity.gui.value.ButtonValue buttonValue = (com.shyeuar.baity.gui.value.ButtonValue) v;
+                com.shyeuar.baity.gui.value.Value found = com.shyeuar.baity.gui.value.ValueTreeUtils.findByName(module, valueName);
+                if (found instanceof com.shyeuar.baity.gui.value.ButtonValue) {
+                        com.shyeuar.baity.gui.value.ButtonValue buttonValue = (com.shyeuar.baity.gui.value.ButtonValue) found;
                         if (buttonValue.getButtonValueType() == com.shyeuar.baity.gui.value.ButtonValue.ButtonValueType.KEYBIND) {
                             com.shyeuar.baity.managers.KeybindManager.markCacheDirty();
-                            break;
                         }
-                    }
                 }
             }
         }

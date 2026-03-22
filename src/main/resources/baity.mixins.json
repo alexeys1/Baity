@@ -44,7 +44,7 @@
     "accessor.FogRendererAccessor",
     "NoSwapAnimationMixin",
     "ImmuneReactionMixin$ChatDetectorMixin",
-    "ChromaOwnNameMixin",
+    "NickTweaksMixin",
     "ImmuneReactionMixin$PlayerTickMixin",
     "InvisibleBugHighlightsMixin$ParticlePacketMixin",
     "InvisibleBugHighlightsMixin$EntityRemovalMixin",

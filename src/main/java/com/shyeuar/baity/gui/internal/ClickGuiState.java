@@ -37,6 +37,7 @@ public class ClickGuiState {
     private String listeningButtonValueName = null;
     
     private SliderDragInfo draggingSlider = null;
+    private GradientDragInfo draggingGradient = null;
     
     private SliderInputInfo editingSlider = null;
     private String sliderInputText = "";
@@ -172,6 +173,8 @@ public class ClickGuiState {
     
     public SliderDragInfo getDraggingSlider() { return draggingSlider; }
     public void setDraggingSlider(SliderDragInfo info) { draggingSlider = info; }
+    public GradientDragInfo getDraggingGradient() { return draggingGradient; }
+    public void setDraggingGradient(GradientDragInfo info) { draggingGradient = info; }
     
     public SliderInputInfo getEditingSlider() { return editingSlider; }
     public void setEditingSlider(SliderInputInfo info) { 
@@ -212,6 +215,55 @@ public class ClickGuiState {
         public SliderInputInfo(String moduleName, String valueName) {
             this.moduleName = moduleName;
             this.valueName = valueName;
+        }
+    }
+
+    public static class GradientDragInfo {
+        public final String moduleName;
+        public final String valueName;
+        public final float mapX1;
+        public final float mapY1;
+        public final float mapX2;
+        public final float mapY2;
+        public final boolean dragValue; // true = dragging value slider; false = dragging hue/sat map
+
+        public GradientDragInfo(String moduleName, String valueName, float mapX1, float mapY1, float mapX2, float mapY2) {
+            this(moduleName, valueName, mapX1, mapY1, mapX2, mapY2, false);
+        }
+
+        public GradientDragInfo(String moduleName, String valueName, float mapX1, float mapY1, float mapX2, float mapY2, boolean dragValue) {
+            this.moduleName = moduleName;
+            this.valueName = valueName;
+            this.mapX1 = mapX1;
+            this.mapY1 = mapY1;
+            this.mapX2 = mapX2;
+            this.mapY2 = mapY2;
+            this.dragValue = dragValue;
+        }
+    }
+    
+    private GradientInputInfo editingGradient = null;
+    private String gradientInputText = "";
+    
+    public GradientInputInfo getEditingGradient() { return editingGradient; }
+    public void setEditingGradient(GradientInputInfo info) {
+        editingGradient = info;
+        if (info == null) {
+            gradientInputText = "";
+        }
+    }
+    public boolean isEditingGradient() { return editingGradient != null; }
+    public String getGradientInputText() { return gradientInputText; }
+    public void setGradientInputText(String text) { gradientInputText = text; }
+    
+    public static class GradientInputInfo {
+        public final String moduleName;
+        public final String valueName;
+        public final int lineIndex; // 0=start, 1=end
+        public GradientInputInfo(String moduleName, String valueName, int lineIndex) {
+            this.moduleName = moduleName;
+            this.valueName = valueName;
+            this.lineIndex = lineIndex;
         }
     }
 

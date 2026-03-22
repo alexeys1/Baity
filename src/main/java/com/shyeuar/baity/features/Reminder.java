@@ -4,6 +4,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import com.shyeuar.baity.utils.TickSchedulerUtils;
 import com.shyeuar.baity.utils.MessageUtils;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -27,6 +28,8 @@ public class Reminder {
     private static final Pattern GOD_POTION_PATTERN = Pattern.compile(
         "You have a God Potion active! (\\d+) (Days?|Hours?|Minutes?|Mins?|Min) Use '/effects' to see the effects!"
     );
+    private static final Pattern SECTION_COLOR_CODE_PATTERN = Pattern.compile("(?i)\u00A7[0-9A-FK-ORX]");
+    private static final Pattern AMPERSAND_HEX_CODE_PATTERN = Pattern.compile("(?i)&#[0-9A-F]{6}");
     
     private static final long MEOW_COOLDOWN = 2000;
     private static final float MEOW_VOLUME = 1.5F;
@@ -91,25 +94,28 @@ public class Reminder {
             if (client.player == null) return;
             
             String fullMessage = message.getString();
+            String sentenceMessage = fullMessage.replace('\n', ' ').replace('\r', ' ');
             
-            int colonIndex = fullMessage.indexOf(':');
+            int colonIndex = sentenceMessage.indexOf(':');
             if (colonIndex == -1) {
                 return;
             }
             
-            String afterColon = fullMessage.substring(colonIndex + 1).trim();
+            String afterColon = sentenceMessage.substring(colonIndex + 1).trim();
             if (afterColon.isEmpty()) {
                 return;
             }
             
-            String playerName = client.player.getName().getString();
+            String playerName = client.player.getDisplayName() != null
+                    ? client.player.getDisplayName().getString()
+                    : client.player.getName().getString();
             if (playerName == null || playerName.isEmpty()) {
                 return;
             }
             
-            String lowerAfterColon = afterColon.toLowerCase();
-            String lowerPlayerName = playerName.toLowerCase();
-            if (lowerAfterColon.contains(lowerPlayerName)) {
+            String normalizedAfterColon = normalizeForMeowMatch(afterColon);
+            String normalizedPlayerName = normalizeForMeowMatch(playerName);
+            if (!normalizedPlayerName.isEmpty() && normalizedAfterColon.contains(normalizedPlayerName)) {
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastMeowTimestamp > MEOW_COOLDOWN) {
                     lastMeowTimestamp = currentTime;
@@ -355,5 +361,12 @@ public class Reminder {
     
     public void setMeowAlertEnabled(boolean enabled) {
         com.shyeuar.baity.config.ConfigManager.reminderMeowAlertEnabled = enabled;
+    }
+
+    private String normalizeForMeowMatch(String input) {
+        if (input == null || input.isEmpty()) return "";
+        String noSectionColor = SECTION_COLOR_CODE_PATTERN.matcher(input).replaceAll("");
+        String noAmpHex = AMPERSAND_HEX_CODE_PATTERN.matcher(noSectionColor).replaceAll("");
+        return noAmpHex.trim().toLowerCase(Locale.ROOT);
     }
 }

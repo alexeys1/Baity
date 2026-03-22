@@ -8,6 +8,8 @@ public enum ValueStyle {
     DEFAULT,
     BUTTON_LIKE,
     SLIDER,
-    COLOR_PALETTE
+    COLOR_PALETTE,
+    GROUP,
+    GRADIENT_EDITOR
 }
 

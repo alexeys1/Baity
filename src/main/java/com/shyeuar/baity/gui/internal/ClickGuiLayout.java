@@ -4,6 +4,7 @@ import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.gui.value.Value;
 import com.shyeuar.baity.gui.value.ValueStyle;
+import com.shyeuar.baity.gui.value.ValueTreeUtils;
 
 import java.util.List;
 
@@ -16,13 +17,9 @@ public class ClickGuiLayout {
         for (Module module : modules) {
             contentHeight += ClickGuiState.ITEM_HEIGHT;
             if (module.isExpanded()) {
-                int childCount = 0;
-                int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
-                for (Value value : module.getValues()) {
-                    if (!"enabled".equals(value.getName())) {
-                        childCount++;
-                    }
-                }
+                java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
+                int childCount = entries.size();
+                int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
                 if (childCount > 0) {
                     ClickGuiLayout.ContainerDimensions dims = 
                         ClickGuiLayout.calculateSubOptionContainer(childCount, visibleHeight, extraHeight);
@@ -41,13 +38,9 @@ public class ClickGuiLayout {
         for (Module module : modules) {
             contentHeight += ClickGuiState.ITEM_HEIGHT;
             if (module.isExpanded()) {
-                int childCount = 0;
-                int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
-                for (Value value : module.getValues()) {
-                    if (!"enabled".equals(value.getName())) {
-                        childCount++;
-                    }
-                }
+                java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
+                int childCount = entries.size();
+                int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
                 if (childCount > 0) {
                     ClickGuiLayout.ContainerDimensions dims = 
                         ClickGuiLayout.calculateSubOptionContainer(childCount, visibleHeight, extraHeight);
@@ -80,18 +73,23 @@ public class ClickGuiLayout {
     }
     
     public static int calculateExtraHeight(Module module) {
+        return calculateExtraHeight(ValueTreeUtils.getVisibleEntries(module));
+    }
+
+    public static int calculateExtraHeight(List<ValueTreeUtils.ValueEntry> entries) {
         int extraHeight = 0;
         Value previousValue = null;
-        for (Value value : module.getValues()) {
-            if (!"enabled".equals(value.getName())) {
-                if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
-                    extraHeight += 20; 
-                }
-                if (value.needsSeparatorBefore(previousValue)) {
-                    extraHeight += 12;
-                }
-                previousValue = value;
+        for (ValueTreeUtils.ValueEntry entry : entries) {
+            Value value = entry.value();
+            if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
+                extraHeight += 20;
+            } else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR) {
+                extraHeight += 100;
             }
+            if (value.needsSeparatorBefore(previousValue)) {
+                extraHeight += 12;
+            }
+            previousValue = value;
         }
         return extraHeight;
     }

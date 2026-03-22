@@ -7,7 +7,10 @@ import com.shyeuar.baity.gui.render.GuiRenderUtil;
 import com.shyeuar.baity.gui.value.Value;
 import com.shyeuar.baity.gui.value.ValueStyle;
 import com.shyeuar.baity.gui.value.ButtonValue;
+import com.shyeuar.baity.gui.value.GroupValue;
+import com.shyeuar.baity.gui.value.GradientEditorValue;
 import com.shyeuar.baity.gui.value.SliderValue;
+import com.shyeuar.baity.gui.value.ValueTreeUtils;
 import com.shyeuar.baity.gui.value.ValueTypeRegistry;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.utils.TimerUtils;
@@ -44,6 +47,13 @@ public class ClickGuiInputHandler {
             Minecraft.getInstance().setScreen(new com.shyeuar.baity.gui.hud.HudPositionEditor());
             return true;
         }
+
+        if (button == 0 && state.isEditingGradient()) {
+            if (!isClickInsideEditingGradientInput(coords)) {
+                state.setEditingGradient(null);
+                state.setGradientInputText("");
+            }
+        }
         
         if (state.isEditingSlider() && button == 0) {
             ClickGuiState.SliderInputInfo editInfo = state.getEditingSlider();
@@ -60,25 +70,29 @@ public class ClickGuiInputHandler {
                         continue;
                     }
                     if (module.isExpanded()) {
-                        int subOptionCount = 0;
-                        for (Value v : module.getValues()) {
-                            if (!"enabled".equals(v.getName())) subOptionCount++;
-                        }
+                        java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
+                        int subOptionCount = entries.size();
                         if (subOptionCount == 0) break;
                         
-                        int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
+                        int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
                         ClickGuiLayout.ContainerDimensions dims = 
                             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, 
                             ClickGuiState.HEIGHT - 20 - ClickGuiState.LIST_TOP_PADDING, extraHeight);
                         int containerX2 = (int)(ClickGuiState.WIDTH - 30);
                         float subModY = modY + dims.padding;
                         
-                        for (Value v : module.getValues()) {
-                            if ("enabled".equals(v.getName())) continue;
+                        Value previousValue = null;
+                        for (ValueTreeUtils.ValueEntry entry : entries) {
+                            Value v = entry.value();
+                            int depth = entry.depth();
+                            if (v.needsSeparatorBefore(previousValue)) {
+                                subModY += 12;
+                            }
                             if (v instanceof SliderValue && v.getName().equals(editInfo.valueName)) {
                                 SliderValue sv = (SliderValue) v;
                                 int resetBoxWidth = 30;
-                                int resetBoxX = containerX2 - 4 - resetBoxWidth - 6;
+                                int subX2 = containerX2 - 4 - depth * 8;
+                                int resetBoxX = subX2 - resetBoxWidth - 6;
                                 String valueText = sv.getFormattedValue();
                                 int valueTextWidth = Minecraft.getInstance().font.width(valueText);
                                 int valueDisplayWidth = Math.max(valueTextWidth + 8, 35);
@@ -93,7 +107,14 @@ public class ClickGuiInputHandler {
                                 }
                                 break;
                             }
-                            subModY += dims.subOptionHeight;
+                            float currentHeight = dims.subOptionHeight;
+                            if (v.getStyle() == ValueStyle.COLOR_PALETTE) {
+                                currentHeight = dims.subOptionHeight * 2;
+                            } else if (v.getStyle() == ValueStyle.GRADIENT_EDITOR) {
+                                currentHeight = dims.subOptionHeight * 6;
+                            }
+                            subModY += currentHeight;
+                            previousValue = v;
                         }
                     }
                     break;
@@ -138,12 +159,10 @@ public class ClickGuiInputHandler {
             if (editInfo != null && state.getOriginalSliderValue() != null) {
                 for (Module module : ModuleManager.getModules()) {
                     if (!module.getName().equals(editInfo.moduleName)) continue;
-                    for (Value value : module.getValues()) {
-                        if (value instanceof SliderValue && value.getName().equals(editInfo.valueName)) {
-                            SliderValue sliderValue = (SliderValue) value;
-                            sliderValue.setValue(state.getOriginalSliderValue());
-                            break;
-                        }
+                    Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
+                    if (found instanceof SliderValue) {
+                        SliderValue sliderValue = (SliderValue) found;
+                        sliderValue.setValue(state.getOriginalSliderValue());
                     }
                 }
             }
@@ -222,6 +241,9 @@ public class ClickGuiInputHandler {
         if (state.isEditingSlider()) {
             return handleSliderInput(keyCode);
         }
+        if (state.isEditingGradient()) {
+            return handleGradientHexInput(keyCode);
+        }
         
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             if (state.isListeningForInput()) {
@@ -243,6 +265,15 @@ public class ClickGuiInputHandler {
                 if (chr == '-' && !current.isEmpty()) return true;
                 if (chr == '.' && current.contains(".")) return true;
                 state.setSliderInputText(current + chr);
+            }
+            return true;
+        }
+        if (state.isEditingGradient()) {
+            String current = state.getGradientInputText();
+            if ((chr >= '0' && chr <= '9') || (chr >= 'a' && chr <= 'f') || (chr >= 'A' && chr <= 'F')) {
+                if (current.length() < 6) {
+                    state.setGradientInputText(current + chr);
+                }
             }
             return true;
         }
@@ -279,15 +310,13 @@ public class ClickGuiInputHandler {
                     double newValue = Double.parseDouble(inputText);
                     for (Module module : ModuleManager.getModules()) {
                         if (!module.getName().equals(editInfo.moduleName)) continue;
-                        for (Value value : module.getValues()) {
-                            if (value instanceof SliderValue && value.getName().equals(editInfo.valueName)) {
-                                SliderValue sliderValue = (SliderValue) value;
-                                if (sliderValue.trySetValue(newValue)) {
-                                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
-                                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), sliderValue.getValue());
-                                    }
+                        Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
+                        if (found instanceof SliderValue) {
+                            SliderValue sliderValue = (SliderValue) found;
+                            if (sliderValue.trySetValue(newValue)) {
+                                if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), sliderValue.getValue());
                                 }
-                                break;
                             }
                         }
                     }
@@ -302,10 +331,51 @@ public class ClickGuiInputHandler {
         return false;
     }
     
+    private boolean handleGradientHexInput(int keyCode) {
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            state.setEditingGradient(null);
+            state.setGradientInputText("");
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
+            String current = state.getGradientInputText();
+            if (!current.isEmpty()) {
+                state.setGradientInputText(current.substring(0, current.length() - 1));
+            }
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+            ClickGuiState.GradientInputInfo editInfo = state.getEditingGradient();
+            if (editInfo != null) {
+                String raw = state.getGradientInputText();
+                String hex = raw.trim();
+                if (hex.startsWith("#")) hex = hex.substring(1);
+                if (hex.matches("^[0-9A-Fa-f]{6}$")) {
+                    for (Module module : ModuleManager.getModules()) {
+                        if (!module.getName().equals(editInfo.moduleName)) continue;
+                        Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
+                        if (found instanceof GradientEditorValue) {
+                            GradientEditorValue ge = (GradientEditorValue) found;
+                            ge.applyHexToSelected("#" + hex);
+                            if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                                ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), ge.getValue());
+                            }
+                        }
+                    }
+                }
+            }
+            state.setEditingGradient(null);
+            state.setGradientInputText("");
+            return true;
+        }
+        return false;
+    }
+    
     public void handleMouseRelease(int button) {
         if (button == 0) {
             state.resetDragState();
             state.setDraggingSlider(null);
+            state.setDraggingGradient(null);
         }
     }
    
@@ -316,6 +386,9 @@ public class ClickGuiInputHandler {
         
         if (state.getDraggingSlider() != null) {
             handleSliderDrag(mouseX, mouseY);
+        }
+        if (state.getDraggingGradient() != null) {
+            handleGradientDrag(mouseX, mouseY);
         }
     }
     
@@ -328,19 +401,44 @@ public class ClickGuiInputHandler {
         for (Module module : ModuleManager.getModules()) {
             if (!module.getName().equals(dragInfo.moduleName)) continue;
             
-            for (Value value : module.getValues()) {
-                if (value instanceof SliderValue && value.getName().equals(dragInfo.valueName)) {
-                    SliderValue sliderValue = (SliderValue) value;
-                    
-                    double percentage = (coords.mouseX - dragInfo.sliderX) / (double) dragInfo.sliderWidth;
-                    percentage = Math.max(0, Math.min(1, percentage));
-                    sliderValue.setFromPercentage(percentage);
-                    
-                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
-                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), sliderValue.getValue());
-                    }
-                    return;
+            Value found = ValueTreeUtils.findByName(module, dragInfo.valueName);
+            if (found instanceof SliderValue) {
+                SliderValue sliderValue = (SliderValue) found;
+
+                double percentage = (coords.mouseX - dragInfo.sliderX) / (double) dragInfo.sliderWidth;
+                percentage = Math.max(0, Math.min(1, percentage));
+                sliderValue.setFromPercentage(percentage);
+
+                if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), sliderValue.getValue());
                 }
+                return;
+            }
+        }
+    }
+
+    private void handleGradientDrag(double mouseX, double mouseY) {
+        ClickGuiState.GradientDragInfo dragInfo = state.getDraggingGradient();
+        if (dragInfo == null) return;
+
+        ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
+        float hue = (float) ((coords.mouseX - dragInfo.mapX1) / Math.max(1f, (dragInfo.mapX2 - dragInfo.mapX1)));
+        float sat = (float) (1f - (coords.mouseY - dragInfo.mapY1) / Math.max(1f, (dragInfo.mapY2 - dragInfo.mapY1)));
+
+        for (Module module : ModuleManager.getModules()) {
+            if (!module.getName().equals(dragInfo.moduleName)) continue;
+            Value found = ValueTreeUtils.findByName(module, dragInfo.valueName);
+            if (found instanceof GradientEditorValue gradientValue) {
+                if (dragInfo.dragValue) {
+                    float valNorm = (float)(1f - (coords.mouseY - dragInfo.mapY1) / Math.max(1f, (dragInfo.mapY2 - dragInfo.mapY1)));
+                    gradientValue.setSelectedValue(valNorm);
+                } else {
+                    gradientValue.setSelectedFromHueSat(hue, sat);
+                }
+                if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), gradientValue.getValue());
+                }
+                return;
             }
         }
     }
@@ -359,16 +457,15 @@ public class ClickGuiInputHandler {
             String listeningName = state.getListeningButtonValueName();
             Module module = ModuleManager.getModuleByName(listeningModule);
             if (module != null) {
-                for (Value value : module.getValues()) {
-                    if (value instanceof ButtonValue && value.getName().equals(listeningName)) {
-                        ButtonValue buttonValue = (ButtonValue) value;
-                        buttonValue.setValue(mouseKeyCode);
-                        if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
-                            ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), mouseKeyCode);
-                        }
-                        state.clearListeningButtonValue();
-                        return true;
+                Value found = ValueTreeUtils.findByName(module, listeningName);
+                if (found instanceof ButtonValue) {
+                    ButtonValue buttonValue = (ButtonValue) found;
+                    buttonValue.setValue(mouseKeyCode);
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), mouseKeyCode);
                     }
+                    state.clearListeningButtonValue();
+                    return true;
                 }
             }
             state.clearListeningButtonValue();
@@ -733,16 +830,13 @@ public class ClickGuiInputHandler {
     private boolean handleSubOptionClick(Module module, float modY, 
                                         ClickGuiLayout.ScaledCoordinates coords, int button,
                                         float contentX, float contentWidth) {
-        if (button != 0 || !timer.delay(100)) return false;
-        
-        int subOptionCount = 0;
-        for (Value value : module.getValues()) {
-            if (!"enabled".equals(value.getName())) subOptionCount++;
-        }
-        
+        if (!timer.delay(100)) return false;
+
+        java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
+        int subOptionCount = entries.size();
         if (subOptionCount == 0) return false;
-        
-        int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
+
+        int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
         float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
         ClickGuiLayout.ContainerDimensions dims = 
             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
@@ -753,9 +847,9 @@ public class ClickGuiInputHandler {
         
         int containerHeight = dims.height;
         Value previousValue = null;
-        
-        for (Value value : module.getValues()) {
-            if ("enabled".equals(value.getName())) continue;
+        for (ValueTreeUtils.ValueEntry entry : entries) {
+            Value value = entry.value();
+            int depth = entry.depth();
             
             if (subModY > modY + containerHeight - dims.padding) {
                 break;
@@ -766,7 +860,19 @@ public class ClickGuiInputHandler {
             }
             
             ValueStyle style = value.getStyle();
-            if (style == ValueStyle.BUTTON_LIKE && value instanceof ButtonValue) {
+            int subX1 = (int)(containerX1 + 4 + depth * 12);
+            int subX2 = (int)(containerX2 - 4 - depth * 8);
+            if (style == ValueStyle.GROUP && value instanceof GroupValue) {
+                if ((button == 0 || button == 1) &&
+                    GuiRenderUtil.isHovered(subX1, (int) subModY, subX2, (int)(subModY + dims.subOptionHeight), coords.mouseX, coords.mouseY)) {
+                    ((GroupValue) value).toggleExpanded();
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), value.getValue());
+                    }
+                    timer.reset();
+                    return true;
+                }
+            } else if (button == 0 && style == ValueStyle.BUTTON_LIKE && value instanceof ButtonValue) {
                 ButtonValue buttonValue = (ButtonValue) value;
                 
                 String boxText = buttonValue.getDisplayText(val -> {
@@ -784,7 +890,6 @@ public class ClickGuiInputHandler {
                 int boxWidth = boxTextWidth + 16;
                 float boxCenterY = subModY + dims.subOptionHeight / 2f;
                 int boxHeight = 12;
-                int subX2 = (int)(containerX2 - 4);
                 int boxX1 = (int)(subX2 - boxWidth - 10);
                 int boxY1 = (int)(boxCenterY - boxHeight / 2f);
                 int boxX2 = (int)(subX2 - 10);
@@ -804,12 +909,10 @@ public class ClickGuiInputHandler {
                         return true;
                     }
                 }
-            } else if (style == ValueStyle.SLIDER && value instanceof SliderValue) {
+            } else if (button == 0 && style == ValueStyle.SLIDER && value instanceof SliderValue) {
                 SliderValue sliderValue = (SliderValue) value;
                 Minecraft client = Minecraft.getInstance();
                 if (client == null) return false;
-                
-                int subX2 = (int)(containerX2 - 4);
                 
                 int resetBoxWidth = 30;
                 int resetBoxHeight = 12;
@@ -864,11 +967,11 @@ public class ClickGuiInputHandler {
                     timer.reset();
                     return true;
                 }
-            } else if (style == ValueStyle.COLOR_PALETTE && value instanceof com.shyeuar.baity.gui.value.ColorPaletteValue) {
+            } else if (button == 0 && style == ValueStyle.COLOR_PALETTE && value instanceof com.shyeuar.baity.gui.value.ColorPaletteValue) {
                 com.shyeuar.baity.gui.value.ColorPaletteValue paletteValue = (com.shyeuar.baity.gui.value.ColorPaletteValue) value;
                 
                 int hoveredIndex = com.shyeuar.baity.gui.render.ValueStyleRenderer.getHoveredColorIndex(
-                    paletteValue, containerX1 + 4, subModY, containerX2 - 4, dims.subOptionHeight,
+                    paletteValue, subX1, subModY, subX2, dims.subOptionHeight,
                     coords.mouseX, coords.mouseY);
                 
                 if (hoveredIndex >= 0) {
@@ -880,9 +983,76 @@ public class ClickGuiInputHandler {
                     timer.reset();
                     return true;
                 }
-            } else {
-                if (GuiRenderUtil.isHovered(containerX1 + 4, (int)subModY, 
-                                           containerX2 - 4, (int)(subModY + dims.subOptionHeight), 
+            } else if (button == 0 && style == ValueStyle.GRADIENT_EDITOR && value instanceof GradientEditorValue gradientValue) {
+                float blockHeight = dims.subOptionHeight * 6;
+                float mapX1 = subX1 + 8;
+                float mapY1 = subModY + 22;
+                float mapX2 = subX2 - 60;
+                float mapY2 = subModY + blockHeight - 40;
+
+                if (GuiRenderUtil.isHovered(mapX1, mapY1, mapX2, mapY2, coords.mouseX, coords.mouseY)) {
+                    float hue = (coords.mouseX - mapX1) / Math.max(1f, (mapX2 - mapX1));
+                    float sat = 1f - (coords.mouseY - mapY1) / Math.max(1f, (mapY2 - mapY1));
+                    gradientValue.setSelectedFromHueSat(hue, sat);
+                    state.setDraggingGradient(new ClickGuiState.GradientDragInfo(module.getName(), value.getName(), mapX1, mapY1, mapX2, mapY2));
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), gradientValue.getValue());
+                    }
+                    timer.reset();
+                    return true;
+                }
+
+                float sliderX1 = subX2 - 48;
+                float sliderX2 = subX2 - 36;
+                if (GuiRenderUtil.isHovered(sliderX1, mapY1, sliderX2, mapY2, coords.mouseX, coords.mouseY)) {
+                    float valNorm = 1f - (coords.mouseY - mapY1) / Math.max(1f, (mapY2 - mapY1));
+                    gradientValue.setSelectedValue(valNorm);
+                    state.setDraggingGradient(new ClickGuiState.GradientDragInfo(module.getName(), value.getName(), mapX1, mapY1, mapX2, mapY2, true));
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), gradientValue.getValue());
+                    }
+                    timer.reset();
+                    return true;
+                }
+
+                float boxX1 = subX2 - 30;
+                float boxX2 = subX2 - 12;
+                if (GuiRenderUtil.isHovered(boxX1, subModY + 24, boxX2, subModY + 42, coords.mouseX, coords.mouseY)) {
+                    gradientValue.selectPoint(0);
+                    SoundUtils.playBubble();
+                    timer.reset();
+                    return true;
+                }
+                float box2Y2 = mapY2;
+                float box2Y1 = box2Y2 - 18;
+                if (GuiRenderUtil.isHovered(boxX1, box2Y1, boxX2, box2Y2, coords.mouseX, coords.mouseY)) {
+                    gradientValue.selectPoint(1);
+                    SoundUtils.playBubble();
+                    timer.reset();
+                    return true;
+                }
+                int inputWidth = Minecraft.getInstance().font.width("#FFFFFF");
+                float inputX2 = mapX2;
+                float inputX1 = inputX2 - inputWidth;
+                float syncY2 = subModY + blockHeight - 8;
+                float inputY = syncY2 - 3;
+                if (GuiRenderUtil.isHovered(inputX1, inputY - 12, inputX2, inputY + 6, coords.mouseX, coords.mouseY)) {
+                    state.setEditingGradient(new ClickGuiState.GradientInputInfo(module.getName(), value.getName(), gradientValue.getSelectedPoint()));
+                    state.setGradientInputText("");
+                    timer.reset();
+                    return true;
+                }
+                if (GuiRenderUtil.isHovered(subX2 - 56, subModY + blockHeight - 18, subX2 - 8, subModY + blockHeight - 4, coords.mouseX, coords.mouseY)) {
+                    gradientValue.syncColors();
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), gradientValue.getValue());
+                    }
+                    timer.reset();
+                    return true;
+                }
+            } else if (button == 0) {
+                if (GuiRenderUtil.isHovered(subX1, (int)subModY, 
+                                           subX2, (int)(subModY + dims.subOptionHeight), 
                                            coords.mouseX, coords.mouseY)) {
                     if (value.getValue() instanceof Boolean) {
                         value.setValue(!((Boolean)value.getValue()));
@@ -899,6 +1069,8 @@ public class ClickGuiInputHandler {
             float currentHeight = dims.subOptionHeight;
             if (style == ValueStyle.COLOR_PALETTE) {
                 currentHeight = dims.subOptionHeight * 2;
+            } else if (style == ValueStyle.GRADIENT_EDITOR) {
+                currentHeight = dims.subOptionHeight * 6;
             }
             subModY += currentHeight;
             previousValue = value;
@@ -906,19 +1078,63 @@ public class ClickGuiInputHandler {
         
         return false;
     }
+
+    private boolean isClickInsideEditingGradientInput(ClickGuiLayout.ScaledCoordinates coords) {
+        ClickGuiState.GradientInputInfo editInfo = state.getEditingGradient();
+        if (editInfo == null) return false;
+
+        float modY = ClickGuiState.HEADER_HEIGHT + 10 - state.getScrollOffset();
+        List<Module> modules = getFilteredModules();
+        for (Module module : modules) {
+            modY += 30;
+            if (!module.isExpanded()) continue;
+
+            java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
+            int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
+            float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
+            ClickGuiLayout.ContainerDimensions dims = ClickGuiLayout.calculateSubOptionContainer(entries.size(), visibleHeight, extraHeight);
+
+            float containerX2 = ClickGuiState.SIDEBAR_WIDTH + ClickGuiState.CONTENT_WIDTH - 20;
+            float subModY = modY + dims.padding;
+            Value previousValue = null;
+            for (ValueTreeUtils.ValueEntry entry : entries) {
+                Value value = entry.value();
+                int depth = entry.depth();
+                if (value.needsSeparatorBefore(previousValue)) subModY += 12;
+                if (value.getStyle() == ValueStyle.GRADIENT_EDITOR &&
+                    module.getName().equals(editInfo.moduleName) &&
+                    value.getName().equals(editInfo.valueName)) {
+                    int subX2 = (int) (containerX2 - 4 - depth * 8);
+                    float blockHeight = dims.subOptionHeight * 6;
+                    float mapX2 = subX2 - 60;
+                    float mapY2 = subModY + blockHeight - 40;
+                    int inputWidth = Minecraft.getInstance().font.width("#FFFFFF");
+                    float inputX2 = mapX2;
+                    float inputX1 = inputX2 - inputWidth;
+                    float inputY = mapY2 + 11;
+                    return GuiRenderUtil.isHovered(inputX1, inputY - 10, inputX2, inputY + 3, coords.mouseX, coords.mouseY);
+                }
+                float currentHeight = dims.subOptionHeight;
+                if (value.getStyle() == ValueStyle.COLOR_PALETTE) currentHeight = dims.subOptionHeight * 2;
+                else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR) currentHeight = dims.subOptionHeight * 6;
+                subModY += currentHeight;
+                previousValue = value;
+            }
+            modY += getSubOptionContainerHeight(module);
+        }
+        return false;
+    }
     
     private boolean handleSubOptionScroll(Module module, float modY, 
                                          ClickGuiLayout.ScaledCoordinates coords, 
                                          double verticalAmount,
                                          float contentX, float contentWidth) {
-        int subOptionCount = 0;
-        for (Value value : module.getValues()) {
-            if (!"enabled".equals(value.getName())) subOptionCount++;
-        }
+        java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
+        int subOptionCount = entries.size();
         
         if (subOptionCount == 0) return false;
         
-        int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
+        int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
         float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
         ClickGuiLayout.ContainerDimensions dims = 
             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
@@ -956,6 +1172,8 @@ public class ClickGuiInputHandler {
             float currentHeight = dims.subOptionHeight;
             if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
                 currentHeight = dims.subOptionHeight * 2;
+            } else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR) {
+                currentHeight = dims.subOptionHeight * 6;
             }
             subModY += currentHeight;
             previousValue = value;
@@ -1001,16 +1219,15 @@ public class ClickGuiInputHandler {
         if (KeyMappingUtils.isResetKey(keyCode)) {
             Module module = ModuleManager.getModuleByName(listeningModule);
             if (module != null) {
-                for (Value value : module.getValues()) {
-                    if (value instanceof ButtonValue && value.getName().equals(listeningName)) {
-                        ButtonValue buttonValue = (ButtonValue) value;
-                        buttonValue.setValue(0);
-                        if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
-                            ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), 0);
-                        }
-                        state.clearListeningButtonValue();
-                        return true;
+                Value found = ValueTreeUtils.findByName(module, listeningName);
+                if (found instanceof ButtonValue) {
+                    ButtonValue buttonValue = (ButtonValue) found;
+                    buttonValue.setValue(0);
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), 0);
                     }
+                    state.clearListeningButtonValue();
+                    return true;
                 }
             }
             state.clearListeningButtonValue();
@@ -1023,16 +1240,15 @@ public class ClickGuiInputHandler {
         
         Module module = ModuleManager.getModuleByName(listeningModule);
         if (module != null) {
-            for (Value value : module.getValues()) {
-                if (value instanceof ButtonValue && value.getName().equals(listeningName)) {
-                    ButtonValue buttonValue = (ButtonValue) value;
-                    buttonValue.setValue(keyCode);
-                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
-                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), keyCode);
-                    }
-                    state.clearListeningButtonValue();
-                    return true;
+            Value found = ValueTreeUtils.findByName(module, listeningName);
+            if (found instanceof ButtonValue) {
+                ButtonValue buttonValue = (ButtonValue) found;
+                buttonValue.setValue(keyCode);
+                if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), keyCode);
                 }
+                state.clearListeningButtonValue();
+                return true;
             }
         }
         
@@ -1041,13 +1257,11 @@ public class ClickGuiInputHandler {
     }
     
     private int getSubOptionContainerHeight(Module module) {
-        int subOptionCount = 0;
-        for (Value value : module.getValues()) {
-            if (!"enabled".equals(value.getName())) subOptionCount++;
-        }
+        java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
+        int subOptionCount = entries.size();
         if (subOptionCount == 0) return 0;
         
-        int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
+        int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
         float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
         ClickGuiLayout.ContainerDimensions dims = 
             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);

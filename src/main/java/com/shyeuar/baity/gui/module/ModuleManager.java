@@ -3,6 +3,8 @@ package com.shyeuar.baity.gui.module;
 import com.shyeuar.baity.gui.value.ModuleCategory;
 import com.shyeuar.baity.gui.value.Option;
 import com.shyeuar.baity.gui.value.ButtonValue;
+import com.shyeuar.baity.gui.value.GroupValue;
+import com.shyeuar.baity.gui.value.GradientEditorValue;
 import com.shyeuar.baity.gui.sync.ConfigSynchronizer;
 import com.shyeuar.baity.gui.tooltip.TooltipManager;
 import com.shyeuar.baity.config.ConfigManager;
@@ -235,44 +237,77 @@ public class ModuleManager {
             }
         );
 
+        GroupValue nickTweaksChromaGroup = new GroupValue("chroma settings", "chroma settings", ModuleCategory.MISC)
+            .setExpanded(ConfigManager.nickTweaksChromaGroupExpanded)
+            .addChild(new Option("chroma", "chroma", ConfigManager.nickTweaksChromaEnabled, ModuleCategory.MISC))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue(
+                "chroma lightness", "chroma lightness", 0.8, 0.2, 1.0, 0.05, ModuleCategory.MISC
+            ))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue(
+                "chroma chroma", "chroma chroma", 0.2, 0.0, 0.4, 0.01, ModuleCategory.MISC
+            ))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue(
+                "chroma size", "chroma size", 3.1, 0.5, 10.0, 0.1, ModuleCategory.MISC
+            ))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue(
+                "chroma speed", "chroma speed", 1.0, 0.1, 8.0, 0.1, ModuleCategory.MISC
+            ));
+
         ModuleRegistry.registerModuleWithValues(
-            "ChromaOwnName", "ChromaOwnName", ModuleCategory.RENDER,
-            () -> ConfigManager.chromaOwnNameEnabled,
-            val -> ConfigManager.chromaOwnNameEnabled = val,
+            "NickTweaks", "NickTweaks", ModuleCategory.MISC,
+            () -> ConfigManager.nickTweaksEnabled,
+            val -> ConfigManager.nickTweaksEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new com.shyeuar.baity.gui.value.SliderValue(
-                    "chroma lightness", "Chroma Lightness", 0.8, 0.2, 1.0, 0.05, ModuleCategory.RENDER
+                new GradientEditorValue(
+                    "gradient editor", "gradient editor", ModuleCategory.MISC,
+                    ConfigManager.nickTweaksGradientStartColor, ConfigManager.nickTweaksGradientEndColor
                 ),
-                new com.shyeuar.baity.gui.value.SliderValue(
-                    "chroma chroma", "Chroma 'Chroma'", 0.2, 0.0, 0.4, 0.01, ModuleCategory.RENDER
-                ),
-                new com.shyeuar.baity.gui.value.SliderValue(
-                    "chroma size", "Chroma Size", 3.1, 0.5, 10.0, 0.1, ModuleCategory.RENDER
-                ),
-                new com.shyeuar.baity.gui.value.SliderValue(
-                    "chroma speed", "Chroma Speed", 1.0, 0.1, 8.0, 0.1, ModuleCategory.RENDER
-                )
+                nickTweaksChromaGroup
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
+                    "chroma settings",
+                    () -> ConfigManager.nickTweaksChromaGroupExpanded,
+                    val -> ConfigManager.nickTweaksChromaGroupExpanded = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "chroma",
+                    () -> ConfigManager.nickTweaksChromaEnabled,
+                    val -> ConfigManager.nickTweaksChromaEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "gradient editor",
+                    () -> String.format("#%06X,#%06X", ConfigManager.nickTweaksGradientStartColor & 0xFFFFFF, ConfigManager.nickTweaksGradientEndColor & 0xFFFFFF),
+                    val -> {
+                        if (!(val instanceof String raw)) return;
+                        String[] parts = raw.split(",", 2);
+                        if (parts.length != 2) return;
+                        String start = parts[0].trim().replace("#", "");
+                        String end = parts[1].trim().replace("#", "");
+                        if (!start.matches("^[0-9A-Fa-f]{6}$") || !end.matches("^[0-9A-Fa-f]{6}$")) return;
+                        ConfigManager.nickTweaksGradientStartColor = Integer.parseInt(start, 16);
+                        ConfigManager.nickTweaksGradientEndColor = Integer.parseInt(end, 16);
+                    }
+                ),
+                new ModuleRegistry.ValueConfigInfo(
                     "chroma lightness",
-                    () -> ConfigManager.chromaOwnNameChromaLightness,
-                    val -> ConfigManager.chromaOwnNameChromaLightness = ((Number) val).doubleValue()
+                    () -> ConfigManager.nickTweaksChromaLightness,
+                    val -> ConfigManager.nickTweaksChromaLightness = ((Number) val).doubleValue()
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "chroma chroma",
-                    () -> ConfigManager.chromaOwnNameChromaChroma,
-                    val -> ConfigManager.chromaOwnNameChromaChroma = ((Number) val).doubleValue()
+                    () -> ConfigManager.nickTweaksChromaChroma,
+                    val -> ConfigManager.nickTweaksChromaChroma = ((Number) val).doubleValue()
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "chroma size",
-                    () -> ConfigManager.chromaOwnNameChromaSize,
-                    val -> ConfigManager.chromaOwnNameChromaSize = ((Number) val).doubleValue()
+                    () -> ConfigManager.nickTweaksChromaSize,
+                    val -> ConfigManager.nickTweaksChromaSize = ((Number) val).doubleValue()
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "chroma speed",
-                    () -> ConfigManager.chromaOwnNameChromaSpeed,
-                    val -> ConfigManager.chromaOwnNameChromaSpeed = ((Number) val).doubleValue()
+                    () -> ConfigManager.nickTweaksChromaSpeed,
+                    val -> ConfigManager.nickTweaksChromaSpeed = ((Number) val).doubleValue()
                 )
             }
         );
@@ -495,7 +530,10 @@ public class ModuleManager {
                 .append(MessageUtils.createColoredText("config\\baity\\FishHookTimer_DIY_UI_Setup_Guide.txt", 0xADFF2F))
                 .append(MessageUtils.createColoredText(".", 0xFFFF00)));
         TooltipManager.registerTooltip("Muffler", "Mute the annoying sounds.", 0xFFFFFF);
-        TooltipManager.registerTooltip("ChromaOwnName", "Color your own name in chat.", 0xFFFFFF);
+        TooltipManager.registerTooltip("NickTweaks", "Tweak nick rendering globally.", 0xFFFFFF);
+        TooltipManager.registerTooltip("chroma settings", "Expandable chroma options container.", 0xFFFFFF);
+        TooltipManager.registerTooltip("gradient editor", "Edit two endpoint colors for NickTweaks gradient.", 0xFFFFFF);
+        TooltipManager.registerTooltip("chroma", "Enable dynamic chroma color rendering.", 0xFFFFFF);
         TooltipManager.registerTooltip("chroma lightness", "How light each chroma color should be.", 0xFFFFFF);
         TooltipManager.registerTooltip("chroma chroma", "Similar to saturation.", 0xFFFFFF);
         TooltipManager.registerTooltip("chroma size", "Width of each chroma color band.", 0xFFFFFF);

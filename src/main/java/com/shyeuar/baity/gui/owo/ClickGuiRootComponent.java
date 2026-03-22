@@ -9,6 +9,7 @@ import com.shyeuar.baity.gui.render.ModuleStyleRenderer;
 import com.shyeuar.baity.gui.render.ValueStyleRenderer;
 import com.shyeuar.baity.gui.value.Value;
 import com.shyeuar.baity.gui.value.ModuleCategory;
+import com.shyeuar.baity.gui.value.ValueTreeUtils;
 import io.wispforest.owo.ui.base.BaseComponent;
 import io.wispforest.owo.ui.core.OwoUIDrawContext;
 import io.wispforest.owo.ui.core.Positioning;
@@ -123,7 +124,7 @@ public class ClickGuiRootComponent extends BaseComponent {
         
         for (Module module : modules) {
             renderModule(adapter, client, module, contentX + 10, modY, contentX + contentWidth - 10,
-                        coords.mouseX, coords.mouseY);
+                        coords.mouseX, coords.mouseY, visibleTop, visibleBottom);
             
             if (tooltipInfo != null && tooltipInfo.tooltip != null) {
                 state.setHoveredTooltip(tooltipInfo.tooltip);
@@ -355,11 +356,12 @@ public class ClickGuiRootComponent extends BaseComponent {
     
     private void renderModule(OwoRenderAdapter adapter, Minecraft client, Module module,
                              float x, float modY, float width,
-                             float mouseX, float mouseY) {
+                             float mouseX, float mouseY, float visibleTop, float visibleBottom) {
         float x2 = x + (width - x);
         float moduleHeight = 25f;
         
-        boolean hovered = mouseX >= x && mouseY >= modY && mouseX <= x2 && mouseY <= modY + moduleHeight;
+        boolean visible = modY + moduleHeight >= visibleTop && modY <= visibleBottom;
+        boolean hovered = visible && mouseX >= x && mouseY >= modY && mouseX <= x2 && mouseY <= modY + moduleHeight;
         
         com.shyeuar.baity.gui.theme.LinearTheme.applyToTheme(theme);
         
@@ -449,8 +451,7 @@ public class ClickGuiRootComponent extends BaseComponent {
         int boxY2 = (int)(boxCenterY + boxHeight / 2f);
         
         boolean boxHovered = com.shyeuar.baity.gui.render.GuiRenderUtil.isHovered(boxX1, boxY1, boxX2, boxY2, mouseX, mouseY);
-        int boxBgColor = isListening ? theme.BG_3.getRGB() :
-                        (boxHovered ? new java.awt.Color(255, 255, 255, 24).getRGB() : theme.BG_2.getRGB());
+        int boxBgColor = (boxHovered ? new java.awt.Color(60, 60, 60, 80).getRGB() : new java.awt.Color(40, 40, 40, 50).getRGB());
         com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, boxX1, boxY1, boxX2, boxY2, boxBgColor, 0f);
         
         int baseX = boxX1 + 8;
@@ -505,17 +506,15 @@ public class ClickGuiRootComponent extends BaseComponent {
                                   float containerX1, float modY, float containerX2,
                                   float visibleHeight,
                                   float mouseX, float mouseY) {
-        int subOptionCount = 0;
-        for (Value value : module.getValues()) {
-            if (!"enabled".equals(value.getName())) subOptionCount++;
-        }
+        java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
+        int subOptionCount = entries.size();
         
         if (subOptionCount == 0) return 0;
         
         float expandProgress = getModuleExpandProgress(module.getName());
         if (expandProgress <= 0.0f) return 0;
         
-        int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
+        int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
         ClickGuiLayout.ContainerDimensions dims = 
             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
         int fullContainerHeight = subOptionCount * dims.subOptionHeight + dims.padding * 2 + extraHeight;
@@ -534,8 +533,9 @@ public class ClickGuiRootComponent extends BaseComponent {
             float subModY = modY + dims.padding;
             
             Value previousValue = null;
-            for (Value value : module.getValues()) {
-                if ("enabled".equals(value.getName())) continue;
+            for (ValueTreeUtils.ValueEntry entry : entries) {
+                Value value = entry.value();
+                int depth = entry.depth();
                 
                 if (value.needsSeparatorBefore(previousValue)) {
                     subModY += 12; 
@@ -544,14 +544,22 @@ public class ClickGuiRootComponent extends BaseComponent {
                 float currentHeight = dims.subOptionHeight;
                 if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.COLOR_PALETTE) {
                     currentHeight = dims.subOptionHeight * 2;
+                } else if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.GRADIENT_EDITOR) {
+                    currentHeight = dims.subOptionHeight * 6;
+                }
+                if (subModY + currentHeight < ClickGuiState.HEADER_HEIGHT ||
+                    subModY > ClickGuiState.HEIGHT - ClickGuiState.FOOTER_HEIGHT) {
+                    subModY += currentHeight;
+                    previousValue = value;
+                    continue;
                 }
                 
                 float localAlphaF = Math.min(1f, Math.max(0f, 
                     (innerVisible - (subModY - modY - dims.padding)) / (float)dims.subOptionHeight));
                 int localAlpha = (int)(255 * expandProgress * localAlphaF);
                 
-                int subX1 = (int)(containerX1 + 4);
-                int subX2 = (int)(containerX2 - 4);
+                int subX1 = (int)(containerX1 + 4 + depth * 12);
+                int subX2 = (int)(containerX2 - 4 - depth * 8);
                 
                 ValueStyleRenderer.renderValue(guiGraphics, client, module, value, theme,
                                               subX1, subModY, subX2, dims.subOptionHeight,
@@ -561,7 +569,9 @@ public class ClickGuiRootComponent extends BaseComponent {
                                               state.getListeningButtonValueName(),
                                               tooltipInfo,
                                               state.getEditingSlider(),
-                                              state.getSliderInputText());
+                                              state.getSliderInputText(),
+                                              state.getEditingGradient(),
+                                              state.getGradientInputText());
                 
                 if (tooltipInfo != null && tooltipInfo.tooltip != null) {
                     state.setHoveredTooltip(tooltipInfo.tooltip);
@@ -1085,13 +1095,11 @@ public class ClickGuiRootComponent extends BaseComponent {
     }
     
     private float getSubOptionContainerHeight(Module module) {
-        int subOptionCount = 0;
-        for (Value value : module.getValues()) {
-            if (!"enabled".equals(value.getName())) subOptionCount++;
-        }
+        java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
+        int subOptionCount = entries.size();
         if (subOptionCount == 0) return 0;
         
-        int extraHeight = ClickGuiLayout.calculateExtraHeight(module);
+        int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
         float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
         ClickGuiLayout.ContainerDimensions dims = 
             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);

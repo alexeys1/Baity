@@ -117,8 +117,7 @@ public class ModuleStyleRenderer {
        int boxY2 = (int)(boxCenterY + boxHeight / 2f);
 
        boolean boxHovered = GuiRenderUtil.isHovered(boxX1, boxY1, boxX2, boxY2, mouseX, mouseY);
-       int boxBgColor = isListening ? theme.BG_3.getRGB() :
-                       (boxHovered ? new java.awt.Color(255, 255, 255, 24).getRGB() : theme.BG_2.getRGB());
+      int boxBgColor = (boxHovered ? new java.awt.Color(60, 60, 60, 80).getRGB() : new java.awt.Color(40, 40, 40, 50).getRGB());
        GuiRenderUtil.draw3DRect(context, boxX1, boxY1, boxX2, boxY2, boxBgColor, 0f);
 
        int baseX = boxX1 + 8;

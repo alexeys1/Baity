@@ -258,6 +258,7 @@ public class ModuleManager {
             () -> ConfigManager.nickTweaksEnabled,
             val -> ConfigManager.nickTweaksEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
+                new Option("bold self nick", "bold self nick", false, ModuleCategory.MISC),
                 new GradientEditorValue(
                     "gradient editor", "gradient editor", ModuleCategory.MISC,
                     ConfigManager.nickTweaksGradientStartColor, ConfigManager.nickTweaksGradientEndColor
@@ -265,6 +266,11 @@ public class ModuleManager {
                 nickTweaksChromaGroup
             },
             new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "bold self nick",
+                    () -> ConfigManager.nickTweaksBoldSelf,
+                    val -> ConfigManager.nickTweaksBoldSelf = (Boolean) val
+                ),
                 new ModuleRegistry.ValueConfigInfo(
                     "chroma settings",
                     () -> ConfigManager.nickTweaksChromaGroupExpanded,
@@ -519,7 +525,11 @@ public class ModuleManager {
         TooltipManager.registerTooltip("BlockAnimation", "Restore the blocking animation of version 1.7.", 0xFFFFFF);
         TooltipManager.registerTooltip("PepCat", "Play an animation and give pep talk when you died. It's a skill issue!", 0xFFFFFF);
         TooltipManager.registerTooltip("RadialMenu", "A roulette tool that invokes a shortcut command.", 0xFFFFFF);
-        TooltipManager.registerTooltip("ChatChannelSwitcher", "Show quick chat-channel buttons.", 0xFFFFFF);
+        TooltipManager.registerTooltip(
+            "ChatChannelSwitcher",
+            MessageUtils.createColoredText("Show quick chat-channel buttons.", 0xFFFFFF)
+                .append(MessageUtils.createColoredText(" Click the channel button with the middle button to get the usage method.", 0xFFFF00))
+        );
         TooltipManager.registerTooltip("meowalert", 
             MessageUtils.createColoredText("play a ", 0xFFFFFF)
                 .append(MessageUtils.createColoredText("ᯠ₋ ̫ ₋.ᯄ ੭", 0xFFC0CB))

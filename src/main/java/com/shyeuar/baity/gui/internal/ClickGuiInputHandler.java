@@ -162,7 +162,7 @@ public class ClickGuiInputHandler {
                     Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
                     if (found instanceof SliderValue) {
                         SliderValue sliderValue = (SliderValue) found;
-                        sliderValue.setValue(state.getOriginalSliderValue());
+                            sliderValue.setValue(state.getOriginalSliderValue());
                     }
                 }
             }
@@ -313,10 +313,10 @@ public class ClickGuiInputHandler {
                         Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
                         if (found instanceof SliderValue) {
                             SliderValue sliderValue = (SliderValue) found;
-                            if (sliderValue.trySetValue(newValue)) {
+                                if (sliderValue.trySetValue(newValue)) {
                                 if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
                                     ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), sliderValue.getValue());
-                                }
+                                    }
                             }
                         }
                     }
@@ -404,16 +404,16 @@ public class ClickGuiInputHandler {
             Value found = ValueTreeUtils.findByName(module, dragInfo.valueName);
             if (found instanceof SliderValue) {
                 SliderValue sliderValue = (SliderValue) found;
-
-                double percentage = (coords.mouseX - dragInfo.sliderX) / (double) dragInfo.sliderWidth;
-                percentage = Math.max(0, Math.min(1, percentage));
-                sliderValue.setFromPercentage(percentage);
-
+                    
+                    double percentage = (coords.mouseX - dragInfo.sliderX) / (double) dragInfo.sliderWidth;
+                    percentage = Math.max(0, Math.min(1, percentage));
+                    sliderValue.setFromPercentage(percentage);
+                    
                 if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
                     ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), sliderValue.getValue());
+                    }
+                    return;
                 }
-                return;
-            }
         }
     }
 
@@ -460,12 +460,12 @@ public class ClickGuiInputHandler {
                 Value found = ValueTreeUtils.findByName(module, listeningName);
                 if (found instanceof ButtonValue) {
                     ButtonValue buttonValue = (ButtonValue) found;
-                    buttonValue.setValue(mouseKeyCode);
+                        buttonValue.setValue(mouseKeyCode);
                     if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
                         ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), mouseKeyCode);
-                    }
-                    state.clearListeningButtonValue();
-                    return true;
+                        }
+                        state.clearListeningButtonValue();
+                        return true;
                 }
             }
             state.clearListeningButtonValue();
@@ -831,11 +831,11 @@ public class ClickGuiInputHandler {
                                         ClickGuiLayout.ScaledCoordinates coords, int button,
                                         float contentX, float contentWidth) {
         if (!timer.delay(100)) return false;
-
+        
         java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
         int subOptionCount = entries.size();
         if (subOptionCount == 0) return false;
-
+        
         int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
         float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
         ClickGuiLayout.ContainerDimensions dims = 
@@ -1222,12 +1222,12 @@ public class ClickGuiInputHandler {
                 Value found = ValueTreeUtils.findByName(module, listeningName);
                 if (found instanceof ButtonValue) {
                     ButtonValue buttonValue = (ButtonValue) found;
-                    buttonValue.setValue(0);
+                        buttonValue.setValue(0);
                     if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
                         ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), 0);
-                    }
-                    state.clearListeningButtonValue();
-                    return true;
+                        }
+                        state.clearListeningButtonValue();
+                        return true;
                 }
             }
             state.clearListeningButtonValue();
@@ -1243,12 +1243,12 @@ public class ClickGuiInputHandler {
             Value found = ValueTreeUtils.findByName(module, listeningName);
             if (found instanceof ButtonValue) {
                 ButtonValue buttonValue = (ButtonValue) found;
-                buttonValue.setValue(keyCode);
+                    buttonValue.setValue(keyCode);
                 if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
                     ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), keyCode);
-                }
-                state.clearListeningButtonValue();
-                return true;
+                    }
+                    state.clearListeningButtonValue();
+                    return true;
             }
         }
         

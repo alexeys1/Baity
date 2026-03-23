@@ -9,31 +9,162 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import net.minecraft.network.chat.Style;
+import java.util.Map;
 
 @Environment(EnvType.CLIENT)
-public final class ChromaNameRenderUtils {
-    private ChromaNameRenderUtils() {
+public final class NickRenderUtils {
+    private static final long TARGET_CACHE_MS = 250L;
+    private static volatile long targetsCacheAt = 0L;
+    private static volatile String cachePlayerName = "";
+    private static volatile List<Target> cachedTargets = List.of();
+    private static final int MATCH_CACHE_MAX = 2048;
+    private static final Object MATCH_CACHE_LOCK = new Object();
+    private static final LinkedHashMap<String, TargetMatch[]> MATCH_CACHE = new LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, TargetMatch[]> eldest) {
+            return size() > MATCH_CACHE_MAX;
+        }
+    };
+
+    private static final boolean PERF_DEBUG = Boolean.getBoolean("baity.perfDebug");
+    private static final long PERF_DEBUG_INTERVAL_MS = Long.getLong("baity.perfDebug.intervalMs", 5000L);
+    private static final long PERF_SLOW_THRESHOLD_NS = Long.getLong("baity.perfDebug.slowThresholdNs", 5_000_000L);
+
+    private static volatile long perfLastLogAtMs = 0L;
+    private static long perfHandleStringCalls = 0L;
+    private static long perfHandleStringTimeNs = 0L;
+    private static long perfHandleStringMaxNs = 0L;
+    private static long perfHandleStringCacheHit = 0L;
+    private static long perfHandleStringCacheMiss = 0L;
+
+    private static long perfHandleCharCalls = 0L;
+    private static long perfHandleCharTimeNs = 0L;
+    private static long perfHandleCharMaxNs = 0L;
+    private static long perfHandleCharCacheHit = 0L;
+    private static long perfHandleCharCacheMiss = 0L;
+
+    private static void perfMaybeLog(String stage, long nowMs) {
+        if (!PERF_DEBUG) return;
+        if (perfLastLogAtMs == 0L) perfLastLogAtMs = nowMs;
+        if (nowMs - perfLastLogAtMs < PERF_DEBUG_INTERVAL_MS) return;
+
+        // Keep output concise; only aggregated data.
+        System.out.println(
+                "[Baity][Perf] " + stage +
+                        " strCalls=" + perfHandleStringCalls +
+                        " strAvgNs=" + (perfHandleStringCalls == 0 ? 0 : (perfHandleStringTimeNs / perfHandleStringCalls)) +
+                        " strMaxNs=" + perfHandleStringMaxNs +
+                        " strHit=" + perfHandleStringCacheHit +
+                        " strMiss=" + perfHandleStringCacheMiss +
+                        " | charCalls=" + perfHandleCharCalls +
+                        " charAvgNs=" + (perfHandleCharCalls == 0 ? 0 : (perfHandleCharTimeNs / perfHandleCharCalls)) +
+                        " charMaxNs=" + perfHandleCharMaxNs +
+                        " charHit=" + perfHandleCharCacheHit +
+                        " charMiss=" + perfHandleCharCacheMiss
+        );
+
+        perfLastLogAtMs = nowMs;
+        perfHandleStringCalls = 0L;
+        perfHandleStringTimeNs = 0L;
+        perfHandleStringMaxNs = 0L;
+        perfHandleStringCacheHit = 0L;
+        perfHandleStringCacheMiss = 0L;
+
+        perfHandleCharCalls = 0L;
+        perfHandleCharTimeNs = 0L;
+        perfHandleCharMaxNs = 0L;
+        perfHandleCharCacheHit = 0L;
+        perfHandleCharCacheMiss = 0L;
+    }
+
+    private NickRenderUtils() {
+    }
+
+    private static void clearMatchCache() {
+        synchronized (MATCH_CACHE_LOCK) {
+            MATCH_CACHE.clear();
+        }
     }
 
     public static String handleString(String text) {
         if (text == null || text.isEmpty()) return text;
-        List<Target> targets = collectTargets();
+
+        final boolean debugEnabled = PERF_DEBUG;
+        final long startNs = debugEnabled ? System.nanoTime() : 0L;
+        long collectNs = 0L;
+
+        List<Target> targets;
+        if (debugEnabled) {
+            long t = System.nanoTime();
+            targets = collectTargets();
+            collectNs = System.nanoTime() - t;
+        } else {
+            targets = collectTargets();
+        }
         if (targets.isEmpty()) return text;
 
-        String lower = text.toLowerCase(Locale.ROOT);
-        for (Target target : targets) {
-            if (!lower.contains(target.nameLower())) continue;
-            return applySectionColorToString(text, targets);
+        long version = targetsCacheAt;
+        String cacheKey = version + "|" + text;
+        TargetMatch[] matchByIndex;
+        synchronized (MATCH_CACHE_LOCK) {
+            matchByIndex = MATCH_CACHE.get(cacheKey);
         }
-        return text;
+
+        boolean cacheHit = matchByIndex != null;
+        if (matchByIndex == null) {
+            List<Glyph> glyphs = new ArrayList<>();
+            text.codePoints().forEach(cp -> glyphs.add(new Glyph(cp, Style.EMPTY)));
+            if (glyphs.isEmpty()) return text;
+
+            String lower = text.toLowerCase(Locale.ROOT);
+            List<Target> matchingTargets = null;
+            for (Target target : targets) {
+                if (!lower.contains(target.nameLower())) continue;
+                if (matchingTargets == null) matchingTargets = new ArrayList<>();
+                matchingTargets.add(target);
+            }
+            if (matchingTargets == null || matchingTargets.isEmpty()) return text;
+
+            matchByIndex = matchTargets(glyphs, matchingTargets);
+            synchronized (MATCH_CACHE_LOCK) {
+                MATCH_CACHE.put(cacheKey, matchByIndex);
+            }
+        }
+
+        boolean matched = false;
+        for (TargetMatch value : matchByIndex) {
+            if (value != null) {
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) return text;
+
+        String out = applySectionColorToString(text, matchByIndex);
+
+        if (debugEnabled) {
+            long dtNs = System.nanoTime() - startNs;
+            long nowMs = System.currentTimeMillis();
+            if (dtNs >= PERF_SLOW_THRESHOLD_NS) {
+                System.out.println("[Baity][Perf][NickRenderUtils] handleString slow dtNs=" + dtNs + " collectNs=" + collectNs + " cacheHit=" + cacheHit + " targets=" + targets.size());
+            }
+            perfHandleStringCalls++;
+            perfHandleStringTimeNs += dtNs;
+            perfHandleStringMaxNs = Math.max(perfHandleStringMaxNs, dtNs);
+            if (cacheHit) perfHandleStringCacheHit++; else perfHandleStringCacheMiss++;
+            perfMaybeLog("NickRenderUtils", nowMs);
+        }
+
+        return out;
     }
 
     public static FormattedText handleFormattedText(FormattedText text) {
@@ -46,13 +177,55 @@ public final class ChromaNameRenderUtils {
 
     public static FormattedCharSequence handleCharSequence(FormattedCharSequence original) {
         if (original == null) return null;
-        List<Target> targets = collectTargets();
+        final boolean debugEnabled = PERF_DEBUG;
+        final long startNs = debugEnabled ? System.nanoTime() : 0L;
+        long collectNs = 0L;
+
+        List<Target> targets;
+        if (debugEnabled) {
+            long t = System.nanoTime();
+            targets = collectTargets();
+            collectNs = System.nanoTime() - t;
+        } else {
+            targets = collectTargets();
+        }
         if (targets.isEmpty()) return original;
 
-        List<Glyph> glyphs = toGlyphs(original);
+        StringBuilder sbPlain = new StringBuilder();
+        List<Glyph> glyphs = new ArrayList<>();
+        original.accept((index, style, codepoint) -> {
+            sbPlain.appendCodePoint(codepoint);
+            glyphs.add(new Glyph(codepoint, style));
+            return true;
+        });
         if (glyphs.isEmpty()) return original;
+        String plain = sbPlain.toString();
+        if (plain.isEmpty()) return original;
 
-        TargetMatch[] matchByIndex = matchTargets(glyphs, targets);
+        long version = targetsCacheAt;
+        String cacheKey = version + "|" + plain;
+        TargetMatch[] matchByIndex;
+        synchronized (MATCH_CACHE_LOCK) {
+            matchByIndex = MATCH_CACHE.get(cacheKey);
+        }
+
+        boolean cacheHit = matchByIndex != null;
+        if (matchByIndex == null) {
+            String lower = plain.toLowerCase(Locale.ROOT);
+            List<Target> matchingTargets = null;
+            for (Target target : targets) {
+                if (!lower.contains(target.nameLower())) continue;
+                if (matchingTargets == null) matchingTargets = new ArrayList<>();
+                matchingTargets.add(target);
+            }
+            if (matchingTargets == null || matchingTargets.isEmpty()) return original;
+
+            matchByIndex = matchTargets(glyphs, matchingTargets);
+            synchronized (MATCH_CACHE_LOCK) {
+                MATCH_CACHE.put(cacheKey, matchByIndex);
+            }
+        }
+
         boolean matched = false;
         for (TargetMatch value : matchByIndex) {
             if (value != null) {
@@ -69,6 +242,9 @@ public final class ChromaNameRenderUtils {
             Style style = glyph.style();
             TargetMatch match = matchByIndex[i];
             if (match != null) {
+                if (match.target().bold()) {
+                    style = style.withBold(true);
+                }
                 int len = Math.max(1, match.length());
                 double progress = len == 1 ? 0.0 : (double) (i - match.start()) / (len - 1);
                 int rgb = match.target().colorAt(progress, nowMs);
@@ -76,13 +252,26 @@ public final class ChromaNameRenderUtils {
             }
             out.add(FormattedCharSequence.codepoint(glyph.codepoint(), style));
         }
-        return FormattedCharSequence.composite(out);
+        FormattedCharSequence result = FormattedCharSequence.composite(out);
+
+        if (debugEnabled) {
+            long dtNs = System.nanoTime() - startNs;
+            if (dtNs >= PERF_SLOW_THRESHOLD_NS) {
+                System.out.println("[Baity][Perf][NickRenderUtils] handleCharSequence slow dtNs=" + dtNs + " collectNs=" + collectNs + " cacheHit=" + cacheHit + " targets=" + targets.size());
+            }
+            perfHandleCharCalls++;
+            perfHandleCharTimeNs += dtNs;
+            perfHandleCharMaxNs = Math.max(perfHandleCharMaxNs, dtNs);
+            if (cacheHit) perfHandleCharCacheHit++; else perfHandleCharCacheMiss++;
+            perfMaybeLog("NickRenderUtils", nowMs);
+        }
+
+        return result;
     }
 
-    private static String applySectionColorToString(String text, List<Target> targets) {
+    private static String applySectionColorToString(String text, TargetMatch[] matchByIndex) {
         List<Glyph> glyphs = new ArrayList<>();
         text.codePoints().forEach(cp -> glyphs.add(new Glyph(cp, Style.EMPTY)));
-        TargetMatch[] matchByIndex = matchTargets(glyphs, targets);
 
         StringBuilder sb = new StringBuilder();
         long nowMs = System.currentTimeMillis();
@@ -104,15 +293,6 @@ public final class ChromaNameRenderUtils {
         for (char c : hex.toCharArray()) {
             sb.append('\u00A7').append(c);
         }
-    }
-
-    private static List<Glyph> toGlyphs(FormattedCharSequence sequence) {
-        List<Glyph> glyphs = new ArrayList<>();
-        sequence.accept((index, style, codepoint) -> {
-            glyphs.add(new Glyph(codepoint, style));
-            return true;
-        });
-        return glyphs;
     }
 
     private static TargetMatch[] matchTargets(List<Glyph> glyphs, List<Target> targets) {
@@ -165,9 +345,13 @@ public final class ChromaNameRenderUtils {
 
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return List.of();
+        String selfName = client.player.getName().getString();
+        long now = System.currentTimeMillis();
+        if (now - targetsCacheAt <= TARGET_CACHE_MS && selfName.equals(cachePlayerName)) {
+            return cachedTargets;
+        }
 
         List<Target> targets = new ArrayList<>();
-        String selfName = client.player.getName().getString();
         if (selfName != null && !selfName.isBlank()) {
             targets.add(Target.local(selfName));
         }
@@ -184,7 +368,11 @@ public final class ChromaNameRenderUtils {
 
         targets.removeIf(t -> t.name().isBlank());
         targets.sort(Comparator.comparingInt((Target t) -> t.codePoints().length).reversed());
-        return targets;
+        cachedTargets = List.copyOf(targets);
+        cachePlayerName = selfName;
+        targetsCacheAt = now;
+        clearMatchCache();
+        return cachedTargets;
     }
 
     private static int lerpRgb(int a, int b, double t) {
@@ -220,6 +408,7 @@ public final class ChromaNameRenderUtils {
             String nameLower,
             int[] codePoints,
             boolean local,
+            boolean bold,
             int[] palette,
             double speed,
             boolean remoteChromaEnabled,
@@ -232,6 +421,7 @@ public final class ChromaNameRenderUtils {
                     name.toLowerCase(Locale.ROOT),
                     name.codePoints().toArray(),
                     true,
+                    ConfigManager.nickTweaksBoldSelf,
                     new int[0],
                     clamp(ConfigManager.nickTweaksChromaSpeed, 0.0, 8.0),
                     false,
@@ -246,6 +436,7 @@ public final class ChromaNameRenderUtils {
                     name.toLowerCase(Locale.ROOT),
                     name.codePoints().toArray(),
                     false,
+                    profile.boldSelf(),
                     profile.paletteView(),
                     clamp(profile.speed(), 0.0, 8.0),
                     profile.chromaEnabled(),
@@ -277,9 +468,9 @@ public final class ChromaNameRenderUtils {
                     return localStart;
                 }
                 return lerpRgb(
-                    localStart,
-                    localEnd,
-                    progress
+                        localStart,
+                        localEnd,
+                        progress
                 );
             }
 
@@ -293,3 +484,4 @@ public final class ChromaNameRenderUtils {
         }
     }
 }
+

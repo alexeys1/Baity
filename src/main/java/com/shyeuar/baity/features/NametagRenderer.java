@@ -2,9 +2,11 @@ package com.shyeuar.baity.features;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.config.DevConfig;
+import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.utils.ModuleUtils;
+import com.shyeuar.baity.sync.BaityPresenceSync;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
@@ -143,15 +145,34 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         }
         
         Font textRenderer = mc.font;
-        
-        int totalWidth = textRenderer.width(nameComponent);
+
+        int nameWidth = textRenderer.width(nameComponent);
+
+        // NickTweaks bold is applied during Font.prepareText, while width measurement here
+        // may not fully reflect the bold visual width. Compensate to keep suffix distance
+        // from overlapping the name.
+        boolean shouldNickBold = false;
+        if (player == mc.player) {
+            shouldNickBold = ConfigManager.nickTweaksBoldSelf;
+        } else {
+            String rawName = player.getName().getString();
+            BaityPresenceSync.ChromaProfile profile = BaityPresenceSync.getChromaProfileByName(rawName);
+            shouldNickBold = profile != null && profile.boldSelf();
+        }
+
+        int boldExtraPx = 0;
+        if (shouldNickBold) {
+            Component boldNameComponent = nameComponent.copy().withStyle(nameComponent.getStyle().withBold(true));
+            boldExtraPx = textRenderer.width(boldNameComponent) - nameWidth;
+        }
+        nameWidth += Math.max(0, boldExtraPx);
+        int totalWidth = nameWidth;
         if (isDeveloper) {
             totalWidth += textRenderer.width(DevConfig.DEV_PREFIX) + 2; 
         }
         
         int currentX;
         if (isDeveloper) {
-            int nameWidth = textRenderer.width(nameComponent);
             int prefixWidth = textRenderer.width(DevConfig.DEV_PREFIX) + 2;
             currentX = -nameWidth / 2 - prefixWidth; 
         } else {
@@ -175,7 +196,7 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
             String distanceText = " [" + (int)Math.round(dist) + "]";
             int distanceX;
             if (isDeveloper) {
-                distanceX = currentX + textRenderer.width(nameComponent) + 2;
+                distanceX = currentX + nameWidth + 2;
             } else {
                 distanceX = totalWidth / 2 + 2;
             }

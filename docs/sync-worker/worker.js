@@ -9,6 +9,9 @@ function json(data, status = 200, extraHeaders = {}) {
   });
 }
 
+const USER_RECORD_TTL_SECONDS = 60 * 60 * 24 * 14;
+const USER_ACTIVE_WINDOW_MS = 1000 * 60 * 60 * 24 * 7;
+
 function normalizeHexColor(value) {
   if (typeof value !== "string") return null;
   const m = value.match(/^#([A-Fa-f0-9]{6})$/);
@@ -49,6 +52,7 @@ function sanitizeUserPayload(payload) {
       chromaOwnName: {
         nickTweaksEnabled: Boolean(chromaRaw.nickTweaksEnabled ?? true),
         enabled: Boolean(chromaRaw.enabled),
+        boldSelf: Boolean(chromaRaw.boldSelf),
         speed: clampNumber(chromaRaw.speed, 0, 8, 1),
         palette: palette.length > 0 ? palette : ["#FF4D4D", "#FFAA00", "#FFFF66", "#66FF99", "#66CCFF", "#C299FF"],
         gradientStart: normalizeHexColor(chromaRaw.gradientStart) || "#FF0000",
@@ -57,6 +61,7 @@ function sanitizeUserPayload(payload) {
       nickTweaks: {
         nickTweaksEnabled: Boolean(chromaRaw.nickTweaksEnabled ?? true),
         enabled: Boolean(chromaRaw.enabled),
+        boldSelf: Boolean(chromaRaw.boldSelf),
         speed: clampNumber(chromaRaw.speed, 0, 8, 1),
         palette: palette.length > 0 ? palette : ["#FF4D4D", "#FFAA00", "#FFFF66", "#66FF99", "#66CCFF", "#C299FF"],
         gradientStart: normalizeHexColor(chromaRaw.gradientStart) || "#FF0000",
@@ -115,7 +120,7 @@ export default {
       if (!sanitized) return json({ ok: false, error: "invalid_payload" }, 400);
 
       const key = `user:${sanitized.uuid}`;
-      await env.PRESENCE_KV.put(key, JSON.stringify(sanitized), { expirationTtl: 60 * 60 * 24 * 14 });
+      await env.PRESENCE_KV.put(key, JSON.stringify(sanitized), { expirationTtl: USER_RECORD_TTL_SECONDS });
 
       const indexObj = await readIndex(env);
       indexObj[sanitized.uuid] = { name: sanitized.name, lastSeenAt: sanitized.meta.lastSeenAt };
@@ -136,13 +141,18 @@ export default {
         try {
           const entry = JSON.parse(raw);
           const lastSeen = Date.parse(entry?.meta?.lastSeenAt || "");
-          if (!Number.isFinite(lastSeen) || now - lastSeen > 1000 * 60 * 60 * 24 * 7) {
+          if (!Number.isFinite(lastSeen) || now - lastSeen > USER_ACTIVE_WINDOW_MS) {
+            delete indexObj[uuid];
             continue;
           }
           users[uuid] = entry;
         } catch {
+          delete indexObj[uuid];
         }
       }
+
+      // Keep the index small: remove expired/invalid rows discovered during reads.
+      await writeIndex(env, indexObj);
 
       return json({
         version: 1,

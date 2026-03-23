@@ -14,6 +14,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,11 +40,13 @@ public final class ChatChannelSwitcher implements HudElement {
     private static final float DEFAULT_SCALE = 1.0f;
     private static final int CHAT_INPUT_LEFT_MARGIN = 4;
     private static final int CHAT_INPUT_BOTTOM_Y = 12;
+
     private static final String[] HOVER_TOOLTIP_LINES = new String[]{
         "右键临时频道",
-        "中键隐藏提示"
+        "中键隐藏提示",
+        "alt + w/a/s/d快捷切换临时频道",
+        "alt + shift + w/a/s/d快捷切换频道"
     };
-
     private static final Channel[] CHANNELS = new Channel[]{
         new Channel("All", "all", "/achat "),
         new Channel("Party", "party", "/pchat "),
@@ -53,11 +56,18 @@ public final class ChatChannelSwitcher implements HudElement {
 
     private static final ChatChannelSwitcher INSTANCE = new ChatChannelSwitcher();
     private static boolean chatListenerRegistered = false;
+    private static final long CHANNEL_SWITCH_DEBOUNCE_MS = 60L;
 
     private boolean selected;
     private boolean clicked;
     private String lastSelectedChannel = ConfigManager.chatChannelSwitcherLastChannel;
     private String pendingChannel = "";
+    private long lastChannelSwitchAt = 0L;
+
+    private static volatile long altHotkeyLastAtMs = 0L;
+    private static volatile char altHotkeyExpectedLower = 0;
+    private static volatile int altHotkeyPendingStripCount = 0;
+    private static final long ALT_HOTKEY_STRIP_WINDOW_MS = 250L;
 
     private ChatChannelSwitcher() {
     }
@@ -78,6 +88,10 @@ public final class ChatChannelSwitcher implements HudElement {
 
     public static boolean mouseClicked(Screen screen, EditBox chatField, MouseButtonEvent click) {
         return INSTANCE.mouseClickedInternal(screen, chatField, click);
+    }
+
+    public static boolean handleHotkey(Screen screen, EditBox chatField, int keyCode, boolean altDown, boolean shiftDown) {
+        return INSTANCE.handleHotkeyInternal(screen, chatField, keyCode, altDown, shiftDown);
     }
 
     private void renderInternal(Screen screen, EditBox chatField, GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -164,17 +178,12 @@ public final class ChatChannelSwitcher implements HudElement {
 
             Minecraft client = Minecraft.getInstance();
             if (click.button() == 0 && client.player != null) {
-                pendingChannel = button.command();
-                client.player.connection.sendCommand("chat " + button.command());
-                chatField.setFocused(true);
+                handlePermanentSwitch(client, chatField, button.command());
                 return true;
             }
 
             if (click.button() == 1) {
-                chatField.setValue(button.autofillCommand());
-                chatField.setCursorPosition(button.autofillCommand().length());
-                chatField.moveCursorToEnd(false);
-                chatField.setFocused(true);
+                handleTemporarySwitch(chatField, button.command(), button.autofillCommand());
                 return true;
             }
 
@@ -195,6 +204,192 @@ public final class ChatChannelSwitcher implements HudElement {
             && screen instanceof ChatScreen
             && chatField != null
             && Minecraft.getInstance().player != null;
+    }
+
+    private boolean handleHotkeyInternal(Screen screen, EditBox chatField, int keyCode, boolean altDown, boolean shiftDown) {
+        if (!shouldRender(screen, chatField) || !altDown) return false;
+        int idx = hotbarIndexFromKey(keyCode);
+        if (idx < 0 || idx >= CHANNELS.length) return false;
+
+        Channel channel = CHANNELS[idx];
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null) return false;
+
+        markAltHotkeyCharToStrip(idx);
+
+        if (shiftDown) {
+            long now = System.currentTimeMillis();
+            if (now - lastChannelSwitchAt < CHANNEL_SWITCH_DEBOUNCE_MS) return true;
+            lastChannelSwitchAt = now;
+
+            handlePermanentSwitch(client, chatField, channel.command());
+            return true;
+        }
+
+        handleTemporarySwitch(chatField, channel.command(), channel.autofillCommand());
+        return true;
+    }
+
+    private void handleTemporarySwitch(EditBox chatField, String command, String autofillCommand) {
+        if (chatField == null) return;
+        String existing = chatField.getValue();
+        if (existing == null) existing = "";
+
+        String newPrefix = autofillCommand == null ? "" : autofillCommand;
+        if (newPrefix.isEmpty()) return;
+
+        for (Channel c : CHANNELS) {
+            String prefix = c.autofillCommand();
+            if (prefix != null && existing.startsWith(prefix)) {
+                if (normalizeChannel(c.command()).equals(normalizeChannel(command))) {
+                    chatField.setCursorPosition(chatField.getValue().length());
+                    chatField.moveCursorToEnd(false);
+                    chatField.setFocused(true);
+                    return;
+                }
+                existing = existing.substring(prefix.length());
+                break;
+            }
+        }
+
+        chatField.setValue(newPrefix + existing);
+        chatField.setCursorPosition(chatField.getValue().length());
+        chatField.moveCursorToEnd(false);
+        chatField.setFocused(true);
+    }
+
+    private static void markAltHotkeyCharToStrip(int channelIndex) {
+        char lower;
+        switch (channelIndex) {
+            case 0 -> lower = 'w';
+            case 1 -> lower = 'a';
+            case 2 -> lower = 's';
+            case 3 -> lower = 'd';
+            default -> lower = 0;
+        }
+        if (lower == 0) return;
+        altHotkeyExpectedLower = lower;
+        altHotkeyLastAtMs = System.currentTimeMillis();
+        altHotkeyPendingStripCount = Math.min(8, altHotkeyPendingStripCount + 1);
+    }
+
+    public static void tryStripAltHotkeyChar(EditBox chatField) {
+        if (chatField == null) return;
+        if (altHotkeyExpectedLower == 0) return;
+
+        long now = System.currentTimeMillis();
+        if (now - altHotkeyLastAtMs > ALT_HOTKEY_STRIP_WINDOW_MS) return;
+
+        String value = chatField.getValue();
+        if (value == null || value.isEmpty()) return;
+
+        int pending = altHotkeyPendingStripCount;
+        if (pending <= 0) {
+            altHotkeyExpectedLower = 0;
+            altHotkeyLastAtMs = 0L;
+            return;
+        }
+
+        String newValue = value;
+        int removed = 0;
+        while (removed < pending && !newValue.isEmpty()) {
+            char last = newValue.charAt(newValue.length() - 1);
+            char lower = Character.toLowerCase(last);
+            if (lower != 'w' && lower != 'a' && lower != 's' && lower != 'd') break;
+            newValue = newValue.substring(0, newValue.length() - 1);
+            removed++;
+        }
+
+        if (removed > 0) {
+            chatField.setValue(newValue);
+            chatField.setCursorPosition(newValue.length());
+            chatField.moveCursorToEnd(false);
+            altHotkeyPendingStripCount = pending - removed;
+        }
+
+        if (altHotkeyPendingStripCount <= 0 || newValue.isEmpty()) {
+            altHotkeyExpectedLower = 0;
+            altHotkeyLastAtMs = 0L;
+            altHotkeyPendingStripCount = 0;
+        }
+    }
+
+    private void handlePermanentSwitch(Minecraft client, EditBox chatField, String targetChannelCommand) {
+        if (client == null || client.player == null) return;
+        if (chatField == null) return;
+        if (targetChannelCommand == null) return;
+
+        String clickedChannel = normalizeChannel(targetChannelCommand);
+        if (clickedChannel.isEmpty()) return;
+
+        String beforeActiveChannel = getActiveChannel(chatField);
+        String existingText = chatField.getValue();
+        if (existingText == null) existingText = "";
+
+        String restoredText = computeRestoredChatTextAfterPermanentSwitch(existingText, clickedChannel, beforeActiveChannel);
+
+        if (clickedChannel.equalsIgnoreCase(beforeActiveChannel) && restoredText.equals(existingText)) {
+            return;
+        }
+
+        setLastSelectedChannel(clickedChannel);
+        trySendChannelCommand(client, clickedChannel);
+
+        client.setScreen(new ChatScreen(restoredText, false));
+    }
+
+    private String computeRestoredChatTextAfterPermanentSwitch(String existingText, String clickedChannel, String beforeActiveChannel) {
+        if (existingText == null) return "";
+        if (existingText.isEmpty()) return existingText;
+
+        String matchedPrefix = null;
+        String matchedPrefixChannel = null;
+        int matchedPrefixLen = 0;
+
+        for (Channel c : CHANNELS) {
+            String prefix = c.autofillCommand();
+            if (prefix != null && existingText.startsWith(prefix)) {
+                matchedPrefix = prefix;
+                matchedPrefixChannel = normalizeChannel(c.command());
+                matchedPrefixLen = prefix.length();
+                break;
+            }
+        }
+
+        if (matchedPrefix == null) return existingText;
+
+        String remainder = existingText.substring(matchedPrefixLen);
+        boolean sameAsActive = clickedChannel.equalsIgnoreCase(beforeActiveChannel);
+
+        if (sameAsActive) {
+            if (matchedPrefixChannel != null
+                    && matchedPrefixChannel.equalsIgnoreCase(clickedChannel)
+                    && remainder.trim().isEmpty()) {
+                return existingText;
+            }
+            if (matchedPrefixChannel != null && !matchedPrefixChannel.equalsIgnoreCase(clickedChannel)) {
+                return remainder;
+            }
+            return existingText;
+        }
+
+        return remainder;
+    }
+
+    private void trySendChannelCommand(Minecraft client, String channel) {
+        if (client == null || client.player == null) return;
+        pendingChannel = channel;
+        client.player.connection.sendCommand("/chat " + channel);
+    }
+
+    private int hotbarIndexFromKey(int keyCode) {
+        return switch (keyCode) {
+            case GLFW.GLFW_KEY_W -> 0;
+            case GLFW.GLFW_KEY_A -> 1;
+            case GLFW.GLFW_KEY_S -> 2;
+            case GLFW.GLFW_KEY_D -> 3;
+            default -> -1;
+        };
     }
 
     private void ensureHudPositionInitialized(EditBox chatField) {
@@ -446,12 +641,13 @@ public final class ChatChannelSwitcher implements HudElement {
     }
 
     private void renderTooltip(GuiGraphics guiGraphics, Font font, ChannelButton button, int originX, int originY, float scale) {
+        String[] lines = HOVER_TOOLTIP_LINES;
         int textWidth = 0;
-        for (String line : HOVER_TOOLTIP_LINES) {
+        for (String line : lines) {
             textWidth = Math.max(textWidth, font.width(line));
         }
         int tooltipWidth = textWidth + TOOLTIP_PADDING * 2;
-        int tooltipHeight = HOVER_TOOLTIP_LINES.length * font.lineHeight + TOOLTIP_PADDING * 2;
+        int tooltipHeight = lines.length * font.lineHeight + TOOLTIP_PADDING * 2;
 
         int buttonX1 = originX + Math.round(button.x1() * scale);
         int buttonY1 = originY + Math.round(button.y1() * scale);
@@ -481,7 +677,7 @@ public final class ChatChannelSwitcher implements HudElement {
         guiGraphics.fill(x2 - 1, y1, x2, y2, TOOLTIP_BORDER_COLOR);
 
         int textY = y1 + TOOLTIP_PADDING;
-        for (String line : HOVER_TOOLTIP_LINES) {
+        for (String line : lines) {
             guiGraphics.drawString(font, line, x1 + TOOLTIP_PADDING, textY, TEXT_COLOR, false);
             textY += font.lineHeight;
         }

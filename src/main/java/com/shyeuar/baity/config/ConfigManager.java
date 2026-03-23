@@ -98,7 +98,8 @@ public class ConfigManager {
     public static float fishHookTimerScale = 1.5f;
 
     public static boolean nickTweaksEnabled = false;
-    public static boolean nickTweaksChromaEnabled = true;
+    public static boolean nickTweaksChromaEnabled = false;
+    public static boolean nickTweaksBoldSelf = false;
     public static double nickTweaksChromaLightness = 0.8;
     public static double nickTweaksChromaChroma = 0.2;
     public static double nickTweaksChromaSize = 3.1;
@@ -345,6 +346,9 @@ public class ConfigManager {
         registerField("NickTweaksChromaEnabled", Boolean.class,
             c -> ConfigManager.nickTweaksChromaEnabled,
             (c, v) -> ConfigManager.nickTweaksChromaEnabled = (Boolean) v);
+        registerField("NickTweaksBoldSelf", Boolean.class,
+            c -> ConfigManager.nickTweaksBoldSelf,
+            (c, v) -> ConfigManager.nickTweaksBoldSelf = (Boolean) v);
         registerField("NickTweaksChromaLightness", Double.class,
             c -> ConfigManager.nickTweaksChromaLightness,
             (c, v) -> ConfigManager.nickTweaksChromaLightness = (Double) v);

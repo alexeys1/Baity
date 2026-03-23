@@ -1,6 +1,6 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.utils.ChromaNameRenderUtils;
+import com.shyeuar.baity.utils.NickRenderUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.Font;
@@ -19,7 +19,7 @@ public class NickTweaksMixin {
             argsOnly = true
     )
     private String baity$chromaPrepareString(String text) {
-        return ChromaNameRenderUtils.handleString(text);
+        return NickRenderUtils.handleString(text);
     }
 
     @ModifyVariable(
@@ -28,21 +28,21 @@ public class NickTweaksMixin {
             argsOnly = true
     )
     private FormattedCharSequence baity$chromaPrepareSequence(FormattedCharSequence text) {
-        return ChromaNameRenderUtils.handleCharSequence(text);
+        return NickRenderUtils.handleCharSequence(text);
     }
 
     @ModifyVariable(method = "width(Ljava/lang/String;)I", at = @At("HEAD"), argsOnly = true)
     private String baity$chromaWidthString(String text) {
-        return ChromaNameRenderUtils.handleString(text);
+        return NickRenderUtils.handleString(text);
     }
 
     @ModifyVariable(method = "width(Lnet/minecraft/network/chat/FormattedText;)I", at = @At("HEAD"), argsOnly = true)
     private FormattedText baity$chromaWidthFormattedText(FormattedText text) {
-        return ChromaNameRenderUtils.handleFormattedText(text);
+        return NickRenderUtils.handleFormattedText(text);
     }
 
     @ModifyVariable(method = "width(Lnet/minecraft/util/FormattedCharSequence;)I", at = @At("HEAD"), argsOnly = true)
     private FormattedCharSequence baity$chromaWidthSequence(FormattedCharSequence text) {
-        return ChromaNameRenderUtils.handleCharSequence(text);
+        return NickRenderUtils.handleCharSequence(text);
     }
 }

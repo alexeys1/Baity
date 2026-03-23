@@ -31,6 +31,8 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class BaityPresenceSync {
     private static final long FETCH_INTERVAL_MS = 180_000L;
     private static final long FETCH_JITTER_RANGE_MS = 90_000L;
+    private static final long FETCH_BACKOFF_BASE_MS = 5_000L;
+    private static final long FETCH_BACKOFF_MAX_MS = 60_000L;
     private static final long REPORT_HEARTBEAT_MS = 600_000L;
     private static final long REPORT_CHANGE_DEBOUNCE_MS = 3_000L;
     private static final int CONNECT_TIMEOUT_MS = 3000;
@@ -46,9 +48,13 @@ public final class BaityPresenceSync {
     private static volatile Instant updatedAt = Instant.EPOCH;
     private static volatile String lastReportedSignature = "";
     private static volatile long stableFetchJitterMs = -1L;
+    private static volatile int consecutiveFetchFailures = 0;
 
     private static final Map<UUID, RemoteUserState> USERS_BY_UUID = new ConcurrentHashMap<>();
     private static final Map<String, ChromaProfile> CHROMA_BY_NAME = new ConcurrentHashMap<>();
+
+    private static final boolean PERF_DEBUG = Boolean.getBoolean("baity.perfDebug");
+    private static final long PERF_SLOW_THRESHOLD_NS = Long.getLong("baity.perfDebug.syncSlowThresholdNs", 10_000_000L);
 
     private BaityPresenceSync() {
     }
@@ -59,17 +65,25 @@ public final class BaityPresenceSync {
         nextReportAllowedAt = 0L;
         lastReportedSignature = "";
         stableFetchJitterMs = -1L;
+        consecutiveFetchFailures = 0;
     }
 
     public static void tick() {
+        final long startNs = PERF_DEBUG ? System.nanoTime() : 0L;
         String url = resolveFetchUrl();
 
         long now = System.currentTimeMillis();
         if (url != null && !url.isBlank() && now >= nextFetchAt && FETCHING.compareAndSet(false, true)) {
-            nextFetchAt = now + FETCH_INTERVAL_MS + getStableFetchJitterMs();
             CompletableFuture.runAsync(() -> {
                 try {
-                    fetchAndReplace(url.trim());
+                    boolean success = fetchAndReplace(url.trim());
+                    if (success) {
+                        consecutiveFetchFailures = 0;
+                        nextFetchAt = System.currentTimeMillis() + FETCH_INTERVAL_MS + getStableFetchJitterMs();
+                    } else {
+                        consecutiveFetchFailures = Math.min(consecutiveFetchFailures + 1, 16);
+                        nextFetchAt = System.currentTimeMillis() + computeFetchBackoffMs(consecutiveFetchFailures);
+                    }
                 } finally {
                     FETCHING.set(false);
                 }
@@ -100,6 +114,13 @@ public final class BaityPresenceSync {
                 }
             } else {
                 REPORTING.set(false);
+            }
+        }
+
+        if (PERF_DEBUG) {
+            long dtNs = System.nanoTime() - startNs;
+            if (dtNs >= PERF_SLOW_THRESHOLD_NS) {
+                System.out.println("[Baity][Perf][PresenceSync] tick slow dtNs=" + dtNs);
             }
         }
     }
@@ -137,6 +158,13 @@ public final class BaityPresenceSync {
         return syncUrl.trim();
     }
 
+    private static long computeFetchBackoffMs(int failures) {
+        int clampedFailures = Math.max(1, failures);
+        long multiplier = 1L << Math.min(clampedFailures - 1, 12);
+        long base = FETCH_BACKOFF_BASE_MS * multiplier;
+        return Math.min(base, FETCH_BACKOFF_MAX_MS);
+    }
+
     public static boolean isSmolEnabledFor(UUID uuid) {
         if (uuid == null) return false;
         RemoteUserState state = USERS_BY_UUID.get(uuid);
@@ -158,7 +186,7 @@ public final class BaityPresenceSync {
         return updatedAt;
     }
 
-    private static void fetchAndReplace(String url) {
+    private static boolean fetchAndReplace(String url) {
         HttpURLConnection connection = null;
         try {
             connection = (HttpURLConnection) URI.create(url).toURL().openConnection();
@@ -169,13 +197,15 @@ public final class BaityPresenceSync {
             connection.setRequestProperty("Accept", "application/json");
 
             int code = connection.getResponseCode();
-            if (code < 200 || code >= 300) return;
+            if (code < 200 || code >= 300) return false;
 
             try (InputStream stream = connection.getInputStream()) {
                 String json = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
                 applyPayload(json);
+                return true;
             }
         } catch (Exception ignored) {
+            return false;
         } finally {
             if (connection != null) connection.disconnect();
         }
@@ -199,7 +229,10 @@ public final class BaityPresenceSync {
         int[] palette = generateLocalChromaPalette(); // chroma off -> [start,end]; chroma on -> HSV palette
         double speed = chromaEnabled ? Math.max(0.0, Math.min(8.0, ConfigManager.nickTweaksChromaSpeed)) : 0.0;
 
-        return new LocalUserState(player.getUUID(), playerName, true, chromaEnabled, smolEnabled, palette, speed);
+        int gradientStart = ConfigManager.nickTweaksGradientStartColor & 0xFFFFFF;
+        int gradientEnd = ConfigManager.nickTweaksGradientEndColor & 0xFFFFFF;
+        boolean boldSelf = ConfigManager.nickTweaksBoldSelf;
+        return new LocalUserState(player.getUUID(), playerName, true, chromaEnabled, smolEnabled, palette, speed, gradientStart, gradientEnd, boldSelf);
     }
 
     private static void reportLocalState(String url, LocalUserState state) {
@@ -236,8 +269,9 @@ public final class BaityPresenceSync {
                 palette.add(String.format("#%06X", color & 0xFFFFFF));
             }
             chroma.add("palette", palette);
-            chroma.addProperty("gradientStart", String.format("#%06X", ConfigManager.nickTweaksGradientStartColor & 0xFFFFFF));
-            chroma.addProperty("gradientEnd", String.format("#%06X", ConfigManager.nickTweaksGradientEndColor & 0xFFFFFF));
+            chroma.addProperty("gradientStart", String.format("#%06X", state.gradientStart() & 0xFFFFFF));
+            chroma.addProperty("gradientEnd", String.format("#%06X", state.gradientEnd() & 0xFFFFFF));
+            chroma.addProperty("boldSelf", state.boldSelf());
             features.add("chromaOwnName", chroma);
             features.add("nickTweaks", chroma.deepCopy());
 
@@ -330,6 +364,7 @@ public final class BaityPresenceSync {
             int[] palette = parsePalette(chromaObj == null ? null : chromaObj.getAsJsonArray("palette"));
             int gradientStart = parseHexColor(chromaObj, "gradientStart", 0xFF0000);
             int gradientEnd = parseHexColor(chromaObj, "gradientEnd", 0x0000FF);
+            boolean boldSelf = chromaObj != null && getAsBoolean(chromaObj, "boldSelf", false);
             if (palette.length == 0 && chromaEnabled) {
                 palette = new int[]{0xFF4D4D, 0xFFAA00, 0xFFFF66, 0x66FF99, 0x66CCFF, 0xC299FF};
             }
@@ -337,7 +372,7 @@ public final class BaityPresenceSync {
             RemoteUserState state = new RemoteUserState(uuid, name, isBaityUser, smolEnabled, chromaEnabled, palette, speed);
             newUsers.put(uuid, state);
             if (nickTweaksEnabled) {
-                newChromaByName.put(name.toLowerCase(Locale.ROOT), new ChromaProfile(chromaEnabled, palette, speed, gradientStart, gradientEnd));
+                newChromaByName.put(name.toLowerCase(Locale.ROOT), new ChromaProfile(chromaEnabled, palette, speed, gradientStart, gradientEnd, boldSelf));
             }
         }
 
@@ -402,7 +437,7 @@ public final class BaityPresenceSync {
         }
     }
 
-    public record ChromaProfile(boolean chromaEnabled, int[] palette, double speed, int gradientStart, int gradientEnd) {
+    public record ChromaProfile(boolean chromaEnabled, int[] palette, double speed, int gradientStart, int gradientEnd, boolean boldSelf) {
         public ChromaProfile {
             if (palette == null) palette = new int[0];
             gradientStart &= 0xFFFFFF;
@@ -432,10 +467,14 @@ public final class BaityPresenceSync {
             boolean chromaEnabled,
             boolean smolEnabled,
             int[] chromaPalette,
-            double chromaSpeed
+            double chromaSpeed,
+            int gradientStart,
+            int gradientEnd,
+            boolean boldSelf
     ) {
         String signature() {
-            return uuid + "|" + name + "|" + isBaityUser + "|" + chromaEnabled + "|" + smolEnabled + "|" + chromaSpeed + "|" + java.util.Arrays.toString(chromaPalette);
+            return uuid + "|" + name + "|" + isBaityUser + "|" + chromaEnabled + "|" + smolEnabled + "|" + chromaSpeed
+                    + "|" + gradientStart + "|" + gradientEnd + "|" + boldSelf + "|" + java.util.Arrays.toString(chromaPalette);
         }
     }
 }

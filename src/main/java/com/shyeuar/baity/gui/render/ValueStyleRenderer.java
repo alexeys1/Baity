@@ -416,30 +416,37 @@ public class ValueStyleRenderer {
       GuiRenderUtil.draw3DRect(context, syncX1, syncY1, syncX2, syncY2, syncBg, 0f);
        context.drawString(client.font, "Sync", (int) (syncX1 + 12), (int) (syncY1 + 3), textColor, false);
       if (syncHovered && hoveredTooltipInfo != null) {
-          hoveredTooltipInfo.tooltip = "Copy the unselected endpoint color into the selected endpoint";
-          hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal("Copy the unselected endpoint color into the selected endpoint");
+          hoveredTooltipInfo.tooltip = "Set the selected color to the unselected color.";
+          hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal("Set the selected color to the unselected color.");
           hoveredTooltipInfo.x = (int) (mouseX + 5);
           hoveredTooltipInfo.y = (int) (mouseY + 5);
       }
 
       String preview = client.player != null ? client.player.getName().getString() : "NickTweaks";
+      boolean boldPreview = com.shyeuar.baity.config.ConfigManager.nickTweaksBoldSelf;
       if (com.shyeuar.baity.config.ConfigManager.nickTweaksChromaEnabled) {
           drawChromaPreview(context, client, preview, x1 + 10, y + blockHeight - 18);
+          if (boldPreview) {
+              drawChromaPreview(context, client, preview, x1 + 11, y + blockHeight - 18);
+          }
       } else {
           drawGradientText(context, client, preview, x1 + 10, y + blockHeight - 18, value.getStartColor(), value.getEndColor());
+          if (boldPreview) {
+              drawGradientText(context, client, preview, x1 + 11, y + blockHeight - 18, value.getStartColor(), value.getEndColor());
+          }
       }
    }
 
    private static void drawHueSatMap(GuiGraphics context, float x1, float y1, float x2, float y2, int alpha) {
        int width = Math.max(1, (int) (x2 - x1));
        int height = Math.max(1, (int) (y2 - y1));
-       for (int px = 0; px < width; px += 4) {
+       for (int px = 0; px < width; px += 8) {
            float hue = px / (float) width;
-           for (int py = 0; py < height; py += 4) {
+           for (int py = 0; py < height; py += 8) {
                float sat = 1f - py / (float) height;
                int rgb = java.awt.Color.HSBtoRGB(hue, sat, GradientEditorValue.MAP_FIXED_VALUE) & 0xFFFFFF;
                int color = (alpha << 24) | rgb;
-               context.fill((int) x1 + px, (int) y1 + py, (int) x1 + px + 4, (int) y1 + py + 4, color);
+               context.fill((int) x1 + px, (int) y1 + py, (int) x1 + px + 8, (int) y1 + py + 8, color);
            }
        }
    }
@@ -478,11 +485,11 @@ public class ValueStyleRenderer {
 
    private static void drawValueSlider(GuiGraphics context, float x1, float y1, float x2, float y2, float hue, float sat, int alpha) {
        int height = Math.max(1, (int) (y2 - y1));
-       for (int py = 0; py < height; py += 2) {
+       for (int py = 0; py < height; py += 4) {
            float val = 1f - py / (float) height;
            int rgb = java.awt.Color.HSBtoRGB(hue, sat, val) & 0xFFFFFF;
            int color = (alpha << 24) | rgb;
-           context.fill((int) x1, (int) y1 + py, (int) x2, (int) y1 + py + 2, color);
+           context.fill((int) x1, (int) y1 + py, (int) x2, (int) y1 + py + 4, color);
        }
    }
 

@@ -10,6 +10,7 @@
     "CrosshairMixin",
     "NametagHideMixin",
     "BlockAnimationMixin$ItemInHandRendererMixin",
+    "BlockAnimationMixin$MinecraftMixin",
     "BlockAnimationMixin$HumanoidModelMixin",
     "BlockAnimationMixin$PlayerItemInHandLayerMixin",
     "accessor.ItemStackRenderStateAccessor$ItemStackRenderStateAccessorImpl",
@@ -60,6 +61,7 @@
     "AvatarRenderStateMixin",
     "GameRendererMixin",
     "accessor.PlayerAccessor",
+    "accessor.LivingEntityAccessor",
     "accessor.CameraAccessor",
     "accessor.AvatarRenderStateAccessor",
     "accessor.CameraRenderStateAccessor"

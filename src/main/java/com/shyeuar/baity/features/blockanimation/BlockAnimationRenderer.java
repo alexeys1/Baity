@@ -68,14 +68,8 @@ public final class BlockAnimationRenderer {
                     .applyPositionAndRotation(poseStack, handSide);
         }
         
-        float actualSwingProgress = swingProgress;
-        if (BlockAnimationManager.isSwinging() 
-                && BlockAnimationManager.getSwingHand() == interactionHand) {
-            actualSwingProgress = BlockAnimationManager.getSwingProgress(partialTick);
-        }
-        
         if (BlockAnimationUtils.isInteractAnimationsEnabled()) {
-            accessor.baity$callApplyItemArmAttackTransform(poseStack, handSide, actualSwingProgress);
+            accessor.baity$callApplyItemArmAttackTransform(poseStack, handSide, swingProgress);
         }
         
         applyFirstPersonBlockTransform(poseStack, handSide);

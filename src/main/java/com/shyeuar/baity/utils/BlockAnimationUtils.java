@@ -3,11 +3,15 @@ package com.shyeuar.baity.utils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 
 @Environment(EnvType.CLIENT)
 public final class BlockAnimationUtils {
@@ -74,6 +78,36 @@ public final class BlockAnimationUtils {
                 return true;
             }
         }
+    }
+
+    public static boolean isNotSwinging(Player player) {
+        if (player == null) return false;
+        int swingDuration = ((com.shyeuar.baity.mixin.accessor.LivingEntityAccessor) (Object) player).baity$getCurrentSwingDuration();
+        return !player.swinging || player.swingTime >= swingDuration / 2 || player.swingTime < 0;
+    }
+
+    public static void fakeHandSwing(Player player, InteractionHand hand) {
+        if (player == null || hand == null) return;
+        if (isNotSwinging(player)) {
+            player.swingTime = -1;
+            player.swinging = true;
+            player.swingingArm = hand;
+        }
+    }
+
+    public static void applySwingWhilstMining(ClientLevel level, Player player, HitResult hitResult) {
+        if (player == null) return;
+        InteractionHand activeHand = player.getUsedItemHand();
+        InteractionHand hand = InteractionHand.MAIN_HAND;
+        if (!activeHand.equals(hand)) return;
+        if (hitResult == null || hitResult.getType() != HitResult.Type.BLOCK) return;
+
+        BlockHitResult bhr = (BlockHitResult) hitResult;
+        BlockPos pos = bhr.getBlockPos();
+        if (level != null && !level.getBlockState(pos).isAir()) {
+            level.addBreakingBlockEffect(pos, bhr.getDirection());
+        }
+        fakeHandSwing(player, hand);
     }
 }
 

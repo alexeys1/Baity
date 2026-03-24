@@ -47,8 +47,6 @@ public class Baity implements ClientModInitializer {
         com.shyeuar.baity.features.fishing.FishHookTimer.init();
         com.shyeuar.baity.features.chat.ChatChannelSwitcher.init();
         
-        com.shyeuar.baity.features.blockanimation.BlockAnimationManager.register();
-        
         registerCustomSounds();
         
         ClientTickEvents.END_CLIENT_TICK.register(client -> {

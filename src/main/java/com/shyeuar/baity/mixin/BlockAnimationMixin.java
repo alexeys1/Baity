@@ -1,7 +1,10 @@
 package com.shyeuar.baity.mixin;
 
+import com.llamalad7.mixinextras.sugar.Local;
 import com.shyeuar.baity.utils.BlockAnimationUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.model.ArmedModel;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.HumanoidModel;
@@ -10,6 +13,7 @@ import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
@@ -21,7 +25,9 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Slice;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.jetbrains.annotations.Nullable;
 
 public abstract class BlockAnimationMixin {
 
@@ -112,6 +118,45 @@ public abstract class BlockAnimationMixin {
             if (result == com.shyeuar.baity.features.blockanimation.BlockAnimationRenderer.RenderResult.INTERRUPT) {
                 callback.cancel();
             }
+        }
+
+        @Inject(
+            method = "renderArmWithItem",
+            at = @At(
+                value = "INVOKE",
+                target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;applyItemArmTransform(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/entity/HumanoidArm;F)V",
+                shift = At.Shift.AFTER
+            ),
+            slice = @Slice(
+                from = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;getUseAnimation()Lnet/minecraft/world/item/ItemUseAnimation;"),
+                to = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;applyItemArmTransform(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/entity/HumanoidArm;F)V", ordinal = 6)
+            )
+        )
+        private void baity$applyUseItemSwingOffset(net.minecraft.client.player.AbstractClientPlayer player, float partialTicks, float pitch,
+                                                    InteractionHand interactionHand, float swingProgress, net.minecraft.world.item.ItemStack stack,
+                                                    float equippedProgress, com.mojang.blaze3d.vertex.PoseStack poseStack,
+                                                    net.minecraft.client.renderer.SubmitNodeCollector submitNodeCollector, int combinedLight,
+                                                    CallbackInfo callback, @Local HumanoidArm arm) {
+            if (!BlockAnimationUtils.isFeatureActive()) return;
+            this.baity$callApplyItemArmAttackTransform(poseStack, arm, swingProgress);
+        }
+    }
+
+    @Mixin(Minecraft.class)
+    public static abstract class MinecraftMixin {
+        @Shadow @Nullable public net.minecraft.client.player.LocalPlayer player;
+        @Shadow @Final public Options options;
+        @Shadow @Nullable public HitResult hitResult;
+        @Shadow @Nullable public ClientLevel level;
+
+        @Inject(method = "tick", at = @At("TAIL"))
+        private void baity$applySwingWhilstMining(CallbackInfo ci) {
+            if (!BlockAnimationUtils.isFeatureActive()) return;
+            if (this.player == null) return;
+            if (this.player.getItemInHand(this.player.getUsedItemHand()).isEmpty()) return;
+            if (!this.player.isUsingItem()) return;
+            if (!this.options.keyAttack.isDown()) return;
+            BlockAnimationUtils.applySwingWhilstMining(this.level, this.player, this.hitResult);
         }
     }
 

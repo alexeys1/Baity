@@ -53,9 +53,6 @@ public final class BaityPresenceSync {
     private static final Map<UUID, RemoteUserState> USERS_BY_UUID = new ConcurrentHashMap<>();
     private static final Map<String, ChromaProfile> CHROMA_BY_NAME = new ConcurrentHashMap<>();
 
-    private static final boolean PERF_DEBUG = Boolean.getBoolean("baity.perfDebug");
-    private static final long PERF_SLOW_THRESHOLD_NS = Long.getLong("baity.perfDebug.syncSlowThresholdNs", 10_000_000L);
-
     private BaityPresenceSync() {
     }
 
@@ -69,7 +66,6 @@ public final class BaityPresenceSync {
     }
 
     public static void tick() {
-        final long startNs = PERF_DEBUG ? System.nanoTime() : 0L;
         String url = resolveFetchUrl();
 
         long now = System.currentTimeMillis();
@@ -114,13 +110,6 @@ public final class BaityPresenceSync {
                 }
             } else {
                 REPORTING.set(false);
-            }
-        }
-
-        if (PERF_DEBUG) {
-            long dtNs = System.nanoTime() - startNs;
-            if (dtNs >= PERF_SLOW_THRESHOLD_NS) {
-                System.out.println("[Baity][Perf][PresenceSync] tick slow dtNs=" + dtNs);
             }
         }
     }

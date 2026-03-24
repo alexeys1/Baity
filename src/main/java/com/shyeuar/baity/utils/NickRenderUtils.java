@@ -35,57 +35,6 @@ public final class NickRenderUtils {
         }
     };
 
-    private static final boolean PERF_DEBUG = Boolean.getBoolean("baity.perfDebug");
-    private static final long PERF_DEBUG_INTERVAL_MS = Long.getLong("baity.perfDebug.intervalMs", 5000L);
-    private static final long PERF_SLOW_THRESHOLD_NS = Long.getLong("baity.perfDebug.slowThresholdNs", 5_000_000L);
-
-    private static volatile long perfLastLogAtMs = 0L;
-    private static long perfHandleStringCalls = 0L;
-    private static long perfHandleStringTimeNs = 0L;
-    private static long perfHandleStringMaxNs = 0L;
-    private static long perfHandleStringCacheHit = 0L;
-    private static long perfHandleStringCacheMiss = 0L;
-
-    private static long perfHandleCharCalls = 0L;
-    private static long perfHandleCharTimeNs = 0L;
-    private static long perfHandleCharMaxNs = 0L;
-    private static long perfHandleCharCacheHit = 0L;
-    private static long perfHandleCharCacheMiss = 0L;
-
-    private static void perfMaybeLog(String stage, long nowMs) {
-        if (!PERF_DEBUG) return;
-        if (perfLastLogAtMs == 0L) perfLastLogAtMs = nowMs;
-        if (nowMs - perfLastLogAtMs < PERF_DEBUG_INTERVAL_MS) return;
-
-        // Keep output concise; only aggregated data.
-        System.out.println(
-                "[Baity][Perf] " + stage +
-                        " strCalls=" + perfHandleStringCalls +
-                        " strAvgNs=" + (perfHandleStringCalls == 0 ? 0 : (perfHandleStringTimeNs / perfHandleStringCalls)) +
-                        " strMaxNs=" + perfHandleStringMaxNs +
-                        " strHit=" + perfHandleStringCacheHit +
-                        " strMiss=" + perfHandleStringCacheMiss +
-                        " | charCalls=" + perfHandleCharCalls +
-                        " charAvgNs=" + (perfHandleCharCalls == 0 ? 0 : (perfHandleCharTimeNs / perfHandleCharCalls)) +
-                        " charMaxNs=" + perfHandleCharMaxNs +
-                        " charHit=" + perfHandleCharCacheHit +
-                        " charMiss=" + perfHandleCharCacheMiss
-        );
-
-        perfLastLogAtMs = nowMs;
-        perfHandleStringCalls = 0L;
-        perfHandleStringTimeNs = 0L;
-        perfHandleStringMaxNs = 0L;
-        perfHandleStringCacheHit = 0L;
-        perfHandleStringCacheMiss = 0L;
-
-        perfHandleCharCalls = 0L;
-        perfHandleCharTimeNs = 0L;
-        perfHandleCharMaxNs = 0L;
-        perfHandleCharCacheHit = 0L;
-        perfHandleCharCacheMiss = 0L;
-    }
-
     private NickRenderUtils() {
     }
 
@@ -97,19 +46,7 @@ public final class NickRenderUtils {
 
     public static String handleString(String text) {
         if (text == null || text.isEmpty()) return text;
-
-        final boolean debugEnabled = PERF_DEBUG;
-        final long startNs = debugEnabled ? System.nanoTime() : 0L;
-        long collectNs = 0L;
-
-        List<Target> targets;
-        if (debugEnabled) {
-            long t = System.nanoTime();
-            targets = collectTargets();
-            collectNs = System.nanoTime() - t;
-        } else {
-            targets = collectTargets();
-        }
+        List<Target> targets = collectTargets();
         if (targets.isEmpty()) return text;
 
         long version = targetsCacheAt;
@@ -119,7 +56,6 @@ public final class NickRenderUtils {
             matchByIndex = MATCH_CACHE.get(cacheKey);
         }
 
-        boolean cacheHit = matchByIndex != null;
         if (matchByIndex == null) {
             List<Glyph> glyphs = new ArrayList<>();
             text.codePoints().forEach(cp -> glyphs.add(new Glyph(cp, Style.EMPTY)));
@@ -151,19 +87,6 @@ public final class NickRenderUtils {
 
         String out = applySectionColorToString(text, matchByIndex);
 
-        if (debugEnabled) {
-            long dtNs = System.nanoTime() - startNs;
-            long nowMs = System.currentTimeMillis();
-            if (dtNs >= PERF_SLOW_THRESHOLD_NS) {
-                System.out.println("[Baity][Perf][NickRenderUtils] handleString slow dtNs=" + dtNs + " collectNs=" + collectNs + " cacheHit=" + cacheHit + " targets=" + targets.size());
-            }
-            perfHandleStringCalls++;
-            perfHandleStringTimeNs += dtNs;
-            perfHandleStringMaxNs = Math.max(perfHandleStringMaxNs, dtNs);
-            if (cacheHit) perfHandleStringCacheHit++; else perfHandleStringCacheMiss++;
-            perfMaybeLog("NickRenderUtils", nowMs);
-        }
-
         return out;
     }
 
@@ -177,18 +100,7 @@ public final class NickRenderUtils {
 
     public static FormattedCharSequence handleCharSequence(FormattedCharSequence original) {
         if (original == null) return null;
-        final boolean debugEnabled = PERF_DEBUG;
-        final long startNs = debugEnabled ? System.nanoTime() : 0L;
-        long collectNs = 0L;
-
-        List<Target> targets;
-        if (debugEnabled) {
-            long t = System.nanoTime();
-            targets = collectTargets();
-            collectNs = System.nanoTime() - t;
-        } else {
-            targets = collectTargets();
-        }
+        List<Target> targets = collectTargets();
         if (targets.isEmpty()) return original;
 
         StringBuilder sbPlain = new StringBuilder();
@@ -209,7 +121,6 @@ public final class NickRenderUtils {
             matchByIndex = MATCH_CACHE.get(cacheKey);
         }
 
-        boolean cacheHit = matchByIndex != null;
         if (matchByIndex == null) {
             String lower = plain.toLowerCase(Locale.ROOT);
             List<Target> matchingTargets = null;
@@ -252,21 +163,7 @@ public final class NickRenderUtils {
             }
             out.add(FormattedCharSequence.codepoint(glyph.codepoint(), style));
         }
-        FormattedCharSequence result = FormattedCharSequence.composite(out);
-
-        if (debugEnabled) {
-            long dtNs = System.nanoTime() - startNs;
-            if (dtNs >= PERF_SLOW_THRESHOLD_NS) {
-                System.out.println("[Baity][Perf][NickRenderUtils] handleCharSequence slow dtNs=" + dtNs + " collectNs=" + collectNs + " cacheHit=" + cacheHit + " targets=" + targets.size());
-            }
-            perfHandleCharCalls++;
-            perfHandleCharTimeNs += dtNs;
-            perfHandleCharMaxNs = Math.max(perfHandleCharMaxNs, dtNs);
-            if (cacheHit) perfHandleCharCacheHit++; else perfHandleCharCacheMiss++;
-            perfMaybeLog("NickRenderUtils", nowMs);
-        }
-
-        return result;
+        return FormattedCharSequence.composite(out);
     }
 
     private static String applySectionColorToString(String text, TargetMatch[] matchByIndex) {

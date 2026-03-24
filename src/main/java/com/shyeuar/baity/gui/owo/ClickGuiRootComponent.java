@@ -451,8 +451,12 @@ public class ClickGuiRootComponent extends BaseComponent {
         int boxY2 = (int)(boxCenterY + boxHeight / 2f);
         
         boolean boxHovered = com.shyeuar.baity.gui.render.GuiRenderUtil.isHovered(boxX1, boxY1, boxX2, boxY2, mouseX, mouseY);
-        int boxBgColor = (boxHovered ? new java.awt.Color(60, 60, 60, 80).getRGB() : new java.awt.Color(40, 40, 40, 50).getRGB());
+        int boxBgColor = boxHovered
+            ? new java.awt.Color(58, 58, 68, 255).getRGB()
+            : new java.awt.Color(36, 36, 44, 255).getRGB();
+        int boxBorderColor = new java.awt.Color(82, 82, 94, 255).getRGB();
         com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, boxX1, boxY1, boxX2, boxY2, boxBgColor, 0f);
+        com.shyeuar.baity.gui.render.GuiRenderUtil.stroke1px(guiGraphics, boxX1, boxY1, boxX2, boxY2, boxBorderColor);
         
         int baseX = boxX1 + 8;
         int baseY = (int)(boxCenterY - 4);

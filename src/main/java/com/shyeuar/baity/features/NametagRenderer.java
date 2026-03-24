@@ -148,16 +148,17 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
 
         int nameWidth = textRenderer.width(nameComponent);
 
-        // NickTweaks bold is applied during Font.prepareText, while width measurement here
-        // may not fully reflect the bold visual width. Compensate to keep suffix distance
-        // from overlapping the name.
+        Module nickTweaksModule = ModuleManager.getModuleByName("NickTweaks");
+        boolean nickTweaksEnabled = nickTweaksModule != null && nickTweaksModule.isEnabled();
         boolean shouldNickBold = false;
-        if (player == mc.player) {
-            shouldNickBold = ConfigManager.nickTweaksBoldSelf;
-        } else {
-            String rawName = player.getName().getString();
-            BaityPresenceSync.ChromaProfile profile = BaityPresenceSync.getChromaProfileByName(rawName);
-            shouldNickBold = profile != null && profile.boldSelf();
+        if (nickTweaksEnabled) {
+            if (player == mc.player) {
+                shouldNickBold = ConfigManager.nickTweaksBoldSelf;
+            } else {
+                String rawName = player.getName().getString();
+                BaityPresenceSync.ChromaProfile profile = BaityPresenceSync.getChromaProfileByName(rawName);
+                shouldNickBold = profile != null && profile.boldSelf();
+            }
         }
 
         int boldExtraPx = 0;

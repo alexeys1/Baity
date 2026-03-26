@@ -2,11 +2,11 @@ package com.shyeuar.baity.features;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.config.DevConfig;
-import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
+import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.utils.ModuleUtils;
-import com.shyeuar.baity.sync.BaityPresenceSync;
+import com.shyeuar.baity.utils.NickRenderUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
@@ -100,8 +100,7 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
             
             Module smolPeopleModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("SmolPeople");
             if (smolPeopleModule != null && smolPeopleModule.isEnabled()) {
-                boolean showOwnNametag = ModuleUtils.getOptionBoolean(module, "show own nametag", false);
-                if (player == mc.player && showOwnNametag) {
+                if (SmolFriendManager.shouldApplySmolTo(player.getId())) {
                     heightOffset -= 0.4f;
                 }
             }
@@ -146,27 +145,8 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         
         Font textRenderer = mc.font;
 
-        int nameWidth = textRenderer.width(nameComponent);
-
-        Module nickTweaksModule = ModuleManager.getModuleByName("NickTweaks");
-        boolean nickTweaksEnabled = nickTweaksModule != null && nickTweaksModule.isEnabled();
-        boolean shouldNickBold = false;
-        if (nickTweaksEnabled) {
-            if (player == mc.player) {
-                shouldNickBold = ConfigManager.nickTweaksBoldSelf;
-            } else {
-                String rawName = player.getName().getString();
-                BaityPresenceSync.ChromaProfile profile = BaityPresenceSync.getChromaProfileByName(rawName);
-                shouldNickBold = profile != null && profile.boldSelf();
-            }
-        }
-
-        int boldExtraPx = 0;
-        if (shouldNickBold) {
-            Component boldNameComponent = nameComponent.copy().withStyle(nameComponent.getStyle().withBold(true));
-            boldExtraPx = textRenderer.width(boldNameComponent) - nameWidth;
-        }
-        nameWidth += Math.max(0, boldExtraPx);
+        String processedForWidth = NickRenderUtils.handleString(baseName);
+        int nameWidth = textRenderer.width(processedForWidth);
         int totalWidth = nameWidth;
         if (isDeveloper) {
             totalWidth += textRenderer.width(DevConfig.DEV_PREFIX) + 2; 

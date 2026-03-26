@@ -1,6 +1,7 @@
 {
   "required": true,
   "package": "com.shyeuar.baity.mixin",
+  "refmap": "baity.refmap.json",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "SmolPeopleMixin$SmolNameTagMixin",

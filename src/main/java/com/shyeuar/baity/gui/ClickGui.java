@@ -12,6 +12,7 @@ import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.gui.tooltip.TooltipManager;
 import com.shyeuar.baity.gui.value.ButtonValue;
+import com.shyeuar.baity.sync.BaityPresenceSync;
 import com.shyeuar.baity.utils.TimerUtils;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.container.Containers;
@@ -44,6 +45,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     private static ClickGuiState lastSessionState;
     private static long lastSessionClosedAt;
     private static final long SESSION_TIMEOUT_MS = 5 * 60_000L;
+    private boolean presenceSyncTriggeredOnClose = false;
     
     public static ClickGui getInstance() {
         return currentInstance;
@@ -228,8 +230,8 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     
     @Override
     public boolean charTyped(CharacterEvent input) {
-        char chr = (char) input.codepoint();
-        if (inputHandler.handleCharTyped(chr, input.modifiers())) {
+        int codePoint = input.codepoint();
+        if (inputHandler.handleCodePointTyped(codePoint, input.modifiers())) {
             return true;
         }
         return super.charTyped(input);
@@ -252,6 +254,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     
     @Override
     public void onClose() {
+        triggerPresenceSyncOnCloseIfNeeded();
         if (state.isEditingSlider()) {
             ClickGuiState.SliderInputInfo editInfo = state.getEditingSlider();
             if (editInfo != null && state.getOriginalSliderValue() != null) {
@@ -275,9 +278,16 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
 
     @Override
     public void removed() {
+        triggerPresenceSyncOnCloseIfNeeded();
         lastSessionState = this.state;
         lastSessionClosedAt = System.currentTimeMillis();
         super.removed();
+    }
+
+    private void triggerPresenceSyncOnCloseIfNeeded() {
+        if (presenceSyncTriggeredOnClose) return;
+        presenceSyncTriggeredOnClose = true;
+        BaityPresenceSync.onClickGuiClosed();
     }
     
     private String getTooltipText(String name) {

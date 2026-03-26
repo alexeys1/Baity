@@ -14,11 +14,14 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import net.fabricmc.loader.api.SemanticVersion;
-import net.fabricmc.loader.api.VersionParsingException;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class VersionCheckUtils {
-    private static final String GITHUB_API_URL = "https://api.github.com/repos/raueyhs/Baity/releases/latest";
+    private static final String GITHUB_API_URL = "https://api.github.com/repos/raueyhs/Baity/releases";
+    private static final String MC_VERSION_PREFIX = "1.21.10";
     private static final Pattern VERSION_PATTERN = Pattern.compile("v([0-9]+\\.[0-9]+\\.[0-9]+)");
     
     public static class VersionCheckResult {
@@ -33,7 +36,6 @@ public class VersionCheckUtils {
         }
     }
     
-    @SuppressWarnings("deprecation")
     public static CompletableFuture<VersionCheckResult> checkVersionAsync(String currentVersion) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -63,36 +65,13 @@ public class VersionCheckUtils {
                     reader.close();
                     
                     String jsonResponse = response.toString();
-                    
-                    String tagName = extractTagName(jsonResponse);
-                    String releaseName = extractReleaseName(jsonResponse);
-                    
-                    String latestVersion = null;
-                    if (releaseName != null) {
-                        latestVersion = extractVersionFromTag(releaseName);
-                    }
-                    if (latestVersion == null && tagName != null) {
-                        latestVersion = extractVersionFromTag(tagName);
-                    }
+
+                    String latestVersion = findLatestMatchingReleaseVersion(jsonResponse);
                     if (latestVersion == null) {
                         return new VersionCheckResult(true, "Unknown error", true);
                     }
-                    
-                    String normalizedCurrent = normalizeVersion(currentVersion);
-                    String normalizedLatest = normalizeVersion(latestVersion);
-                    
-                    try {
-                        SemanticVersion currentSemVer = SemanticVersion.parse(normalizedCurrent);
-                        SemanticVersion latestSemVer = SemanticVersion.parse(normalizedLatest);
-                        
-                        int comparison = currentSemVer.compareTo(latestSemVer);
-                        boolean isLatest = comparison >= 0;
-                        
-                        return new VersionCheckResult(isLatest, latestVersion, false);
-                    } catch (VersionParsingException | IllegalArgumentException e) {
-                        boolean isLatest = normalizedCurrent.equals(normalizedLatest);
-                        return new VersionCheckResult(isLatest, latestVersion, false);
-                    }
+
+                    return compareWithLatest(currentVersion, latestVersion);
                 } else {
                     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                     connection.setRequestMethod("GET");
@@ -115,64 +94,19 @@ public class VersionCheckUtils {
                     reader.close();
                     
                     String jsonResponse = response.toString();
-                    
-                    String tagName = extractTagName(jsonResponse);
-                    String releaseName = extractReleaseName(jsonResponse);
-                    
-                    String latestVersion = null;
-                    if (releaseName != null) {
-                        latestVersion = extractVersionFromTag(releaseName);
-                    }
-                    if (latestVersion == null && tagName != null) {
-                        latestVersion = extractVersionFromTag(tagName);
-                    }
+
+                    String latestVersion = findLatestMatchingReleaseVersion(jsonResponse);
                     if (latestVersion == null) {
                         return new VersionCheckResult(true, "Unknown error", true);
                     }
-                    
-                    String normalizedCurrent = normalizeVersion(currentVersion);
-                    String normalizedLatest = normalizeVersion(latestVersion);
-                    
-                    try {
-                        SemanticVersion currentSemVer = SemanticVersion.parse(normalizedCurrent);
-                        SemanticVersion latestSemVer = SemanticVersion.parse(normalizedLatest);
-                        
-                        int comparison = currentSemVer.compareTo(latestSemVer);
-                        boolean isLatest = comparison >= 0;
-                        
-                        return new VersionCheckResult(isLatest, latestVersion, false);
-                    } catch (VersionParsingException | IllegalArgumentException e) {
-                        boolean isLatest = normalizedCurrent.equals(normalizedLatest);
-                        return new VersionCheckResult(isLatest, latestVersion, false);
-                    }
+
+                    return compareWithLatest(currentVersion, latestVersion);
                 }
                 
             } catch (Exception e) {
                 return new VersionCheckResult(true, null, true);
             }
         });
-    }
-    
-    private static String extractTagName(String json) {
-        int tagIndex = json.indexOf("\"tag_name\":");
-        if (tagIndex == -1) return null;
-        
-        int startIndex = json.indexOf("\"", tagIndex + 11) + 1;
-        int endIndex = json.indexOf("\"", startIndex);
-        if (endIndex == -1) return null;
-        
-        return json.substring(startIndex, endIndex);
-    }
-    
-    private static String extractReleaseName(String json) {
-        int nameIndex = json.indexOf("\"name\":");
-        if (nameIndex == -1) return null;
-        
-        int startIndex = json.indexOf("\"", nameIndex + 7) + 1;
-        int endIndex = json.indexOf("\"", startIndex);
-        if (endIndex == -1) return null;
-        
-        return json.substring(startIndex, endIndex);
     }
     
     private static String extractVersionFromTag(String tagName) {
@@ -185,6 +119,105 @@ public class VersionCheckUtils {
         }
         
         return null;
+    }
+
+    private static VersionCheckResult compareWithLatest(String currentVersion, String latestVersion) {
+        String normalizedCurrent = normalizeVersion(currentVersion);
+        String normalizedLatest = normalizeVersion(latestVersion);
+
+        int[] currentParts = parseVXYZ(normalizedCurrent);
+        int[] latestParts = parseVXYZ(normalizedLatest);
+        boolean isLatest;
+        if (currentParts == null || latestParts == null) {
+            isLatest = normalizedCurrent.equals(normalizedLatest);
+        } else {
+            isLatest = compareParts(currentParts, latestParts) >= 0;
+        }
+        return new VersionCheckResult(isLatest, latestVersion, false);
+    }
+
+    private static String findLatestMatchingReleaseVersion(String jsonResponse) {
+        JsonElement root;
+        try {
+            root = JsonParser.parseString(jsonResponse);
+        } catch (Exception e) {
+            return null;
+        }
+
+        if (root == null || !root.isJsonArray()) return null;
+
+        JsonArray releases = root.getAsJsonArray();
+        int[] bestParts = null;
+        String bestVersionRaw = null;
+
+        for (JsonElement releaseEl : releases) {
+            if (releaseEl == null || !releaseEl.isJsonObject()) continue;
+            JsonObject releaseObj = releaseEl.getAsJsonObject();
+
+            String releaseName = getStringOrNull(releaseObj, "name");
+            String tagName = getStringOrNull(releaseObj, "tag_name");
+
+            if (releaseName == null) continue;
+            if (!releaseName.startsWith(MC_VERSION_PREFIX + "-")) continue;
+
+            String extracted = extractVersionFromTag(releaseName);
+            if (extracted == null && tagName != null) {
+                extracted = extractVersionFromTag(tagName);
+            }
+            if (extracted == null) continue;
+
+            String normalizedLatest = normalizeVersion(extracted);
+            int[] parts = parseVXYZ(normalizedLatest);
+            if (parts == null) continue;
+
+            if (bestParts == null || compareParts(parts, bestParts) > 0) {
+                bestParts = parts;
+                bestVersionRaw = extracted;
+            }
+        }
+
+        return bestVersionRaw;
+    }
+
+    private static int[] parseVXYZ(String version) {
+        if (version == null) return null;
+        String v = version.trim();
+        Matcher matcher = VERSION_PATTERN.matcher(v);
+        if (matcher.find()) {
+            String[] parts = matcher.group(1).split("\\.");
+            if (parts.length != 3) return null;
+            try {
+                return new int[] {
+                    Integer.parseInt(parts[0]),
+                    Integer.parseInt(parts[1]),
+                    Integer.parseInt(parts[2])
+                };
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static int compareParts(int[] a, int[] b) {
+        if (a == null || b == null) return 0;
+        for (int i = 0; i < 3; i++) {
+            int ai = a[i];
+            int bi = b[i];
+            if (ai != bi) return Integer.compare(ai, bi);
+        }
+        return 0;
+    }
+
+    private static String getStringOrNull(JsonObject obj, String key) {
+        if (obj == null || key == null) return null;
+        JsonElement el = obj.get(key);
+        if (el == null || el.isJsonNull()) return null;
+        try {
+            return el.getAsString();
+        } catch (Exception e) {
+            return null;
+        }
     }
     
     private static String normalizeVersion(String version) {
@@ -216,4 +249,3 @@ public class VersionCheckUtils {
         }
     }
 }
-

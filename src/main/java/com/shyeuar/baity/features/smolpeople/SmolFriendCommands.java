@@ -1,6 +1,5 @@
 package com.shyeuar.baity.features.smolpeople;
 
-import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -20,18 +19,7 @@ public final class SmolFriendCommands {
     private SmolFriendCommands() {
     }
 
-    public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher) {
-        LiteralArgumentBuilder<FabricClientCommandSource> root = ClientCommandManager.literal("baity")
-            .executes(context -> {
-                com.shyeuar.baity.client.Baity.openGuiNextTick = true;
-                return 1;
-            });
-
-        attachSubCommands(root);
-        dispatcher.register(root);
-    }
-
-    private static void attachSubCommands(LiteralArgumentBuilder<FabricClientCommandSource> root) {
+    public static void attachSubCommands(LiteralArgumentBuilder<FabricClientCommandSource> root) {
         root.then(
             ClientCommandManager.literal("fadd")
                 .executes(context -> handleMissingName())
@@ -46,6 +34,7 @@ public final class SmolFriendCommands {
                     .suggests(SmolFriendCommands::suggestFriends)
                     .executes(context -> executeRemove(StringArgumentType.getString(context, "name"))))
         );
+
     }
 
     private static int executeAdd(String name) {

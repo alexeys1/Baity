@@ -57,11 +57,14 @@ public final class ChatChannelSwitcher implements HudElement {
     private static final ChatChannelSwitcher INSTANCE = new ChatChannelSwitcher();
     private static boolean chatListenerRegistered = false;
     private static final long CHANNEL_SWITCH_DEBOUNCE_MS = 60L;
+    private static final long CHANNEL_SWITCH_CONFIRM_TIMEOUT_MS = 1500L;
 
     private boolean selected;
     private boolean clicked;
     private String lastSelectedChannel = ConfigManager.chatChannelSwitcherLastChannel;
     private String pendingChannel = "";
+    private String pendingChannelRollback = "";
+    private long pendingChannelSinceAt = 0L;
     private long lastChannelSwitchAt = 0L;
 
     private static volatile long altHotkeyLastAtMs = 0L;
@@ -98,6 +101,7 @@ public final class ChatChannelSwitcher implements HudElement {
         if (!shouldRender(screen, chatField)) {
             return;
         }
+        maybeRollbackPendingChannelByTimeout();
 
         ensureHudPositionInitialized(chatField);
 
@@ -333,7 +337,7 @@ public final class ChatChannelSwitcher implements HudElement {
         }
 
         setLastSelectedChannel(clickedChannel);
-        trySendChannelCommand(client, clickedChannel);
+        trySendChannelCommand(client, clickedChannel, beforeActiveChannel);
 
         client.setScreen(new ChatScreen(restoredText, false));
     }
@@ -376,10 +380,30 @@ public final class ChatChannelSwitcher implements HudElement {
         return remainder;
     }
 
-    private void trySendChannelCommand(Minecraft client, String channel) {
+    private void trySendChannelCommand(Minecraft client, String channel, String rollbackChannel) {
         if (client == null || client.player == null) return;
-        pendingChannel = channel;
-        client.player.connection.sendCommand("/chat " + channel);
+        String normalized = normalizeChannel(channel);
+        if (normalized.isEmpty()) return;
+        pendingChannel = normalized;
+        pendingChannelRollback = normalizeChannel(rollbackChannel);
+        pendingChannelSinceAt = System.currentTimeMillis();
+        client.player.connection.sendCommand("chat " + normalized);
+    }
+
+    private void maybeRollbackPendingChannelByTimeout() {
+        if (pendingChannel.isEmpty()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (pendingChannelSinceAt <= 0L || now - pendingChannelSinceAt < CHANNEL_SWITCH_CONFIRM_TIMEOUT_MS) {
+            return;
+        }
+        if (!pendingChannelRollback.isEmpty()) {
+            setLastSelectedChannel(pendingChannelRollback);
+        }
+        pendingChannel = "";
+        pendingChannelRollback = "";
+        pendingChannelSinceAt = 0L;
     }
 
     private int hotbarIndexFromKey(int keyCode) {
@@ -451,13 +475,30 @@ public final class ChatChannelSwitcher implements HudElement {
         String confirmedChannel = parseConfirmedChannel(normalizedMessage);
         if (!confirmedChannel.isEmpty()) {
             pendingChannel = "";
+            pendingChannelRollback = "";
+            pendingChannelSinceAt = 0L;
             setLastSelectedChannel(confirmedChannel);
+            return;
+        }
+
+        if (normalizedMessage.contains("you must be in skyblock to join this channel")) {
+            if (!pendingChannelRollback.isEmpty()) {
+                setLastSelectedChannel(pendingChannelRollback);
+            }
+            pendingChannel = "";
+            pendingChannelRollback = "";
+            pendingChannelSinceAt = 0L;
             return;
         }
 
         String failedChannel = parseFailedChannel(normalizedMessage);
         if (!failedChannel.isEmpty() && failedChannel.equals(pendingChannel)) {
+            if (!pendingChannelRollback.isEmpty()) {
+                setLastSelectedChannel(pendingChannelRollback);
+            }
             pendingChannel = "";
+            pendingChannelRollback = "";
+            pendingChannelSinceAt = 0L;
         }
     }
 

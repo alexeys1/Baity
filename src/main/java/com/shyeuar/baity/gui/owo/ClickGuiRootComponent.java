@@ -35,7 +35,6 @@ public class ClickGuiRootComponent extends BaseComponent {
     private List<Module> cachedFilteredModules = null;
     private String cachedSearchText = null;
     private ModuleCategory cachedCategory = null;
-    private String cachedAuthorName = null;
     private String cachedModVersion = null;
     
     public ClickGuiRootComponent(ClickGuiState state, Theme theme,
@@ -145,7 +144,7 @@ public class ClickGuiRootComponent extends BaseComponent {
             renderScrollbar(adapter, scrollbarInfo, contentX + contentWidth);
         }
         
-        renderWatermark(adapter, client);
+        renderWatermark(adapter, client, coords.mouseX, coords.mouseY);
         renderHudButton(adapter, client, coords.mouseX, coords.mouseY);
         
         updateVersionCheckStatus();
@@ -565,17 +564,8 @@ public class ClickGuiRootComponent extends BaseComponent {
                 int subX1 = (int)(containerX1 + 4 + depth * 12);
                 int subX2 = (int)(containerX2 - 4 - depth * 8);
                 
-                ValueStyleRenderer.renderValue(guiGraphics, client, module, value, theme,
-                                              subX1, subModY, subX2, dims.subOptionHeight,
-                                              mouseX, mouseY, localAlpha,
-                                              getTooltipText, getTooltipTextWithColors,
-                                              getDisplayTextFormatter,
-                                              state.getListeningButtonValueName(),
-                                              tooltipInfo,
-                                              state.getEditingSlider(),
-                                              state.getSliderInputText(),
-                                              state.getEditingGradient(),
-                                              state.getGradientInputText());
+                ValueStyleRenderer.renderValue(guiGraphics, client, module, value, theme, subX1, subModY, subX2, dims.subOptionHeight, mouseX, mouseY, localAlpha, getTooltipText, getTooltipTextWithColors, getDisplayTextFormatter, state.getListeningButtonValueName(), tooltipInfo, state.getEditingSlider(), state.getSliderInputText(), state.getEditingGradient(), state.getGradientInputText(), state.getEditingTextInput(), state.getTextInputValue(), state.getTextInputCursorCpIndex());
+                
                 
                 if (tooltipInfo != null && tooltipInfo.tooltip != null) {
                     state.setHoveredTooltip(tooltipInfo.tooltip);
@@ -599,83 +589,46 @@ public class ClickGuiRootComponent extends BaseComponent {
                                      info.barY + info.barHeight, 2, theme.BG_2.getRGB());
     }
     
-    private void renderWatermark(OwoRenderAdapter adapter, Minecraft client) {
-        if (cachedAuthorName == null) {
-            cachedAuthorName = getAuthorRealName(client);
-        }
-        String watermark = "By " + cachedAuthorName + " (AKA raueyhs , shyeuar)";
-        int wmRawWidth = client.font.width(watermark);
+    private void renderWatermark(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
+        String prefix = "Baity by ";
+        String handleName = "@raueyhs";
+
         float wmScale = 0.70f;
-        float scaledWidth = wmScale * wmRawWidth;
-        
-        float baseX = ClickGuiState.WIDTH - scaledWidth - 8;
+        int prefixWidth = client.font.width(prefix);
+        int handleNameWidth = client.font.width(handleName);
+
+        float totalScaledWidth = wmScale * (prefixWidth + handleNameWidth);
+        float baseX = ClickGuiState.WIDTH - totalScaledWidth - 8;
         float baseY = 8;
-        
-        int wmColor = new java.awt.Color(120, 124, 132).getRGB();
+
+        int baseColor = new java.awt.Color(120, 124, 132).getRGB();
+        int hoverColor = 0xFFFFFF00;
+
+        float handleX1 = baseX + wmScale * prefixWidth;
+        float handleX2 = handleX1 + wmScale * handleNameWidth;
+
+        float lineY = baseY + (int)(client.font.lineHeight * wmScale) + 1;
+        float handleY1 = baseY;
+        float handleY2 = baseY + (int)(client.font.lineHeight * wmScale);
+
+        boolean isHovered = mouseX >= handleX1 && mouseX <= handleX2 &&
+            ((mouseY >= handleY1 && mouseY <= handleY2) ||
+             (mouseY >= lineY && mouseY <= lineY + 1));
+
+        int prefixTextColor = baseColor;
+        int handleTextColor = isHovered ? hoverColor : baseColor;
+        int underlineColor = (isHovered ? hoverColor : baseColor) & 0xFFFFFF | 0x64000000;
+
         var matrices = guiGraphics.pose();
         matrices.pushMatrix();
         matrices.scale(wmScale, wmScale);
-        guiGraphics.drawString(client.font, watermark, 
-                        (int)(baseX / wmScale), (int)(baseY / wmScale), wmColor, false);
+        guiGraphics.drawString(client.font, prefix,
+            (int)(baseX / wmScale), (int)(baseY / wmScale), prefixTextColor, false);
+        guiGraphics.drawString(client.font, handleName,
+            (int)(handleX1 / wmScale), (int)(baseY / wmScale), handleTextColor, false);
         matrices.popMatrix();
-    }
-    
-    private String getAuthorRealName(Minecraft client) {
-        java.util.UUID authorUUID = java.util.UUID.fromString("8b8e7203-bdda-489e-bc20-f226f5b59c62");
-        
-        if (client.player == null || client.player.connection == null) {
-            return "11YearCookieBuff";
-        }
-        
-        try {
-            net.minecraft.client.multiplayer.ClientPacketListener connection = client.player.connection;
-            net.minecraft.client.multiplayer.PlayerInfo playerInfo = connection.getPlayerInfo(authorUUID);
-            if (playerInfo != null) {
-                com.mojang.authlib.GameProfile profile = playerInfo.getProfile();
-                if (profile != null) {
-                    try {
-                        java.lang.reflect.Method getNameMethod = profile.getClass().getMethod("getName");
-                        Object nameObj = getNameMethod.invoke(profile);
-                        if (nameObj instanceof String) {
-                            String name = (String) nameObj;
-                            if (name != null && !name.isEmpty()) {
-                                return name;
-                            }
-                        }
-                    } catch (Exception e) {
-                    }
-                }
-            }
-        } catch (Exception e) {
-        }
-        
-        try {
-            java.util.Collection<net.minecraft.client.multiplayer.PlayerInfo> allPlayers = 
-                client.player.connection.getOnlinePlayers();
-            for (net.minecraft.client.multiplayer.PlayerInfo info : allPlayers) {
-                com.mojang.authlib.GameProfile profile = info.getProfile();
-                if (profile != null) {
-                    try {
-                        java.lang.reflect.Method getIdMethod = profile.getClass().getMethod("getId");
-                        Object uuidObj = getIdMethod.invoke(profile);
-                        if (uuidObj instanceof java.util.UUID && uuidObj.equals(authorUUID)) {
-                            java.lang.reflect.Method getNameMethod = profile.getClass().getMethod("getName");
-                            Object nameObj = getNameMethod.invoke(profile);
-                            if (nameObj instanceof String) {
-                                String name = (String) nameObj;
-                                if (name != null && !name.isEmpty()) {
-                                    return name;
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                    }
-                }
-            }
-        } catch (Exception e) {
-        }
-        
-        return "11YearCookieBuff";
+
+        guiGraphics.fill((int)handleX1, (int)lineY, (int)handleX2, (int)lineY + 1, underlineColor);
     }
     
     private void renderVersion(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
@@ -714,11 +667,18 @@ public class ClickGuiRootComponent extends BaseComponent {
             }
             long elapsed = currentTime - startTime;
             int phase = (int)((elapsed / 300) % 3);
-            String checkingText = switch (phase) {
-                case 1 -> "Checking..";
-                case 2 -> "Checking...";
-                default -> "Checking.";
-            };
+            String checkingText;
+            switch (phase) {
+                case 1:
+                    checkingText = "Checking..";
+                    break;
+                case 2:
+                    checkingText = "Checking...";
+                    break;
+                default:
+                    checkingText = "Checking.";
+                    break;
+            }
             
             int textWidth = client.font.width(checkingText);
             float scaledTextWidth = versionScale * textWidth;
@@ -743,29 +703,28 @@ public class ClickGuiRootComponent extends BaseComponent {
         if (checkStatus != null && startTime > 0) {
             long elapsed = currentTime - startTime;
             if (elapsed < displayDuration) {
-            if ("latest".equals(checkStatus)) {
+                if ("latest".equals(checkStatus)) {
                     if (!isAutoCheck) {
                         showFeedback = true;
-                displayText = "It's already the latest version！";
+                        displayText = "It's already the latest version！";
                     }
-                } else {
+                } else if ("error".equals(checkStatus)) {
                     showFeedback = true;
-                    if ("error".equals(checkStatus)) {
-                String errorMsg = state.getLatestVersion();
-                if (errorMsg != null && errorMsg.equals("Unknown error")) {
-                    displayText = "Unknown error";
-                    isError = true;
-                } else {
-                    displayText = "It's already the latest version！Network error！";
-                    isError = true;
-                }
-            } else if ("update_available".equals(checkStatus)) {
-                String latest = state.getLatestVersion();
-                if (latest != null) {
-                    displayText = "Available updates！Check " + latest + "！";
-                } else {
-                    displayText = "Available updates！";
-                        }
+                    String errorMsg = state.getLatestVersion();
+                    if (errorMsg != null && errorMsg.equals("Unknown error")) {
+                        displayText = "Unknown error";
+                        isError = true;
+                    } else {
+                        displayText = "It's already the latest version！Network error！";
+                        isError = true;
+                    }
+                } else if ("update_available".equals(checkStatus)) {
+                    showFeedback = true;
+                    String latest = state.getLatestVersion();
+                    if (latest != null) {
+                        displayText = "Available updates！Check " + latest + "！";
+                    } else {
+                        displayText = "Available updates！";
                     }
                 }
             }

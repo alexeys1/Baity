@@ -9,7 +9,6 @@ import com.shyeuar.baity.sync.BaityPresenceSync;
 import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.items.CustomTotemItem;
 import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
-import com.shyeuar.baity.features.smolpeople.SmolFriendCommands;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
@@ -78,7 +77,7 @@ public class Baity implements ClientModInitializer {
         });
         
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
-            SmolFriendCommands.register(dispatcher)
+            com.shyeuar.baity.sync.SyncCommands.register(dispatcher)
         );
 
         WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.NametagRenderer());

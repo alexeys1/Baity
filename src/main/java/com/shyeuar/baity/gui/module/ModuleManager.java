@@ -5,6 +5,7 @@ import com.shyeuar.baity.gui.value.Option;
 import com.shyeuar.baity.gui.value.ButtonValue;
 import com.shyeuar.baity.gui.value.GroupValue;
 import com.shyeuar.baity.gui.value.GradientEditorValue;
+import com.shyeuar.baity.gui.value.TextLineInputValue;
 import com.shyeuar.baity.gui.sync.ConfigSynchronizer;
 import com.shyeuar.baity.gui.tooltip.TooltipManager;
 import com.shyeuar.baity.config.ConfigManager;
@@ -237,39 +238,51 @@ public class ModuleManager {
             }
         );
 
-        GroupValue nickTweaksChromaGroup = new GroupValue("chroma settings", "chroma settings", ModuleCategory.MISC)
+        GroupValue nickTweaksChromaGroup = new GroupValue("chroma settings", "chroma settings", ModuleCategory.RENDER)
             .setExpanded(ConfigManager.nickTweaksChromaGroupExpanded)
-            .addChild(new Option("chroma", "chroma", ConfigManager.nickTweaksChromaEnabled, ModuleCategory.MISC))
+            .addChild(new Option("chroma", "chroma", ConfigManager.nickTweaksChromaEnabled, ModuleCategory.RENDER))
             .addChild(new com.shyeuar.baity.gui.value.SliderValue(
-                "chroma lightness", "chroma lightness", 0.8, 0.2, 1.0, 0.05, ModuleCategory.MISC
+                "chroma lightness", "chroma lightness", 0.8, 0.2, 1.0, 0.05, ModuleCategory.RENDER
             ))
             .addChild(new com.shyeuar.baity.gui.value.SliderValue(
-                "chroma chroma", "chroma chroma", 0.2, 0.0, 0.4, 0.01, ModuleCategory.MISC
+                "chroma chroma", "chroma chroma", 0.2, 0.0, 0.4, 0.01, ModuleCategory.RENDER
             ))
             .addChild(new com.shyeuar.baity.gui.value.SliderValue(
-                "chroma size", "chroma size", 3.1, 0.5, 10.0, 0.1, ModuleCategory.MISC
+                "chroma size", "chroma size", 3.1, 0.5, 10.0, 0.1, ModuleCategory.RENDER
             ))
             .addChild(new com.shyeuar.baity.gui.value.SliderValue(
-                "chroma speed", "chroma speed", 1.0, 0.1, 8.0, 0.1, ModuleCategory.MISC
+                "chroma speed", "chroma speed", 1.0, 0.1, 8.0, 0.1, ModuleCategory.RENDER
             ));
 
         ModuleRegistry.registerModuleWithValues(
-            "NickTweaks", "NickTweaks", ModuleCategory.MISC,
+            "NickTweaks", "NickTweaks", ModuleCategory.RENDER,
             () -> ConfigManager.nickTweaksEnabled,
             val -> ConfigManager.nickTweaksEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new Option("bold self nick", "bold self nick", false, ModuleCategory.MISC),
+                new TextLineInputValue("nick changer", "nick changer", "", ModuleCategory.RENDER),
+                new Option("bold self nick", "bold self nick", false, ModuleCategory.RENDER),
+                new Option("custom nick color", "custom nick color", false, ModuleCategory.RENDER),
                 new GradientEditorValue(
-                    "gradient editor", "gradient editor", ModuleCategory.MISC,
+                    "gradient editor", "gradient editor", ModuleCategory.RENDER,
                     ConfigManager.nickTweaksGradientStartColor, ConfigManager.nickTweaksGradientEndColor
                 ),
                 nickTweaksChromaGroup
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
+                    "nick changer",
+                    () -> ConfigManager.nickTweaksNickChanger,
+                    val -> ConfigManager.nickTweaksNickChanger = (String) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
                     "bold self nick",
                     () -> ConfigManager.nickTweaksBoldSelf,
                     val -> ConfigManager.nickTweaksBoldSelf = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "custom nick color",
+                    () -> ConfigManager.nickTweaksCustomNickColorEnabled,
+                    val -> ConfigManager.nickTweaksCustomNickColorEnabled = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "chroma settings",
@@ -541,6 +554,11 @@ public class ModuleManager {
                 .append(MessageUtils.createColoredText(".", 0xFFFF00)));
         TooltipManager.registerTooltip("Muffler", "Mute the annoying sounds.", 0xFFFFFF);
         TooltipManager.registerTooltip("NickTweaks", "Tweak nick rendering globally.", 0xFFFFFF);
+        TooltipManager.registerTooltip(
+            "nick changer",
+            "Tip:Support the color code(&).Also,you can use &r to stop the color spreeding.",
+            0xFFFF00
+        );
         TooltipManager.registerTooltip("chroma settings", "Expandable chroma options container.", 0xFFFFFF);
         TooltipManager.registerTooltip("gradient editor", "Edit two endpoint colors for NickTweaks gradient.", 0xFFFFFF);
         TooltipManager.registerTooltip("chroma", "Enable dynamic chroma color rendering.", 0xFFFFFF);

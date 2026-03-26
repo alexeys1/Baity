@@ -3,6 +3,7 @@ package com.shyeuar.baity.utils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
@@ -65,5 +66,24 @@ public class MessageUtils {
         if (Minecraft.getInstance().player != null) {
             Minecraft.getInstance().gui.getChat().addMessage(message);
         }
+    }
+
+    public static void sendPresenceSyncNotification(boolean ok) {
+        sendPresenceSyncNotification(ok, true);
+    }
+
+    public static void sendPresenceSyncNotification(boolean ok, boolean includeCancelLink) {
+        String status = ok ? "[Sync] Connectivity check OK. " : "[Sync] Connectivity check failed (network/proxy/VPN). ";
+        MutableComponent main = createColoredText(status, 0xFFFFFF);
+        if (!includeCancelLink) {
+            sendCustomMessage(createMessageWithPrefix(main));
+            return;
+        }
+        MutableComponent action = Component.literal("[Click to stop the prompt]")
+            .withStyle(style -> style
+                .withColor(0xFF69B4)
+                .withUnderlined(true)
+                .withClickEvent(new ClickEvent.RunCommand("/baity notification off")));
+        sendCustomMessage(createMessageWithPrefix(main.append(action)));
     }
 }

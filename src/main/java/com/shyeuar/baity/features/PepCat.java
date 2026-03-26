@@ -21,6 +21,7 @@ public class PepCat {
     private static float lastHealth = -1.0f; 
     private static boolean wasInWorld = false;
     private static long lastDeathTime = 0; 
+    private static int lastRandomMessageIndex = -1;
     public static void init() {
         if (!hasRegistered) {
             ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -142,9 +143,36 @@ public class PepCat {
     
     
     private static void sendEncouragementMessage(LocalPlayer player) {
+        int idx = java.util.concurrent.ThreadLocalRandom.current().nextInt(4);
+        if (idx == lastRandomMessageIndex && 4 > 1) {
+            idx = (idx + 1) % 4;
+        }
+        lastRandomMessageIndex = idx;
+
+        String text;
+        String emoji;
+        switch (idx) {
+            case 0 -> {
+                text = "阎王爷翻了翻生死簿，备注栏写了个\"菜\"";
+                emoji = "( ͡° ͜ʖ ͡°)";
+            }
+            case 1 -> {
+                text = "这次复活，建议换个脑子试试";
+                emoji = "⌐■_■";
+            }
+            case 2 -> {
+                text = "路边的乌鸦都在讨论你刚才的走位";
+                emoji = "→_→";
+            }
+            default -> {
+                text = "您的操作已加入\"反面教材\"合集";
+                emoji = "(￣▽￣)";
+            }
+        }
+
         MutableComponent fullMessage = MessageUtils.createBaityPrefix()
-            .append(MessageUtils.createColoredText("它张嘴大笑，似乎在笑你的失误，又或嘲笑死神的无能", 0x00FFFF))
-            .append(MessageUtils.createColoredText("눈_눈", 0xFF80FF));
+            .append(MessageUtils.createColoredText(text, 0x00FFFF))
+            .append(MessageUtils.createColoredText(emoji, 0xFF80FF));
 
         MessageUtils.sendCustomMessage(fullMessage);
     }

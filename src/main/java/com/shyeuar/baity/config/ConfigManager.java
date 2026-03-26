@@ -98,7 +98,9 @@ public class ConfigManager {
     public static float fishHookTimerScale = 1.5f;
 
     public static boolean nickTweaksEnabled = false;
+    public static String nickTweaksNickChanger = "";
     public static boolean nickTweaksChromaEnabled = false;
+    public static boolean nickTweaksCustomNickColorEnabled = false;
     public static boolean nickTweaksBoldSelf = false;
     public static double nickTweaksChromaLightness = 0.8;
     public static double nickTweaksChromaChroma = 0.2;
@@ -107,9 +109,10 @@ public class ConfigManager {
     public static boolean nickTweaksChromaGroupExpanded = false;
     public static int nickTweaksGradientStartColor = 0xFF4D4D;
     public static int nickTweaksGradientEndColor = 0xC299FF;
-    public static String baityPresenceSyncUrl = "https://raw.githubusercontent.com/raueyhs/baity-sync-data/main/data/v1/users.json";
+    public static String baityPresenceSyncUrl = "https://baity-presence-sync.1427637445.workers.dev/users.json";
     public static String baityPresenceReportUrl = "";
     public static String baityPresenceReportToken = "";
+    public static boolean baityPresenceSyncNotificationEnabled = true;
     
     private static final String CONFIG_FILE_NAME = "config.txt";
 
@@ -343,9 +346,15 @@ public class ConfigManager {
         registerField("NickTweaks", Boolean.class,
             c -> ConfigManager.nickTweaksEnabled,
             (c, v) -> ConfigManager.nickTweaksEnabled = (Boolean) v);
+        registerField("NickTweaksNickChanger", String.class,
+            c -> ConfigManager.nickTweaksNickChanger,
+            (c, v) -> ConfigManager.nickTweaksNickChanger = (String) v);
         registerField("NickTweaksChromaEnabled", Boolean.class,
             c -> ConfigManager.nickTweaksChromaEnabled,
             (c, v) -> ConfigManager.nickTweaksChromaEnabled = (Boolean) v);
+        registerField("NickTweaksCustomNickColorEnabled", Boolean.class,
+            c -> ConfigManager.nickTweaksCustomNickColorEnabled,
+            (c, v) -> ConfigManager.nickTweaksCustomNickColorEnabled = (Boolean) v);
         registerField("NickTweaksBoldSelf", Boolean.class,
             c -> ConfigManager.nickTweaksBoldSelf,
             (c, v) -> ConfigManager.nickTweaksBoldSelf = (Boolean) v);
@@ -379,6 +388,9 @@ public class ConfigManager {
         registerField("BaityPresenceReportToken", String.class,
             c -> ConfigManager.baityPresenceReportToken,
             (c, v) -> ConfigManager.baityPresenceReportToken = (String) v);
+        registerField("BaityPresenceSyncNotificationEnabled", Boolean.class,
+            c -> ConfigManager.baityPresenceSyncNotificationEnabled,
+            (c, v) -> ConfigManager.baityPresenceSyncNotificationEnabled = (Boolean) v);
     }
     
     private static void registerField(String key, Class<?> type,

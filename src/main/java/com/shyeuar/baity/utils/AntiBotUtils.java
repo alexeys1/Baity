@@ -7,6 +7,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.client.multiplayer.ServerData;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,6 +21,15 @@ public class AntiBotUtils {
     private static int tickCount = 0;
     
     private static final Pattern LEVEL_PREFIX_PATTERN = Pattern.compile("^\\[\\d+\\]");
+
+    private static boolean isOnHypixel() {
+        if (mc == null || mc.getConnection() == null) return false;
+        if (mc.hasSingleplayerServer()) return false;
+        ServerData data = mc.getCurrentServer();
+        if (data == null || data.ip == null || data.ip.isBlank()) return false;
+        String ip = data.ip.toLowerCase();
+        return ip.contains("hyp");
+    }
 
     private static String removeColorCodes(String text) {
         if (text == null || text.isEmpty()) return text;
@@ -49,6 +59,10 @@ public class AntiBotUtils {
    
     public static void updatePlayerMap() {
         if (mc.player == null || mc.level == null || mc.getConnection() == null) return;
+        if (!isOnHypixel()) {
+            playerMap.clear();
+            return;
+        }
         
         boolean inSkyBlock = isInSkyBlock();
         
@@ -104,6 +118,7 @@ public class AntiBotUtils {
     
     
     public static boolean isRealPlayer(Player player) {
+        if (!isOnHypixel()) return true;
         if (player == null || player == mc.player) return true; 
         
         String uuid = player.getUUID().toString();
@@ -118,6 +133,7 @@ public class AntiBotUtils {
     
     
     public static boolean isBot(Player player) {
+        if (!isOnHypixel()) return false;
         return !isRealPlayer(player);
     }
     

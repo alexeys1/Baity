@@ -244,6 +244,9 @@ public class ClickGuiState {
     
     private GradientInputInfo editingGradient = null;
     private String gradientInputText = "";
+    private TextInputInfo editingTextInput = null;
+    private String textInputValue = "";
+    private int textInputCursorCpIndex = 0;
     
     public GradientInputInfo getEditingGradient() { return editingGradient; }
     public void setEditingGradient(GradientInputInfo info) {
@@ -259,11 +262,35 @@ public class ClickGuiState {
     public static class GradientInputInfo {
         public final String moduleName;
         public final String valueName;
-        public final int lineIndex; // 0=start, 1=end
+        public final int lineIndex;
         public GradientInputInfo(String moduleName, String valueName, int lineIndex) {
             this.moduleName = moduleName;
             this.valueName = valueName;
             this.lineIndex = lineIndex;
+        }
+    }
+
+    public TextInputInfo getEditingTextInput() { return editingTextInput; }
+    public void setEditingTextInput(TextInputInfo info) {
+        editingTextInput = info;
+        if (info == null) {
+            textInputValue = "";
+        }
+    }
+    public boolean isEditingTextInput() { return editingTextInput != null; }
+    public String getTextInputValue() { return textInputValue; }
+    public void setTextInputValue(String value) { textInputValue = value == null ? "" : value; }
+    public int getTextInputCursorCpIndex() { return textInputCursorCpIndex; }
+    public void setTextInputCursorCpIndex(int cpIndex) {
+        textInputCursorCpIndex = Math.max(0, cpIndex);
+    }
+
+    public static class TextInputInfo {
+        public final String moduleName;
+        public final String valueName;
+        public TextInputInfo(String moduleName, String valueName) {
+            this.moduleName = moduleName;
+            this.valueName = valueName;
         }
     }
 

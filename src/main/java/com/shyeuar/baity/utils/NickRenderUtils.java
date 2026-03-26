@@ -22,7 +22,7 @@ import java.util.Map;
 
 @Environment(EnvType.CLIENT)
 public final class NickRenderUtils {
-    private static final long TARGET_CACHE_MS = 250L;
+    private static final long TARGET_CACHE_MS = 1000L;
     private static volatile long targetsCacheAt = 0L;
     private static volatile String cachePlayerName = "";
     private static volatile List<Target> cachedTargets = List.of();
@@ -35,31 +35,48 @@ public final class NickRenderUtils {
         }
     };
 
+    private static final int REPLACEMENT_CACHE_MAX = 512;
+    private static final Object REPLACEMENT_CACHE_LOCK = new Object();
+    private static final LinkedHashMap<String, List<ReplacementCodepoint>> REPLACEMENT_CACHE = new LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, List<ReplacementCodepoint>> eldest) {
+            return size() > REPLACEMENT_CACHE_MAX;
+        }
+    };
+
     private NickRenderUtils() {
     }
 
-    private static void clearMatchCache() {
-        synchronized (MATCH_CACHE_LOCK) {
-            MATCH_CACHE.clear();
-        }
+    public static void invalidateLocalTargetsCache() {
+        targetsCacheAt = 0L;
+        cachePlayerName = "";
+        cachedTargets = List.of();
+    }
+
+    private static boolean isBaityClickGuiScreen() {
+        Minecraft client = Minecraft.getInstance();
+        if (client == null) return false;
+        if (client.screen == null) return false;
+        return client.screen instanceof com.shyeuar.baity.gui.ClickGui;
     }
 
     public static String handleString(String text) {
         if (text == null || text.isEmpty()) return text;
+        if (isBaityClickGuiScreen()) return text;
         List<Target> targets = collectTargets();
         if (targets.isEmpty()) return text;
 
         long version = targetsCacheAt;
         String cacheKey = version + "|" + text;
         TargetMatch[] matchByIndex;
+        int[] codePoints = null;
         synchronized (MATCH_CACHE_LOCK) {
             matchByIndex = MATCH_CACHE.get(cacheKey);
         }
 
         if (matchByIndex == null) {
-            List<Glyph> glyphs = new ArrayList<>();
-            text.codePoints().forEach(cp -> glyphs.add(new Glyph(cp, Style.EMPTY)));
-            if (glyphs.isEmpty()) return text;
+            codePoints = text.codePoints().toArray();
+            if (codePoints.length == 0) return text;
 
             String lower = text.toLowerCase(Locale.ROOT);
             List<Target> matchingTargets = null;
@@ -70,7 +87,7 @@ public final class NickRenderUtils {
             }
             if (matchingTargets == null || matchingTargets.isEmpty()) return text;
 
-            matchByIndex = matchTargets(glyphs, matchingTargets);
+            matchByIndex = matchTargets(codePoints, matchingTargets);
             synchronized (MATCH_CACHE_LOCK) {
                 MATCH_CACHE.put(cacheKey, matchByIndex);
             }
@@ -85,8 +102,11 @@ public final class NickRenderUtils {
         }
         if (!matched) return text;
 
-        String out = applySectionColorToString(text, matchByIndex);
+        if (codePoints == null) codePoints = text.codePoints().toArray();
+        java.util.ArrayList<Glyph> glyphs = new java.util.ArrayList<>(codePoints.length);
+        for (int cp : codePoints) glyphs.add(new Glyph(cp, Style.EMPTY));
 
+        String out = applySectionColorToStringWithReplacement(text, glyphs, matchByIndex);
         return out;
     }
 
@@ -98,19 +118,24 @@ public final class NickRenderUtils {
         return component;
     }
 
+    public static String getLocalPreviewName(String fallback) {
+        String raw = ConfigManager.nickTweaksNickChanger;
+        if (raw == null || raw.isEmpty()) return fallback;
+        String plain = stripLegacyCodes(raw);
+        return plain.isEmpty() ? fallback : plain;
+    }
+
     public static FormattedCharSequence handleCharSequence(FormattedCharSequence original) {
         if (original == null) return null;
+        if (isBaityClickGuiScreen()) return original;
         List<Target> targets = collectTargets();
         if (targets.isEmpty()) return original;
 
         StringBuilder sbPlain = new StringBuilder();
-        List<Glyph> glyphs = new ArrayList<>();
         original.accept((index, style, codepoint) -> {
             sbPlain.appendCodePoint(codepoint);
-            glyphs.add(new Glyph(codepoint, style));
             return true;
         });
-        if (glyphs.isEmpty()) return original;
         String plain = sbPlain.toString();
         if (plain.isEmpty()) return original;
 
@@ -122,6 +147,8 @@ public final class NickRenderUtils {
         }
 
         if (matchByIndex == null) {
+            int[] codePoints = plain.codePoints().toArray();
+
             String lower = plain.toLowerCase(Locale.ROOT);
             List<Target> matchingTargets = null;
             for (Target target : targets) {
@@ -131,7 +158,7 @@ public final class NickRenderUtils {
             }
             if (matchingTargets == null || matchingTargets.isEmpty()) return original;
 
-            matchByIndex = matchTargets(glyphs, matchingTargets);
+            matchByIndex = matchTargets(codePoints, matchingTargets);
             synchronized (MATCH_CACHE_LOCK) {
                 MATCH_CACHE.put(cacheKey, matchByIndex);
             }
@@ -147,41 +174,77 @@ public final class NickRenderUtils {
         if (!matched) return original;
 
         long nowMs = System.currentTimeMillis();
-        List<FormattedCharSequence> out = new ArrayList<>(glyphs.size());
-        for (int i = 0; i < glyphs.size(); i++) {
-            Glyph glyph = glyphs.get(i);
-            Style style = glyph.style();
-            TargetMatch match = matchByIndex[i];
-            if (match != null) {
-                if (match.target().bold()) {
-                    style = style.withBold(true);
-                }
-                int len = Math.max(1, match.length());
-                double progress = len == 1 ? 0.0 : (double) (i - match.start()) / (len - 1);
-                int rgb = match.target().colorAt(progress, nowMs);
-                style = style.withColor(rgb);
-            }
-            out.add(FormattedCharSequence.codepoint(glyph.codepoint(), style));
+
+        List<Glyph> glyphs = new ArrayList<>();
+        original.accept((index, style, codepoint) -> {
+            glyphs.add(new Glyph(codepoint, style));
+            return true;
+        });
+        if (glyphs.isEmpty()) return original;
+
+        List<Glyph> outGlyphs = applyReplacementAndStyle(glyphs, matchByIndex, nowMs);
+        List<FormattedCharSequence> out = new ArrayList<>(outGlyphs.size());
+        for (Glyph glyph : outGlyphs) {
+            out.add(FormattedCharSequence.codepoint(glyph.codepoint(), glyph.style()));
         }
-        return FormattedCharSequence.composite(out);
+        FormattedCharSequence result = FormattedCharSequence.composite(out);
+        return result;
     }
 
-    private static String applySectionColorToString(String text, TargetMatch[] matchByIndex) {
-        List<Glyph> glyphs = new ArrayList<>();
-        text.codePoints().forEach(cp -> glyphs.add(new Glyph(cp, Style.EMPTY)));
-
+    private static String applySectionColorToStringWithReplacement(String text, List<Glyph> glyphs, TargetMatch[] matchByIndex) {
+        List<Glyph> outGlyphs = applyReplacementAndStyle(glyphs, matchByIndex, System.currentTimeMillis());
         StringBuilder sb = new StringBuilder();
-        long nowMs = System.currentTimeMillis();
-        for (int i = 0; i < glyphs.size(); i++) {
-            TargetMatch match = matchByIndex[i];
-            if (match != null) {
-                int len = Math.max(1, match.length());
-                double progress = len == 1 ? 0.0 : (double) (i - match.start()) / (len - 1);
-                appendHexColor(sb, match.target().colorAt(progress, nowMs));
+        for (Glyph glyph : outGlyphs) {
+            if (glyph.style().getColor() != null) {
+                appendHexColor(sb, glyph.style().getColor().getValue());
+            } else {
+                sb.append('\u00A7').append('r');
             }
-            sb.appendCodePoint(glyphs.get(i).codepoint());
+            if (glyph.style().isBold()) {
+                sb.append('\u00A7').append('l');
+            }
+            sb.appendCodePoint(glyph.codepoint());
         }
         return sb.toString();
+    }
+
+    private static List<Glyph> applyReplacementAndStyle(List<Glyph> glyphs, TargetMatch[] matchByIndex, long nowMs) {
+        List<Glyph> out = new ArrayList<>(glyphs.size() + 16);
+        int i = 0;
+        while (i < glyphs.size()) {
+            TargetMatch match = matchByIndex[i];
+            if (match == null || i != match.start()) {
+                out.add(glyphs.get(i));
+                i++;
+                continue;
+            }
+            Target target = match.target();
+            List<ReplacementCodepoint> replacement = target.replacementCodepoints();
+            if (replacement.isEmpty()) {
+                i += match.length();
+                continue;
+            }
+            Style base = glyphs.get(i).style();
+            int len = replacement.size();
+            for (int idx = 0; idx < len; idx++) {
+                ReplacementCodepoint cp = replacement.get(idx);
+                Style style = base;
+                if (target.bold()) {
+                    style = style.withBold(true);
+                }
+                if (cp.explicitColor() != null) {
+                    style = style.withColor(cp.explicitColor());
+                } else {
+                    int rgb = target.colorAt(len == 1 ? 0.0 : (double) idx / (len - 1), nowMs);
+                    if (rgb >= 0) {
+                        style = style.withColor(rgb);
+                    }
+                }
+                out.add(new Glyph(cp.codepoint(), style));
+            }
+            i += match.length();
+        }
+        return out;
     }
 
     private static void appendHexColor(StringBuilder sb, int rgb) {
@@ -192,23 +255,40 @@ public final class NickRenderUtils {
         }
     }
 
-    private static TargetMatch[] matchTargets(List<Glyph> glyphs, List<Target> targets) {
-        TargetMatch[] out = new TargetMatch[glyphs.size()];
+    private static TargetMatch[] matchTargets(int[] codePoints, List<Target> targets) {
+        TargetMatch[] out = new TargetMatch[codePoints.length];
+
+        int[] lowerCodePoints = new int[codePoints.length];
+        for (int i = 0; i < codePoints.length; i++) {
+            lowerCodePoints[i] = Character.toLowerCase(codePoints[i]);
+        }
+
         for (Target target : targets) {
-            int[] targetCodePoints = target.codePoints();
-            if (targetCodePoints.length == 0 || targetCodePoints.length > glyphs.size()) continue;
+            int[] targetLower = target.codePointsLower();
+            int tLen = targetLower.length;
+            if (tLen == 0 || tLen > codePoints.length) continue;
+            int targetFirstLower = target.codePointsFirstLower();
 
-            for (int i = 0; i <= glyphs.size() - targetCodePoints.length; i++) {
-                if (!isRangeFree(out, i, targetCodePoints.length)) continue;
-                if (!matchesAtIgnoreCase(glyphs, targetCodePoints, i)) continue;
+            for (int i = 0; i <= codePoints.length - tLen; i++) {
+                if (lowerCodePoints[i] != targetFirstLower) continue;
+                if (!isRangeFree(out, i, tLen)) continue;
 
-                int end = i + targetCodePoints.length;
-                boolean leftBoundary = i == 0 || !isNameCodepoint(glyphs.get(i - 1).codepoint());
-                boolean rightBoundary = end >= glyphs.size() || !isNameCodepoint(glyphs.get(end).codepoint());
+                boolean ok = true;
+                for (int j = 0; j < tLen; j++) {
+                    if (lowerCodePoints[i + j] != targetLower[j]) {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (!ok) continue;
+
+                int end = i + tLen;
+                boolean leftBoundary = i == 0 || !isNameCodepoint(codePoints[i - 1]);
+                boolean rightBoundary = end >= codePoints.length || !isNameCodepoint(codePoints[end]);
                 if (!leftBoundary || !rightBoundary) continue;
 
-                TargetMatch match = new TargetMatch(target, i, targetCodePoints.length);
-                for (int j = 0; j < targetCodePoints.length; j++) {
+                TargetMatch match = new TargetMatch(target, i, tLen);
+                for (int j = 0; j < tLen; j++) {
                     out[i + j] = match;
                 }
             }
@@ -219,15 +299,6 @@ public final class NickRenderUtils {
     private static boolean isRangeFree(TargetMatch[] matches, int start, int len) {
         for (int i = 0; i < len; i++) {
             if (matches[start + i] != null) return false;
-        }
-        return true;
-    }
-
-    private static boolean matchesAtIgnoreCase(List<Glyph> glyphs, int[] target, int offset) {
-        for (int i = 0; i < target.length; i++) {
-            int a = Character.toLowerCase(glyphs.get(offset + i).codepoint());
-            int b = Character.toLowerCase(target[i]);
-            if (a != b) return false;
         }
         return true;
     }
@@ -253,6 +324,8 @@ public final class NickRenderUtils {
             targets.add(Target.local(selfName));
         }
 
+        final int[] visitedPlayers = {0};
+        final int[] chromaProfileTargets = {0};
         if (client.level != null) {
             client.level.players().forEach(player -> {
                 String name = player.getName().getString();
@@ -260,6 +333,8 @@ public final class NickRenderUtils {
                 BaityPresenceSync.ChromaProfile profile = BaityPresenceSync.getChromaProfileByName(name);
                 if (profile == null) return;
                 targets.add(Target.remote(name, profile));
+                visitedPlayers[0]++;
+                chromaProfileTargets[0]++;
             });
         }
 
@@ -268,7 +343,6 @@ public final class NickRenderUtils {
         cachedTargets = List.copyOf(targets);
         cachePlayerName = selfName;
         targetsCacheAt = now;
-        clearMatchCache();
         return cachedTargets;
     }
 
@@ -304,39 +378,57 @@ public final class NickRenderUtils {
             String name,
             String nameLower,
             int[] codePoints,
+            int[] codePointsLower,
+            int codePointsFirstLower,
+            String displayName,
             boolean local,
             boolean bold,
             int[] palette,
             double speed,
             boolean remoteChromaEnabled,
+            boolean customNickColorEnabled,
             int remoteGradientStart,
             int remoteGradientEnd
     ) {
         static Target local(String name) {
+            int[] cps = name.codePoints().toArray();
+            int[] lower = new int[cps.length];
+            for (int i = 0; i < cps.length; i++) lower[i] = Character.toLowerCase(cps[i]);
             return new Target(
                     name,
                     name.toLowerCase(Locale.ROOT),
-                    name.codePoints().toArray(),
+                    cps,
+                    lower,
+                    lower.length == 0 ? 0 : lower[0],
+                    null,
                     true,
                     ConfigManager.nickTweaksBoldSelf,
                     new int[0],
                     clamp(ConfigManager.nickTweaksChromaSpeed, 0.0, 8.0),
                     false,
+                    ConfigManager.nickTweaksCustomNickColorEnabled,
                     0,
                     0
             );
         }
 
         static Target remote(String name, BaityPresenceSync.ChromaProfile profile) {
+            int[] cps = name.codePoints().toArray();
+            int[] lower = new int[cps.length];
+            for (int i = 0; i < cps.length; i++) lower[i] = Character.toLowerCase(cps[i]);
             return new Target(
                     name,
                     name.toLowerCase(Locale.ROOT),
-                    name.codePoints().toArray(),
+                    cps,
+                    lower,
+                    lower.length == 0 ? 0 : lower[0],
+                    profile.nickChanger(),
                     false,
                     profile.boldSelf(),
                     profile.paletteView(),
                     clamp(profile.speed(), 0.0, 8.0),
                     profile.chromaEnabled(),
+                    profile.customNickColorEnabled(),
                     profile.gradientStart(),
                     profile.gradientEnd()
             );
@@ -352,6 +444,9 @@ public final class NickRenderUtils {
                     double frac = position - Math.floor(position);
                     return lerpRgb(palette[fromIndex], palette[toIndex], frac);
                 }
+                if (!customNickColorEnabled) {
+                    return -1;
+                }
                 if (remoteGradientStart == remoteGradientEnd) {
                     return remoteGradientStart;
                 }
@@ -359,6 +454,9 @@ public final class NickRenderUtils {
             }
 
             if (!ConfigManager.nickTweaksChromaEnabled) {
+                if (!ConfigManager.nickTweaksCustomNickColorEnabled) {
+                    return -1;
+                }
                 int localStart = ConfigManager.nickTweaksGradientStartColor & 0xFFFFFF;
                 int localEnd = ConfigManager.nickTweaksGradientEndColor & 0xFFFFFF;
                 if (localStart == localEnd) {
@@ -379,6 +477,89 @@ public final class NickRenderUtils {
             float hue = (float) positiveModulo((progress / size) - phase, 1.0);
             return Mth.hsvToRgb(hue, saturation, (float) lightness);
         }
+
+        List<ReplacementCodepoint> replacementCodepoints() {
+            String raw;
+            if (local) {
+                raw = ConfigManager.nickTweaksNickChanger;
+                if (raw == null || raw.isBlank()) raw = name;
+            } else {
+                raw = displayName == null || displayName.isBlank() ? name : displayName;
+            }
+
+            List<ReplacementCodepoint> cached;
+            synchronized (REPLACEMENT_CACHE_LOCK) {
+                cached = REPLACEMENT_CACHE.get(raw);
+            }
+            if (cached != null) return cached;
+            List<ReplacementCodepoint> parsed = parseCustomNick(raw);
+            synchronized (REPLACEMENT_CACHE_LOCK) {
+                REPLACEMENT_CACHE.put(raw, parsed);
+            }
+            return parsed;
+        }
+    }
+
+    private static String stripLegacyCodes(String raw) {
+        List<ReplacementCodepoint> cps = parseCustomNick(raw);
+        StringBuilder out = new StringBuilder();
+        for (ReplacementCodepoint cp : cps) {
+            out.appendCodePoint(cp.codepoint());
+        }
+        return out.toString();
+    }
+
+    private static List<ReplacementCodepoint> parseCustomNick(String raw) {
+        ArrayList<ReplacementCodepoint> out = new ArrayList<>();
+        if (raw == null || raw.isEmpty()) return out;
+        Integer explicitColor = null;
+        for (int i = 0; i < raw.length(); ) {
+            int cp = raw.codePointAt(i);
+            int cpl = Character.charCount(cp);
+            if (cp == '&' && i + cpl < raw.length()) {
+                int ncp = raw.codePointAt(i + cpl);
+                char ch = Character.toLowerCase((char) ncp);
+                Integer mapped = mapLegacyColor(ch);
+                if (mapped != null) {
+                    explicitColor = mapped;
+                    i += cpl + Character.charCount(ncp);
+                    continue;
+                }
+                if (ch == 'r') {
+                    explicitColor = null;
+                    i += cpl + Character.charCount(ncp);
+                    continue;
+                }
+            }
+            out.add(new ReplacementCodepoint(cp, explicitColor));
+            i += cpl;
+        }
+        return out;
+    }
+
+    private static Integer mapLegacyColor(char c) {
+        return switch (c) {
+            case '0' -> 0x000000;
+            case '1' -> 0x0000AA;
+            case '2' -> 0x00AA00;
+            case '3' -> 0x00AAAA;
+            case '4' -> 0xAA0000;
+            case '5' -> 0xAA00AA;
+            case '6' -> 0xFFAA00;
+            case '7' -> 0xAAAAAA;
+            case '8' -> 0x555555;
+            case '9' -> 0x5555FF;
+            case 'a' -> 0x55FF55;
+            case 'b' -> 0x55FFFF;
+            case 'c' -> 0xFF5555;
+            case 'd' -> 0xFF55FF;
+            case 'e' -> 0xFFFF55;
+            case 'f' -> 0xFFFFFF;
+            default -> null;
+        };
+    }
+
+    private record ReplacementCodepoint(int codepoint, Integer explicitColor) {
     }
 }
 

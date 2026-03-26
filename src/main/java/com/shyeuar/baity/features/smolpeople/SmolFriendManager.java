@@ -31,7 +31,6 @@ public final class SmolFriendManager {
         FRIENDS.clear();
 
         if (loadFromFile()) {
-            syncLegacyConfigField();
             return;
         }
 
@@ -43,7 +42,6 @@ public final class SmolFriendManager {
             }
         }
         saveToFile();
-        syncLegacyConfigField();
     }
 
     public static boolean shouldApplySmolTo(int entityId) {
@@ -57,8 +55,10 @@ public final class SmolFriendManager {
             return false;
         }
 
-        if (BaityPresenceSync.isSmolEnabledFor(targetPlayer.getUUID())) {
-            return true;
+        Boolean remotePreference = BaityPresenceSync.getRemoteSmolPreference(targetPlayer.getUUID());
+        if (remotePreference != null) {
+            // Remote feature switch has highest priority whenever remote data exists.
+            return remotePreference;
         }
 
         if (!ConfigManager.smolFriendsEnabled) {
@@ -196,6 +196,6 @@ public final class SmolFriendManager {
 
     private static void syncLegacyConfigField() {
         ConfigManager.smolFriendList = String.join(",", FRIENDS.values());
-        ConfigManager.saveConfig();
+        ConfigManager.requestSave();
     }
 }

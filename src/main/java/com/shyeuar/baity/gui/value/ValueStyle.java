@@ -10,6 +10,7 @@ public enum ValueStyle {
     SLIDER,
     COLOR_PALETTE,
     GROUP,
-    GRADIENT_EDITOR
+    GRADIENT_EDITOR,
+    TEXT_LINE_INPUT
 }
 

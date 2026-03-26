@@ -10,6 +10,7 @@ import com.shyeuar.baity.gui.value.ButtonValue;
 import com.shyeuar.baity.gui.value.GroupValue;
 import com.shyeuar.baity.gui.value.GradientEditorValue;
 import com.shyeuar.baity.gui.value.SliderValue;
+import com.shyeuar.baity.gui.value.TextLineInputValue;
 import com.shyeuar.baity.gui.value.ValueTreeUtils;
 import com.shyeuar.baity.gui.value.ValueTypeRegistry;
 import com.shyeuar.baity.config.ConfigManager;
@@ -53,6 +54,16 @@ public class ClickGuiInputHandler {
                 state.setEditingGradient(null);
                 state.setGradientInputText("");
             }
+        }
+        if (button == 0 && state.isEditingTextInput()) {
+            if (!isClickInsideEditingTextInput(coords)) {
+                state.setEditingTextInput(null);
+                state.setTextInputValue("");
+            }
+        }
+
+        if (handleWatermarkClick(coords, button)) {
+            return true;
         }
         
         if (state.isEditingSlider() && button == 0) {
@@ -141,7 +152,7 @@ public class ClickGuiInputHandler {
         if (handleGitHubIconClick(coords, button)) {
             return true;
         }
-        
+
         if (handleVersionUpdateClick(coords, button)) {
             return true;
         }
@@ -244,6 +255,9 @@ public class ClickGuiInputHandler {
         if (state.isEditingGradient()) {
             return handleGradientHexInput(keyCode);
         }
+        if (state.isEditingTextInput()) {
+            return handleTextLineInput(keyCode);
+        }
         
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             if (state.isListeningForInput()) {
@@ -259,33 +273,64 @@ public class ClickGuiInputHandler {
     }
     
     public boolean handleCharTyped(char chr, int modifiers) {
+        return handleCodePointTyped((int) chr, modifiers);
+    }
+
+    public boolean handleCodePointTyped(int codePoint, int modifiers) {
         if (state.isEditingSlider()) {
             String current = state.getSliderInputText();
-            if (Character.isDigit(chr) || chr == '.' || chr == '-') {
-                if (chr == '-' && !current.isEmpty()) return true;
-                if (chr == '.' && current.contains(".")) return true;
-                state.setSliderInputText(current + chr);
+            char ch = (char) codePoint;
+            if (Character.isDigit(codePoint) || ch == '.' || ch == '-') {
+                if (ch == '-' && !current.isEmpty()) return true;
+                if (ch == '.' && current.contains(".")) return true;
+                state.setSliderInputText(current + ch);
             }
             return true;
         }
         if (state.isEditingGradient()) {
             String current = state.getGradientInputText();
-            if ((chr >= '0' && chr <= '9') || (chr >= 'a' && chr <= 'f') || (chr >= 'A' && chr <= 'F')) {
+            char ch = (char) codePoint;
+            if ((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')) {
                 if (current.length() < 6) {
-                    state.setGradientInputText(current + chr);
+                    state.setGradientInputText(current + ch);
                 }
             }
             return true;
         }
+        if (state.isEditingTextInput()) {
+            if (Character.isISOControl(codePoint)) return false;
+
+            String current = state.getTextInputValue();
+            int cursorCp = state.getTextInputCursorCpIndex();
+            int charPos = cpIndexToCharIndex(current, cursorCp);
+            String insert = new String(Character.toChars(codePoint));
+            state.setTextInputValue(current.substring(0, charPos) + insert + current.substring(charPos));
+            state.setTextInputCursorCpIndex(cursorCp + 1);
+            return true;
+        }
         
         if (state.isSearchFocused()) {
-            if (chr >= 32 && chr < 127) {
-                state.setSearchText(state.getSearchText() + chr);
+            if (codePoint >= 32 && codePoint < 127) {
+                state.setSearchText(state.getSearchText() + (char) codePoint);
                 return true;
             }
         }
         
         return false;
+    }
+
+    private static int cpIndexToCharIndex(String s, int cpIndex) {
+        if (s == null) return 0;
+        int cpCount = s.codePointCount(0, s.length());
+        int target = Math.max(0, Math.min(cpIndex, cpCount));
+        int curCp = 0;
+        for (int charIdx = 0; charIdx < s.length(); ) {
+            if (curCp == target) return charIdx;
+            int cp = s.codePointAt(charIdx);
+            charIdx += Character.charCount(cp);
+            curCp++;
+        }
+        return s.length();
     }
     
     private boolean handleSliderInput(int keyCode) {
@@ -366,6 +411,59 @@ public class ClickGuiInputHandler {
             }
             state.setEditingGradient(null);
             state.setGradientInputText("");
+            return true;
+        }
+        return false;
+    }
+
+    private boolean handleTextLineInput(int keyCode) {
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            state.setEditingTextInput(null);
+            state.setTextInputValue("");
+            state.setTextInputCursorCpIndex(0);
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_LEFT) {
+            if (state.getTextInputCursorCpIndex() > 0) {
+                state.setTextInputCursorCpIndex(state.getTextInputCursorCpIndex() - 1);
+            }
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_RIGHT) {
+            String current = state.getTextInputValue();
+            int maxCp = current.codePointCount(0, current.length());
+            if (state.getTextInputCursorCpIndex() < maxCp) {
+                state.setTextInputCursorCpIndex(state.getTextInputCursorCpIndex() + 1);
+            }
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
+            String current = state.getTextInputValue();
+            int cursorCp = state.getTextInputCursorCpIndex();
+            if (cursorCp > 0 && !current.isEmpty()) {
+                int leftCp = cursorCp - 1;
+                int leftChar = cpIndexToCharIndex(current, leftCp);
+                int rightChar = cpIndexToCharIndex(current, cursorCp);
+                state.setTextInputValue(current.substring(0, leftChar) + current.substring(rightChar));
+                state.setTextInputCursorCpIndex(leftCp);
+            }
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+            ClickGuiState.TextInputInfo info = state.getEditingTextInput();
+            if (info != null) {
+                Module module = ModuleManager.getModuleByName(info.moduleName);
+                if (module != null) {
+                    Value found = ValueTreeUtils.findByName(module, info.valueName);
+                    if (found instanceof TextLineInputValue) {
+                        found.setValue(state.getTextInputValue());
+                        if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                            ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), found.getValue());
+                        }
+                    }
+                }
+            }
+            state.setEditingTextInput(null);
             return true;
         }
         return false;
@@ -691,6 +789,50 @@ public class ClickGuiInputHandler {
         }
         
         return false;
+    }
+    
+    private boolean handleWatermarkClick(ClickGuiLayout.ScaledCoordinates coords, int button) {
+        if (button != 0) return false;
+        
+        Minecraft client = Minecraft.getInstance();
+        if (client == null) return false;
+
+        String prefix = "Baity by ";
+        String handleName = "@raueyhs";
+        float wmScale = 0.70f;
+
+        int prefixWidth = client.font.width(prefix);
+        int handleNameWidth = client.font.width(handleName);
+
+        float totalScaledWidth = wmScale * (prefixWidth + handleNameWidth);
+        float baseX = ClickGuiState.WIDTH - totalScaledWidth - 8;
+        float baseY = 8;
+
+        float handleX1 = baseX + wmScale * prefixWidth;
+        float handleX2 = handleX1 + wmScale * handleNameWidth;
+        float lineY = baseY + (int)(client.font.lineHeight * wmScale) + 1;
+        float handleY1 = baseY;
+        float handleY2 = baseY + (int)(client.font.lineHeight * wmScale);
+
+        boolean hovered =
+            coords.mouseX >= handleX1 && coords.mouseX <= handleX2 &&
+            ((coords.mouseY >= handleY1 && coords.mouseY <= handleY2) ||
+             (coords.mouseY >= lineY && coords.mouseY <= lineY + 1));
+
+        if (!hovered) return false;
+
+        try {
+            net.minecraft.Util.getPlatform().openUri(new java.net.URI("https://github.com/raueyhs"));
+        } catch (Exception e) {
+            if (client.player != null) {
+                client.player.displayClientMessage(
+                    net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://github.com/raueyhs"),
+                    false
+                );
+            }
+        }
+
+        return true;
     }
     
     private boolean handleCategoryClick(ClickGuiLayout.ScaledCoordinates coords) {
@@ -1050,6 +1192,20 @@ public class ClickGuiInputHandler {
                     timer.reset();
                     return true;
                 }
+            } else if (button == 0 && style == ValueStyle.TEXT_LINE_INPUT && value instanceof TextLineInputValue) {
+                float lineX1 = subX1 + (subX2 - subX1) * 0.52f;
+                float lineX2 = subX2 - 10;
+                float lineY = subModY + dims.subOptionHeight - 4;
+                float hoverY1 = lineY - 10;
+                float hoverY2 = lineY + 5;
+                if (GuiRenderUtil.isHovered(lineX1, hoverY1, lineX2, hoverY2, coords.mouseX, coords.mouseY)) {
+                    state.setEditingTextInput(new ClickGuiState.TextInputInfo(module.getName(), value.getName()));
+                    String start = String.valueOf(value.getValue());
+                    state.setTextInputValue(start);
+                    state.setTextInputCursorCpIndex(start.codePointCount(0, start.length()));
+                    timer.reset();
+                    return true;
+                }
             } else if (button == 0) {
                 if (GuiRenderUtil.isHovered(subX1, (int)subModY, 
                                            subX2, (int)(subModY + dims.subOptionHeight), 
@@ -1114,6 +1270,59 @@ public class ClickGuiInputHandler {
                     float inputY = mapY2 + 11;
                     return GuiRenderUtil.isHovered(inputX1, inputY - 10, inputX2, inputY + 3, coords.mouseX, coords.mouseY);
                 }
+                float currentHeight = dims.subOptionHeight;
+                if (value.getStyle() == ValueStyle.COLOR_PALETTE) currentHeight = dims.subOptionHeight * 2;
+                else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR) currentHeight = dims.subOptionHeight * 6;
+                subModY += currentHeight;
+                previousValue = value;
+            }
+            modY += getSubOptionContainerHeight(module);
+        }
+        return false;
+    }
+
+    private boolean isClickInsideEditingTextInput(ClickGuiLayout.ScaledCoordinates coords) {
+        ClickGuiState.TextInputInfo editInfo = state.getEditingTextInput();
+        if (editInfo == null) return false;
+
+        float modY = ClickGuiState.HEADER_HEIGHT + 10 - state.getScrollOffset();
+        List<Module> modules = getFilteredModules();
+
+        for (Module module : modules) {
+            modY += 30;
+            if (!module.isExpanded()) continue;
+
+            java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
+            int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
+            float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
+            ClickGuiLayout.ContainerDimensions dims =
+                ClickGuiLayout.calculateSubOptionContainer(entries.size(), visibleHeight, extraHeight);
+
+            float containerX1 = ClickGuiState.SIDEBAR_WIDTH + 20;
+            float containerX2 = ClickGuiState.SIDEBAR_WIDTH + ClickGuiState.CONTENT_WIDTH - 20;
+            float subModY = modY + dims.padding;
+            Value previousValue = null;
+
+            for (ValueTreeUtils.ValueEntry entry : entries) {
+                Value value = entry.value();
+                int depth = entry.depth();
+
+                if (value.needsSeparatorBefore(previousValue)) subModY += 12;
+
+                int subX1 = (int) (containerX1 + 4 + depth * 12);
+                int subX2 = (int) (containerX2 - 4 - depth * 8);
+
+                if (value.getStyle() == ValueStyle.TEXT_LINE_INPUT &&
+                    module.getName().equals(editInfo.moduleName) &&
+                    value.getName().equals(editInfo.valueName)) {
+                    float lineX1 = subX1 + (subX2 - subX1) * 0.52f;
+                    float lineX2 = subX2 - 10;
+                    float lineY = subModY + dims.subOptionHeight - 4;
+                    float hoverY1 = lineY - 10;
+                    float hoverY2 = lineY + 5;
+                    return GuiRenderUtil.isHovered(lineX1, hoverY1, lineX2, hoverY2, coords.mouseX, coords.mouseY);
+                }
+
                 float currentHeight = dims.subOptionHeight;
                 if (value.getStyle() == ValueStyle.COLOR_PALETTE) currentHeight = dims.subOptionHeight * 2;
                 else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR) currentHeight = dims.subOptionHeight * 6;

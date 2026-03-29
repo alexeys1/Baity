@@ -36,6 +36,11 @@ public final class SyncCommands {
         root.then(
             ClientCommandManager.literal("sync")
                 .executes(context -> syncNow())
+                .then(ClientCommandManager.literal("help")
+                    .executes(context -> {
+                        com.shyeuar.baity.utils.MessageUtils.sendSyncHelpLinesInChat();
+                        return 1;
+                    }))
         );
 
         dispatcher.register(root);
@@ -55,7 +60,7 @@ public final class SyncCommands {
 
     private static int syncNow() {
         BaityPresenceSync.syncOnce();
-        MessageUtils.sendBaityMessage("Requested presence sync (read + write).");
+        MessageUtils.sendSyncStartForCommand();
         BaityPresenceSync.sendConnectivityHintNow();
         return 1;
     }

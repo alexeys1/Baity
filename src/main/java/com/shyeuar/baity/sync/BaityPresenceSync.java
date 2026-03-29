@@ -8,7 +8,6 @@ import com.shyeuar.baity.config.BaityConfigDir;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import com.shyeuar.baity.utils.NickRenderUtils;
 import com.shyeuar.baity.utils.MessageUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -23,6 +22,7 @@ import java.net.SocketTimeoutException;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
 import java.net.URI;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,6 +34,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Base64;
 
 @Environment(EnvType.CLIENT)
 public final class BaityPresenceSync {
@@ -59,7 +60,14 @@ public final class BaityPresenceSync {
     private static volatile long nextTokenProvisionAllowedAt = 0L;
     private static final AtomicBoolean TOKEN_PROVISIONING = new AtomicBoolean(false);
     private static final AtomicBoolean CONNECTIVITY_CHECK_RUNNING = new AtomicBoolean(false);
-    private static volatile int connectivityCheckStatus = 0;
+
+    private static final AtomicBoolean MANUAL_SYNC_PENDING = new AtomicBoolean(false);
+    private static final AtomicBoolean MANUAL_RESULT_SENT = new AtomicBoolean(false);
+    private static volatile int autoStartupSyncResult = 0;
+    private static volatile boolean autoStartupResultShownInWorld = false;
+    private static volatile boolean firstWorldSyncMsgShown = false;
+    private static volatile boolean autoSyncTriggeredInWorld = false;
+    private static volatile boolean autoRetryScheduled = false;
 
     private static final Map<UUID, RemoteUserState> USERS_BY_UUID = new ConcurrentHashMap<>();
     private static final Map<String, ChromaProfile> CHROMA_BY_NAME = new ConcurrentHashMap<>();
@@ -72,9 +80,11 @@ public final class BaityPresenceSync {
         nextReportAllowedAt = 0L;
         lastReportedSignature = "";
         lastSeenLocalPlayerUuid = null;
-        lastInWorld = false;
         nextTokenProvisionAllowedAt = 0L;
-        connectivityCheckStatus = 0;
+        firstWorldSyncMsgShown = false;
+        autoStartupSyncResult = 0;
+        autoStartupResultShownInWorld = false;
+        autoSyncTriggeredInWorld = false;
         loadCacheFromDisk();
         startConnectivitySelfCheck();
     }
@@ -92,7 +102,21 @@ public final class BaityPresenceSync {
         long now = System.currentTimeMillis();
         nextReportAllowedAt = 0L;
         nextTokenProvisionAllowedAt = 0L;
+        MANUAL_SYNC_PENDING.set(true);
+        MANUAL_RESULT_SENT.set(false);
         startReadThenWrite(now, true);
+        CompletableFuture.runAsync(() -> {
+            try {
+                Thread.sleep(20000);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+            if (MANUAL_SYNC_PENDING.get() && !MANUAL_RESULT_SENT.get()) {
+                MANUAL_RESULT_SENT.set(true);
+                MANUAL_SYNC_PENDING.set(false);
+                MessageUtils.sendSyncTimeoutForCommand();
+            }
+        });
     }
 
     public static void sendConnectivityHintNow() {
@@ -111,7 +135,6 @@ public final class BaityPresenceSync {
 
         CompletableFuture.runAsync(() -> {
             boolean ok = healthCheck(finalHealthUrl);
-            connectivityCheckStatus = ok ? 1 : -1;
             MessageUtils.sendPresenceSyncNotification(ok, false);
         });
     }
@@ -120,7 +143,6 @@ public final class BaityPresenceSync {
         if (!CONNECTIVITY_CHECK_RUNNING.compareAndSet(false, true)) return;
         String fetchUrl = resolveFetchUrl();
         if (fetchUrl == null || fetchUrl.isBlank()) {
-            connectivityCheckStatus = -1;
             CONNECTIVITY_CHECK_RUNNING.set(false);
             return;
         }
@@ -134,7 +156,7 @@ public final class BaityPresenceSync {
         }
         final String finalHealthUrl = healthUrl;
         CompletableFuture.runAsync(() -> {
-            connectivityCheckStatus = healthCheck(finalHealthUrl) ? 1 : -1;
+            healthCheck(finalHealthUrl);
             CONNECTIVITY_CHECK_RUNNING.set(false);
         });
     }
@@ -160,11 +182,6 @@ public final class BaityPresenceSync {
         return false;
     }
 
-    private static void sendConnectivityHint() {
-        if (connectivityCheckStatus == 0) return;
-        if (!ConfigManager.baityPresenceSyncNotificationEnabled) return;
-        MessageUtils.sendPresenceSyncNotification(connectivityCheckStatus > 0);
-    }
 
     public static void onClickGuiClosed() {
         attemptReport(System.currentTimeMillis(), false);
@@ -207,6 +224,23 @@ public final class BaityPresenceSync {
                 if (success) {
                     lastReportedSignature = signature;
                     updateCacheForSelfFromLocalState(state);
+                    if (autoStartupSyncResult == 0) {
+                        autoStartupSyncResult = 1;
+                    }
+                    if (MANUAL_SYNC_PENDING.get() && !MANUAL_RESULT_SENT.get()) {
+                        MANUAL_RESULT_SENT.set(true);
+                        MANUAL_SYNC_PENDING.set(false);
+                        MessageUtils.sendSyncResult(true, false);
+                    }
+                } else {
+                    if (autoStartupSyncResult == 0) {
+                        autoStartupSyncResult = -1;
+                    }
+                    if (MANUAL_SYNC_PENDING.get() && !MANUAL_RESULT_SENT.get()) {
+                        MANUAL_RESULT_SENT.set(true);
+                        MANUAL_SYNC_PENDING.set(false);
+                        MessageUtils.sendSyncResult(false, false);
+                    }
                 }
             } finally {
                 REPORTING.set(false);
@@ -318,12 +352,11 @@ public final class BaityPresenceSync {
         Minecraft client = Minecraft.getInstance();
         LocalPlayer player = client.player;
         boolean inWorld = client.level != null && player != null;
-        boolean enteredWorld = inWorld && !lastInWorld;
 
         if (inWorld) {
             UUID currentUuid = player.getUUID();
             boolean switchedAccount = lastSeenLocalPlayerUuid != null && !lastSeenLocalPlayerUuid.equals(currentUuid);
-            if (enteredWorld || switchedAccount || lastSeenLocalPlayerUuid == null) {
+            if (switchedAccount || lastSeenLocalPlayerUuid == null) {
                 nextReportAllowedAt = 0L;
                 nextTokenProvisionAllowedAt = 0L;
                 if (switchedAccount) {
@@ -331,14 +364,22 @@ public final class BaityPresenceSync {
                     ConfigManager.baityPresenceReportToken = "";
                     ConfigManager.requestSave();
                 }
-                if (enteredWorld) {
-                    sendConnectivityHint();
-                }
-                startReadThenWrite(System.currentTimeMillis(), true);
             }
             lastSeenLocalPlayerUuid = currentUuid;
         }
 
+        boolean enteredWorld = inWorld && (lastSeenLocalPlayerUuid != null) && !lastInWorld;
+        if (enteredWorld && !firstWorldSyncMsgShown) {
+            firstWorldSyncMsgShown = true;
+        }
+        if (enteredWorld && !autoSyncTriggeredInWorld) {
+            autoSyncTriggeredInWorld = true;
+            startReadThenWrite(System.currentTimeMillis(), true);
+        }
+        if (inWorld && !autoStartupResultShownInWorld && autoStartupSyncResult != 0 && !autoRetryScheduled) {
+            autoStartupResultShownInWorld = true;
+            MessageUtils.sendSyncResult(autoStartupSyncResult > 0, true);
+        }
         lastInWorld = inWorld;
     }
 
@@ -475,6 +516,10 @@ public final class BaityPresenceSync {
                         applyPayload(json, true);
                         saveCacheToDisk(json);
                         LOGGER.info("[PresenceSync] fetch ok, code={}, bytes={}, attempt={}", code, json.length(), attempt + 1);
+                        if (autoStartupSyncResult == 0) {
+                            autoStartupSyncResult = 1;
+                        }
+                        if (autoSyncTriggeredInWorld) autoRetryScheduled = false;
                         return true;
                     }
                 }
@@ -483,12 +528,24 @@ public final class BaityPresenceSync {
                     sleepRetryBackoff();
                     continue;
                 }
+                boolean scheduled = tryAutoProbeAndRetryRead(url);
+                if (!scheduled) {
+                    if (autoStartupSyncResult == 0) {
+                        autoStartupSyncResult = -1;
+                    }
+                }
                 return false;
             } catch (Exception e) {
                 LOGGER.warn("[PresenceSync] fetch exception, attempt={}, err={}", attempt + 1, e.toString());
                 if (attempt < NETWORK_RETRY_COUNT && shouldRetryException(e)) {
                     sleepRetryBackoff();
                     continue;
+                }
+                boolean scheduled = tryAutoProbeAndRetryRead(url);
+                if (!scheduled) {
+                    if (autoStartupSyncResult == 0) {
+                        autoStartupSyncResult = -1;
+                    }
                 }
                 return false;
             } finally {
@@ -620,6 +677,7 @@ public final class BaityPresenceSync {
                     try (InputStream ignored = connection.getInputStream()) {
                     }
                     LOGGER.info("[PresenceSync] report ok, code={}, uuid={}, attempt={}", code, state.uuid(), attempt + 1);
+                    if (autoSyncTriggeredInWorld) autoRetryScheduled = false;
                     return true;
                 }
                 try (InputStream ignored = connection.getErrorStream()) {
@@ -634,12 +692,20 @@ public final class BaityPresenceSync {
                     sleepRetryBackoff();
                     continue;
                 }
+                boolean scheduled = tryAutoProbeAndRetryWrite(url, state);
+                if (!scheduled) {
+                    return false;
+                }
                 return false;
             } catch (Exception e) {
                 LOGGER.warn("[PresenceSync] report exception, uuid={}, attempt={}, err={}", state.uuid(), attempt + 1, e.toString());
                 if (attempt < NETWORK_RETRY_COUNT && shouldRetryException(e)) {
                     sleepRetryBackoff();
                     continue;
+                }
+                boolean scheduled = tryAutoProbeAndRetryWrite(url, state);
+                if (!scheduled) {
+                    return false;
                 }
                 return false;
             } finally {
@@ -740,11 +806,14 @@ public final class BaityPresenceSync {
 
     private static HttpURLConnection openHttpConnection(String url, int attempt) throws Exception {
         URI uri = URI.create(url);
-        boolean tryDirect = attempt > 0;
-        if (tryDirect) {
-            return (HttpURLConnection) uri.toURL().openConnection(Proxy.NO_PROXY);
+        Proxy proxy = resolveConfiguredProxy(attempt);
+        HttpURLConnection conn = (HttpURLConnection) (proxy == null
+                ? uri.toURL().openConnection()
+                : uri.toURL().openConnection(proxy));
+        if (proxy != null) {
+            applyProxyAuthIfConfigured(conn);
         }
-        return (HttpURLConnection) uri.toURL().openConnection();
+        return conn;
     }
 
     private static void sleepRetryBackoff() {
@@ -753,6 +822,82 @@ public final class BaityPresenceSync {
         } catch (InterruptedException ignored) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    private static Proxy resolveConfiguredProxy(int attempt) {
+        String host = ConfigManager.baityPresenceProxyHost == null ? "" : ConfigManager.baityPresenceProxyHost.trim();
+        int port = ConfigManager.baityPresenceProxyPort;
+        boolean hasProxy = !host.isEmpty() && port > 0;
+        if (!hasProxy) return null;
+        if (attempt > 0 && ConfigManager.baityPresenceProxyFallbackDirect) {
+            return null;
+        }
+        InetSocketAddress addr = new InetSocketAddress(host, port);
+        return new Proxy(Proxy.Type.HTTP, addr);
+    }
+
+    private static void applyProxyAuthIfConfigured(HttpURLConnection conn) {
+        String raw = ConfigManager.baityPresenceProxyAuth == null ? "" : ConfigManager.baityPresenceProxyAuth.trim();
+        if (raw.isEmpty()) return;
+        String token = Base64.getEncoder().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+        conn.setRequestProperty("Proxy-Authorization", "Basic " + token);
+    }
+
+    private static boolean tryAutoProbeAndRetryRead(String fetchUrl) {
+        if (ConfigManager.baityPresenceProxyHost != null && !ConfigManager.baityPresenceProxyHost.isBlank() && ConfigManager.baityPresenceProxyPort > 0) return false;
+        String health = toHealthUrl(fetchUrl);
+        if (probeAndSetProxy(health)) {
+            autoRetryScheduled = true;
+            startReadThenWrite(System.currentTimeMillis(), true);
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean tryAutoProbeAndRetryWrite(String reportUrl, LocalUserState state) {
+        if (ConfigManager.baityPresenceProxyHost != null && !ConfigManager.baityPresenceProxyHost.isBlank() && ConfigManager.baityPresenceProxyPort > 0) return false;
+        String health = toHealthUrl(reportUrl);
+        if (probeAndSetProxy(health)) {
+            autoRetryScheduled = true;
+            attemptReport(System.currentTimeMillis(), true);
+            return true;
+        }
+        return false;
+    }
+
+    private static String toHealthUrl(String anyUrl) {
+        if (anyUrl == null || anyUrl.isBlank()) return "";
+        String u = anyUrl.trim();
+        if (u.endsWith("/users.json")) return u.substring(0, u.length() - "/users.json".length()) + "/health";
+        if (u.endsWith("/report")) return u.substring(0, u.length() - "/report".length()) + "/health";
+        if (u.endsWith("/")) return u + "health";
+        return u + "/health";
+    }
+
+    private static boolean probeAndSetProxy(String healthUrl) {
+        int[] ports = new int[]{7892, 7890, 8080, 8889};
+        for (int p : ports) {
+            try {
+                URI uri = URI.create(healthUrl);
+                Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", p));
+                HttpURLConnection c = (HttpURLConnection) uri.toURL().openConnection(proxy);
+                c.setRequestMethod("GET");
+                c.setConnectTimeout(3000);
+                c.setReadTimeout(3000);
+                int code = c.getResponseCode();
+                if (code >= 200 && code < 500) {
+                    ConfigManager.baityPresenceProxyHost = "127.0.0.1";
+                    ConfigManager.baityPresenceProxyPort = p;
+                    ConfigManager.requestSave();
+                    try { if (c.getInputStream() != null) c.getInputStream().close(); } catch (Exception ignored) {}
+                    c.disconnect();
+                    return true;
+                }
+                c.disconnect();
+            } catch (Exception ignored) {
+            }
+        }
+        return false;
     }
 
     private static String resolveRegisterUrl(String reportUrl) {
@@ -893,43 +1038,37 @@ public final class BaityPresenceSync {
         CHROMA_BY_NAME.putAll(newChromaByName);
 
         if (overrideOwnState) {
-            syncRemoteOwnStateToLocal();
+            tryPushLocalIfRemoteDiffers();
         }
     }
 
-    private static void syncRemoteOwnStateToLocal() {
+    private static void tryPushLocalIfRemoteDiffers() {
         Minecraft client = Minecraft.getInstance();
         if (client == null) return;
         LocalPlayer player = client.player;
         if (player == null) return;
-
-        RemoteUserState selfState = USERS_BY_UUID.get(player.getUUID());
-        if (selfState == null) return;
-
-        ConfigManager.smolpeopleMode = selfState.smolPeopleEnabled();
-
-        ConfigManager.nickTweaksEnabled = selfState.nickTweaksEnabled();
-        ConfigManager.nickTweaksBoldSelf = selfState.boldEnabled();
-        ConfigManager.nickTweaksChromaEnabled = selfState.chromaEnabled();
-        ConfigManager.nickTweaksCustomNickColorEnabled = selfState.customNickColorEnabled();
-        ConfigManager.nickTweaksNickChanger = selfState.nickChanger();
-
-        ConfigManager.nickTweaksChromaSpeed = selfState.chromaSpeed();
-        ConfigManager.nickTweaksChromaSize = selfState.chromaSize();
-        ConfigManager.nickTweaksChromaChroma = selfState.chromaAmount();
-        ConfigManager.nickTweaksChromaLightness = selfState.chromaLightness();
-
-        ConfigManager.nickTweaksGradientStartColor = selfState.gradientStart();
-        ConfigManager.nickTweaksGradientEndColor = selfState.gradientEnd();
-
-        Module smolPeopleModule = ModuleManager.getModuleByName("SmolPeople");
-        if (smolPeopleModule != null) smolPeopleModule.setEnabled(ConfigManager.smolpeopleMode);
-
-        Module nickTweaksModule = ModuleManager.getModuleByName("NickTweaks");
-        if (nickTweaksModule != null) nickTweaksModule.setEnabled(ConfigManager.nickTweaksEnabled);
-
-        NickRenderUtils.invalidateLocalTargetsCache();
+        RemoteUserState remote = USERS_BY_UUID.get(player.getUUID());
+        LocalUserState local = snapshotLocalState();
+        if (local == null) return;
+        if (remote == null) {
+            attemptReport(System.currentTimeMillis(), false);
+            return;
+        }
+        String remoteSig = buildRemoteLikeSignature(remote);
+        if (!remoteSig.equals(local.signature())) {
+            attemptReport(System.currentTimeMillis(), false);
+        }
     }
+
+    private static String buildRemoteLikeSignature(RemoteUserState r) {
+        return (r.uuid() + "|" + r.name() + "|" + r.isBaityUser()
+            + "|" + r.nickTweaksEnabled() + "|" + r.chromaEnabled() + "|" + r.smolPeopleEnabled()
+            + "|" + r.chromaSpeed() + "|" + r.chromaSize() + "|" + r.chromaAmount() + "|" + r.chromaLightness()
+            + "|" + (r.gradientStart() & 0xFFFFFF) + "|" + (r.gradientEnd() & 0xFFFFFF)
+            + "|" + r.boldEnabled() + "|" + r.customNickColorEnabled() + "|" + (r.nickChanger() == null ? "" : r.nickChanger())
+            + "|" + java.util.Arrays.toString(r.chromaPalette() == null ? new int[0] : r.chromaPalette()));
+    }
+
 
     private static void loadCacheFromDisk() {
         try {

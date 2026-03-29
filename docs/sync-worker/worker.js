@@ -197,7 +197,7 @@ async function writeUserTokenRecord(env, uuid, token, nowIso, createdAt = null) 
   await env.PRESENCE_KV.put(userTokenKey(uuid), JSON.stringify(record), { expirationTtl: USER_RECORD_TTL_SECONDS });
 }
 
-async function appendReadLog(env, uuid, readAtIso) {
+async function appendReadLog(env, uuid, name, readAtIso) {
   const raw = await env.PRESENCE_KV.get(readLogKey());
   let logs = [];
   if (raw) {
@@ -209,14 +209,14 @@ async function appendReadLog(env, uuid, readAtIso) {
     } catch {
     }
   }
-  logs.push({ uuid, readAt: readAtIso });
+  logs.push({ uuid, name, readAt: readAtIso });
   if (logs.length > READ_LOG_MAX_ENTRIES) {
     logs = logs.slice(logs.length - READ_LOG_MAX_ENTRIES);
   }
   await env.PRESENCE_KV.put(readLogKey(), JSON.stringify(logs));
 }
 
-async function appendWriteLog(env, uuid, writeAtIso) {
+async function appendWriteLog(env, uuid, name, writeAtIso) {
   const raw = await env.PRESENCE_KV.get(writeLogKey());
   let logs = [];
   if (raw) {
@@ -228,7 +228,7 @@ async function appendWriteLog(env, uuid, writeAtIso) {
     } catch {
     }
   }
-  logs.push({ uuid, writeAt: writeAtIso });
+  logs.push({ uuid, name, writeAt: writeAtIso });
   if (logs.length > WRITE_LOG_MAX_ENTRIES) {
     logs = logs.slice(logs.length - WRITE_LOG_MAX_ENTRIES);
   }
@@ -308,20 +308,18 @@ export default {
     if (request.method === "POST" && path === "/admin/clear-all") {
       if (!isAdminRequest) return json({ ok: false, error: "unauthorized" }, 401);
 
-      const usersTokens = await deleteByPrefix(env, "user-token:");
-      const reads = await deleteByPrefix(env, "reads:");
-      const writes = await deleteByPrefix(env, "writes:");
+      const users = await deleteByPrefix(env, "user:");
+      const userTokens = await deleteByPrefix(env, "user-token:");
+      const tokens = await deleteByPrefix(env, "token:");
       const registers = await deleteByPrefix(env, "register:");
       await env.PRESENCE_KV.delete("users:index");
 
       return json({
         ok: true,
-        counts: {
-          usersTokens,
-          reads,
-          writes,
-          registers
-        }
+        users,
+        userTokens,
+        tokens,
+        registers
       });
     }
 
@@ -468,7 +466,7 @@ export default {
       try {
         const doLog = await shouldLog(env, writeThrottleKey(sanitized.uuid), WRITE_LOG_DEDUP_SECONDS);
         if (doLog) {
-          await appendWriteLog(env, sanitized.uuid, new Date().toISOString());
+          await appendWriteLog(env, sanitized.uuid, sanitized.name, new Date().toISOString());
         }
       } catch {
       }
@@ -489,7 +487,9 @@ export default {
         }
         const doLog = await shouldLog(env, readThrottleKey(requestUuid), READ_LOG_DEDUP_SECONDS);
         if (doLog) {
-          await appendReadLog(env, requestUuid, new Date().toISOString());
+          const entry = indexObj[requestUuid];
+          const requestName = entry && typeof entry.name === "string" ? entry.name : "";
+          await appendReadLog(env, requestUuid, requestName, new Date().toISOString());
         }
       }
       const indexObj = await readIndex(env);

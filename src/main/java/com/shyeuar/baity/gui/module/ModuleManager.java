@@ -552,8 +552,8 @@ public class ModuleManager {
             MessageUtils.createColoredText("Tip: You can DIY the timer UI by resources. Check ", 0xFFFF00)
                 .append(MessageUtils.createColoredText("config\\baity\\FishHookTimer_DIY_UI_Setup_Guide.txt", 0xADFF2F))
                 .append(MessageUtils.createColoredText(".", 0xFFFF00)));
-        TooltipManager.registerTooltip("Muffler", "Mute the annoying sounds.", 0xFFFFFF);
-        TooltipManager.registerTooltip("NickTweaks", "Tweak nick rendering globally.", 0xFFFFFF);
+        TooltipManager.registerTooltip("Muffler", "Disable some annoying sounds.", 0xFFFFFF);
+        TooltipManager.registerTooltip("NickTweaks", "DIY your own name display.", 0xFFFFFF);
         TooltipManager.registerTooltip(
             "nick changer",
             "Tip:Support the color code(&).Also,you can use &r to stop the color spreeding.",

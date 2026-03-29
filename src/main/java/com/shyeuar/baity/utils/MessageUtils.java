@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 
 @Environment(EnvType.CLIENT)
 public class MessageUtils {
@@ -85,5 +86,59 @@ public class MessageUtils {
                 .withUnderlined(true)
                 .withClickEvent(new ClickEvent.RunCommand("/baity notification off")));
         sendCustomMessage(createMessageWithPrefix(main.append(action)));
+    }
+
+    public static void sendSyncStartForCommand() {
+        sendCustomMessage(createMessageWithPrefix(createColoredText("Syncing to remote data...", 0xFFFFFF)));
+    }
+
+    public static void sendSyncResult(boolean success, boolean isNotification) {
+        int color = success ? 0x32CD32 : 0xDC143C;
+        String base = success ? "Succeeded to sync remote data!" : "Failed to sync remote data.";
+        MutableComponent msg = createColoredText(base + " ", color);
+
+        if (isNotification) {
+            MutableComponent stop = Component.literal("[stop to prompt]")
+                .withStyle(style -> style
+                    .withColor(0xFF69B4)
+                    .withUnderlined(true)
+                    .withClickEvent(new ClickEvent.RunCommand("/baity notification off")));
+            msg.append(stop);
+            if (!success) {
+                msg.append(Component.literal(" "));
+                msg.append(buildHelpClickable());
+            }
+            sendCustomMessage(createMessageWithPrefix(msg));
+            return;
+        }
+
+        if (!success) {
+            msg.append(Component.literal(" "));
+            msg.append(buildHelpClickable());
+        }
+        sendCustomMessage(createMessageWithPrefix(msg));
+    }
+
+    private static MutableComponent buildHelpClickable() {
+        return Component.literal("[无法同步?]")
+            .withStyle(Style.EMPTY
+                .withColor(0xFF69B4)
+                .withUnderlined(true)
+                .withClickEvent(new ClickEvent.RunCommand("/baity sync help")));
+    }
+
+    public static void sendSyncTimeoutForCommand() {
+        int color = 0xDC143C;
+        MutableComponent msg = createColoredText("Failed to sync remote data.(time out)", color);
+        sendCustomMessage(createMessageWithPrefix(msg));
+    }
+
+    public static void sendSyncHelpLinesInChat() {
+        if (Minecraft.getInstance().player == null) return;
+        int yellow = 0xFFFF00;
+        MutableComponent line = Component.literal("--------------------------------------------------").withStyle(s -> s.withColor(yellow));
+        Minecraft.getInstance().gui.getChat().addMessage(line);
+        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("检查你代理工具的 HTTP 端口，确保其与配置文件中的 BaityPresenceProxyPort 参数值相同。Host一般为127.0.0.1，如有差异也请自行调整为正确的值.").withStyle(s -> s.withColor(0xFFFFFF)));
+        Minecraft.getInstance().gui.getChat().addMessage(line);
     }
 }

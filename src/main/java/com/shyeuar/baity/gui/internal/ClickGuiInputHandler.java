@@ -256,6 +256,17 @@ public class ClickGuiInputHandler {
             return handleGradientHexInput(keyCode);
         }
         if (state.isEditingTextInput()) {
+            if ((modifiers & GLFW.GLFW_MOD_CONTROL) != 0 && keyCode == GLFW.GLFW_KEY_V) {
+                String clip = net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard();
+                if (clip != null && !clip.isEmpty()) {
+                    String current = state.getTextInputValue();
+                    int cursorCp = state.getTextInputCursorCpIndex();
+                    int charPos = cpIndexToCharIndex(current, cursorCp);
+                    state.setTextInputValue(current.substring(0, charPos) + clip + current.substring(charPos));
+                    state.setTextInputCursorCpIndex(cursorCp + clip.codePointCount(0, clip.length()));
+                }
+                return true;
+            }
             return handleTextLineInput(keyCode);
         }
         

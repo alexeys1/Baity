@@ -59,9 +59,9 @@ public class ConfigManager {
     public static boolean noSwimPoseEnabled = false; 
     
     public static boolean cullingEnabled = false;
-    public static boolean cullingHideDyingMob = false;
-    public static boolean cullingHideNonStarredNametag = false;
-    public static boolean cullingRemoveUnderwaterFog = false;
+    public static boolean cullingHideDyingMob = true;
+    public static boolean cullingHideNonStarredNametag = true;
+    public static boolean cullingRemoveUnderwaterFog = true;
     
     public static boolean skinLayer3DEnabled = false;
     
@@ -83,8 +83,8 @@ public class ConfigManager {
     public static boolean mufflerMuteDrake = true;
     
     public static boolean highlightsEnabled = false;
-    public static boolean highlightsShulkerEnabled = false;
-    public static boolean highlightsInvisibleBugEnabled = false;
+    public static boolean highlightsShulkerEnabled = true;
+    public static boolean highlightsInvisibleBugEnabled = true;
     
     public static boolean fancyCreeperVeilEnabled = false;
     
@@ -113,6 +113,10 @@ public class ConfigManager {
     public static String baityPresenceReportUrl = "";
     public static String baityPresenceReportToken = "";
     public static boolean baityPresenceSyncNotificationEnabled = true;
+    public static String baityPresenceProxyHost = "";
+    public static int baityPresenceProxyPort = 0;
+    public static String baityPresenceProxyAuth = "";
+    public static boolean baityPresenceProxyFallbackDirect = true;
     
     private static final String CONFIG_FILE_NAME = "config.txt";
 
@@ -391,6 +395,18 @@ public class ConfigManager {
         registerField("BaityPresenceSyncNotificationEnabled", Boolean.class,
             c -> ConfigManager.baityPresenceSyncNotificationEnabled,
             (c, v) -> ConfigManager.baityPresenceSyncNotificationEnabled = (Boolean) v);
+        registerField("BaityPresenceProxyHost", String.class,
+            c -> ConfigManager.baityPresenceProxyHost,
+            (c, v) -> ConfigManager.baityPresenceProxyHost = (String) v);
+        registerField("BaityPresenceProxyPort", Integer.class,
+            c -> ConfigManager.baityPresenceProxyPort,
+            (c, v) -> ConfigManager.baityPresenceProxyPort = (Integer) v);
+        registerField("BaityPresenceProxyAuth", String.class,
+            c -> ConfigManager.baityPresenceProxyAuth,
+            (c, v) -> ConfigManager.baityPresenceProxyAuth = (String) v);
+        registerField("BaityPresenceProxyFallbackDirect", Boolean.class,
+            c -> ConfigManager.baityPresenceProxyFallbackDirect,
+            (c, v) -> ConfigManager.baityPresenceProxyFallbackDirect = (Boolean) v);
     }
     
     private static void registerField(String key, Class<?> type,
@@ -419,7 +435,7 @@ public class ConfigManager {
                 config.append(key).append(":").append(value).append("\n");
             }
             
-            java.nio.file.Files.write(configPath, config.toString().getBytes());
+            java.nio.file.Files.writeString(configPath, config.toString(), java.nio.charset.StandardCharsets.UTF_8);
         } catch (java.io.IOException e) {
             System.err.println("Failed to save Baity config: " + e.getMessage());
         }
@@ -462,6 +478,7 @@ public class ConfigManager {
                 System.out.println("[Baity] Migrated config from old baity directory: " + newConfigPath);
             }
             
+            java.util.HashSet<String> seenKeys = new java.util.HashSet<>();
             if (java.nio.file.Files.exists(newConfigPath)) {
                 String content = java.nio.file.Files.readString(newConfigPath).trim();
                 String[] lines = content.split("\n");
@@ -494,11 +511,32 @@ public class ConfigManager {
                     
                     SettingField field = CONFIG_FIELDS.get(key);
                     if (field == null) continue;
+                    seenKeys.add(key);
                     
                     ConfigManager instance = null;
                             Object value = parseValue(valueStr, field.getType());
                             field.setValue(instance, value);
                 }
+            }
+            boolean needSave = false;
+            if (!seenKeys.contains("BaityPresenceProxyHost")) {
+                ConfigManager.baityPresenceProxyHost = "127.0.0.1";
+                needSave = true;
+            }
+            if (!seenKeys.contains("BaityPresenceProxyPort")) {
+                ConfigManager.baityPresenceProxyPort = 7892;
+                needSave = true;
+            }
+            if (!seenKeys.contains("BaityPresenceProxyAuth")) {
+                ConfigManager.baityPresenceProxyAuth = "";
+                needSave = true;
+            }
+            if (!seenKeys.contains("BaityPresenceProxyFallbackDirect")) {
+                ConfigManager.baityPresenceProxyFallbackDirect = true;
+                needSave = true;
+            }
+            if (needSave) {
+                saveConfig();
             }
         } catch (java.io.IOException e) {
             System.err.println("Failed to load Baity config: " + e.getMessage());

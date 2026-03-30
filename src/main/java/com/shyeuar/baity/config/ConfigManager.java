@@ -110,6 +110,7 @@ public class ConfigManager {
     public static int nickTweaksGradientStartColor = 0xFF4D4D;
     public static int nickTweaksGradientEndColor = 0xC299FF;
     public static String baityPresenceSyncUrl = "https://baity-presence-sync.1427637445.workers.dev/users.json";
+    public static boolean baityPresenceSyncEnabled = true;
     public static String baityPresenceReportUrl = "";
     public static String baityPresenceReportToken = "";
     public static boolean baityPresenceSyncNotificationEnabled = true;
@@ -117,6 +118,8 @@ public class ConfigManager {
     public static int baityPresenceProxyPort = 0;
     public static String baityPresenceProxyAuth = "";
     public static boolean baityPresenceProxyFallbackDirect = true;
+    
+    
     
     private static final String CONFIG_FILE_NAME = "config.txt";
 
@@ -386,6 +389,9 @@ public class ConfigManager {
         registerField("BaityPresenceSyncUrl", String.class,
             c -> ConfigManager.baityPresenceSyncUrl,
             (c, v) -> ConfigManager.baityPresenceSyncUrl = (String) v);
+        registerField("BaityPresenceSyncEnabled", Boolean.class,
+            c -> ConfigManager.baityPresenceSyncEnabled,
+            (c, v) -> ConfigManager.baityPresenceSyncEnabled = (Boolean) v);
         registerField("BaityPresenceReportUrl", String.class,
             c -> ConfigManager.baityPresenceReportUrl,
             (c, v) -> ConfigManager.baityPresenceReportUrl = (String) v);
@@ -407,6 +413,7 @@ public class ConfigManager {
         registerField("BaityPresenceProxyFallbackDirect", Boolean.class,
             c -> ConfigManager.baityPresenceProxyFallbackDirect,
             (c, v) -> ConfigManager.baityPresenceProxyFallbackDirect = (Boolean) v);
+        
     }
     
     private static void registerField(String key, Class<?> type,

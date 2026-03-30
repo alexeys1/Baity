@@ -39,6 +39,8 @@ import java.util.Base64;
 @Environment(EnvType.CLIENT)
 public final class BaityPresenceSync {
     private static final Logger LOGGER = LoggerFactory.getLogger("Baity/PresenceSync");
+    private static final long REMOTE_READ_COOLDOWN_MS = 20_000L;
+    private static volatile long nextRemoteReadAllowedAt = 0L;
     private static final long REPORT_CHANGE_DEBOUNCE_MS = 3_000L;
     private static final int CONNECT_TIMEOUT_MS = 10_000;
     private static final int READ_TIMEOUT_MS = 10_000;
@@ -86,7 +88,9 @@ public final class BaityPresenceSync {
         autoStartupResultShownInWorld = false;
         autoSyncTriggeredInWorld = false;
         loadCacheFromDisk();
-        startConnectivitySelfCheck();
+        if (ConfigManager.baityPresenceSyncEnabled) {
+            startConnectivitySelfCheck();
+        }
     }
 
     private static void enableJvmNetworkCompatibility() {
@@ -104,7 +108,7 @@ public final class BaityPresenceSync {
         nextTokenProvisionAllowedAt = 0L;
         MANUAL_SYNC_PENDING.set(true);
         MANUAL_RESULT_SENT.set(false);
-        startReadThenWrite(now, true);
+        startReadThenWrite(now, true, true);
         CompletableFuture.runAsync(() -> {
             try {
                 Thread.sleep(20000);
@@ -120,6 +124,7 @@ public final class BaityPresenceSync {
     }
 
     public static void sendConnectivityHintNow() {
+        if (!ConfigManager.baityPresenceSyncEnabled) return;
         String fetchUrl = resolveFetchUrl();
         if (fetchUrl == null || fetchUrl.isBlank()) return;
 
@@ -140,6 +145,7 @@ public final class BaityPresenceSync {
     }
 
     private static void startConnectivitySelfCheck() {
+        if (!ConfigManager.baityPresenceSyncEnabled) return;
         if (!CONNECTIVITY_CHECK_RUNNING.compareAndSet(false, true)) return;
         String fetchUrl = resolveFetchUrl();
         if (fetchUrl == null || fetchUrl.isBlank()) {
@@ -184,10 +190,11 @@ public final class BaityPresenceSync {
 
 
     public static void onClickGuiClosed() {
-        attemptReport(System.currentTimeMillis(), false);
+        attemptReport(System.currentTimeMillis(), false, false);
     }
 
-    private static void attemptReport(long now, boolean forceUpload) {
+    private static void attemptReport(long now, boolean forceUpload, boolean forceRemoteSync) {
+        if (!forceRemoteSync && !ConfigManager.baityPresenceSyncEnabled) return;
         String reportUrl = resolveReportUrl();
         if (reportUrl == null || reportUrl.isBlank()) {
             return;
@@ -202,7 +209,7 @@ public final class BaityPresenceSync {
             return;
         }
 
-        maybeProvisionWriteToken(reportUrl.trim(), state);
+        maybeProvisionWriteToken(reportUrl.trim(), state, forceRemoteSync);
         if (ConfigManager.baityPresenceReportToken == null || ConfigManager.baityPresenceReportToken.isBlank()) {
             REPORTING.set(false);
             return;
@@ -220,7 +227,7 @@ public final class BaityPresenceSync {
         nextReportAllowedAt = now + REPORT_CHANGE_DEBOUNCE_MS;
         CompletableFuture.runAsync(() -> {
             try {
-                boolean success = reportLocalState(reportUrl.trim(), state);
+                boolean success = reportLocalState(reportUrl.trim(), state, forceRemoteSync);
                 if (success) {
                     lastReportedSignature = signature;
                     updateCacheForSelfFromLocalState(state);
@@ -374,34 +381,51 @@ public final class BaityPresenceSync {
         }
         if (enteredWorld && !autoSyncTriggeredInWorld) {
             autoSyncTriggeredInWorld = true;
-            startReadThenWrite(System.currentTimeMillis(), true);
+            if (ConfigManager.baityPresenceSyncEnabled) {
+                startReadThenWrite(System.currentTimeMillis(), true);
+            }
         }
         if (inWorld && !autoStartupResultShownInWorld && autoStartupSyncResult != 0 && !autoRetryScheduled) {
             autoStartupResultShownInWorld = true;
-            MessageUtils.sendSyncResult(autoStartupSyncResult > 0, true);
+            if (ConfigManager.baityPresenceSyncNotificationEnabled) {
+                MessageUtils.sendSyncResult(autoStartupSyncResult > 0, true);
+            }
         }
         lastInWorld = inWorld;
     }
 
     private static void startReadThenWrite(long now, boolean forceUpload) {
+        startReadThenWrite(now, forceUpload, false);
+    }
+
+    private static void startReadThenWrite(long now, boolean forceUpload, boolean forceRemoteSync) {
+        if (!forceRemoteSync && !ConfigManager.baityPresenceSyncEnabled) return;
+
+        if (!forceRemoteSync && now < nextRemoteReadAllowedAt) {
+            attemptReport(now, forceUpload, forceRemoteSync);
+            return;
+        }
+
+        nextRemoteReadAllowedAt = forceRemoteSync ? 0L : now + REMOTE_READ_COOLDOWN_MS;
+
         String fetchUrl = resolveFetchUrl();
         if (fetchUrl == null || fetchUrl.isBlank()) {
-            attemptReport(now, forceUpload);
+            attemptReport(now, forceUpload, forceRemoteSync);
             return;
         }
 
         String trimmed = fetchUrl.trim();
         if (!FETCHING.compareAndSet(false, true)) {
-            attemptReport(now, forceUpload);
+            attemptReport(now, forceUpload, forceRemoteSync);
             return;
         }
 
         CompletableFuture.runAsync(() -> {
             try {
-                fetchAndReplace(trimmed);
+                fetchAndReplace(trimmed, forceRemoteSync);
             } finally {
                 FETCHING.set(false);
-                attemptReport(System.currentTimeMillis(), forceUpload);
+                attemptReport(System.currentTimeMillis(), forceUpload, forceRemoteSync);
             }
         });
     }
@@ -493,7 +517,7 @@ public final class BaityPresenceSync {
         return CHROMA_BY_NAME.get(name.toLowerCase(Locale.ROOT));
     }
 
-    private static boolean fetchAndReplace(String url) {
+    private static boolean fetchAndReplace(String url, boolean forceRemoteSync) {
         for (int attempt = 0; attempt <= NETWORK_RETRY_COUNT; attempt++) {
             HttpURLConnection connection = null;
             try {
@@ -513,7 +537,7 @@ public final class BaityPresenceSync {
                 if (code >= 200 && code < 300) {
                     try (InputStream stream = connection.getInputStream()) {
                         String json = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-                        applyPayload(json, true);
+                        applyPayload(json, true, forceRemoteSync);
                         saveCacheToDisk(json);
                         LOGGER.info("[PresenceSync] fetch ok, code={}, bytes={}, attempt={}", code, json.length(), attempt + 1);
                         if (autoStartupSyncResult == 0) {
@@ -528,7 +552,7 @@ public final class BaityPresenceSync {
                     sleepRetryBackoff();
                     continue;
                 }
-                boolean scheduled = tryAutoProbeAndRetryRead(url);
+                boolean scheduled = tryAutoProbeAndRetryRead(url, forceRemoteSync);
                 if (!scheduled) {
                     if (autoStartupSyncResult == 0) {
                         autoStartupSyncResult = -1;
@@ -541,7 +565,7 @@ public final class BaityPresenceSync {
                     sleepRetryBackoff();
                     continue;
                 }
-                boolean scheduled = tryAutoProbeAndRetryRead(url);
+                boolean scheduled = tryAutoProbeAndRetryRead(url, forceRemoteSync);
                 if (!scheduled) {
                     if (autoStartupSyncResult == 0) {
                         autoStartupSyncResult = -1;
@@ -599,7 +623,7 @@ public final class BaityPresenceSync {
         return state;
     }
 
-    private static boolean reportLocalState(String url, LocalUserState state) {
+    private static boolean reportLocalState(String url, LocalUserState state, boolean forceRemoteSync) {
         JsonObject root = new JsonObject();
         root.addProperty("version", 1);
 
@@ -692,7 +716,7 @@ public final class BaityPresenceSync {
                     sleepRetryBackoff();
                     continue;
                 }
-                boolean scheduled = tryAutoProbeAndRetryWrite(url, state);
+                boolean scheduled = tryAutoProbeAndRetryWrite(url, state, forceRemoteSync);
                 if (!scheduled) {
                     return false;
                 }
@@ -703,7 +727,7 @@ public final class BaityPresenceSync {
                     sleepRetryBackoff();
                     continue;
                 }
-                boolean scheduled = tryAutoProbeAndRetryWrite(url, state);
+                boolean scheduled = tryAutoProbeAndRetryWrite(url, state, forceRemoteSync);
                 if (!scheduled) {
                     return false;
                 }
@@ -715,7 +739,7 @@ public final class BaityPresenceSync {
         return false;
     }
 
-    private static void maybeProvisionWriteToken(String reportUrl, LocalUserState state) {
+    private static void maybeProvisionWriteToken(String reportUrl, LocalUserState state, boolean forceRemoteSync) {
         String existing = ConfigManager.baityPresenceReportToken;
         if (existing != null && !existing.isBlank()) {
             return;
@@ -730,14 +754,14 @@ public final class BaityPresenceSync {
         nextTokenProvisionAllowedAt = now + 10_000L;
         CompletableFuture.runAsync(() -> {
             try {
-                provisionWriteToken(reportUrl, state);
+                provisionWriteToken(reportUrl, state, forceRemoteSync);
             } finally {
                 TOKEN_PROVISIONING.set(false);
             }
         });
     }
 
-    private static void provisionWriteToken(String reportUrl, LocalUserState state) {
+    private static void provisionWriteToken(String reportUrl, LocalUserState state, boolean forceRemoteSync) {
         JsonObject root = new JsonObject();
         root.addProperty("uuid", state.uuid().toString());
         root.addProperty("name", state.name());
@@ -772,7 +796,7 @@ public final class BaityPresenceSync {
                         ConfigManager.requestSave();
                         LOGGER.info("[PresenceSync] register ok, uuid={}, attempt={}", state.uuid(), attempt + 1);
                         nextReportAllowedAt = 0L;
-                        attemptReport(System.currentTimeMillis(), true);
+                        attemptReport(System.currentTimeMillis(), true, forceRemoteSync);
                         return;
                     }
                 }
@@ -843,23 +867,23 @@ public final class BaityPresenceSync {
         conn.setRequestProperty("Proxy-Authorization", "Basic " + token);
     }
 
-    private static boolean tryAutoProbeAndRetryRead(String fetchUrl) {
+    private static boolean tryAutoProbeAndRetryRead(String fetchUrl, boolean forceRemoteSync) {
         if (ConfigManager.baityPresenceProxyHost != null && !ConfigManager.baityPresenceProxyHost.isBlank() && ConfigManager.baityPresenceProxyPort > 0) return false;
         String health = toHealthUrl(fetchUrl);
         if (probeAndSetProxy(health)) {
             autoRetryScheduled = true;
-            startReadThenWrite(System.currentTimeMillis(), true);
+            startReadThenWrite(System.currentTimeMillis(), true, forceRemoteSync);
             return true;
         }
         return false;
     }
 
-    private static boolean tryAutoProbeAndRetryWrite(String reportUrl, LocalUserState state) {
+    private static boolean tryAutoProbeAndRetryWrite(String reportUrl, LocalUserState state, boolean forceRemoteSync) {
         if (ConfigManager.baityPresenceProxyHost != null && !ConfigManager.baityPresenceProxyHost.isBlank() && ConfigManager.baityPresenceProxyPort > 0) return false;
         String health = toHealthUrl(reportUrl);
         if (probeAndSetProxy(health)) {
             autoRetryScheduled = true;
-            attemptReport(System.currentTimeMillis(), true);
+            attemptReport(System.currentTimeMillis(), true, forceRemoteSync);
             return true;
         }
         return false;
@@ -922,7 +946,7 @@ public final class BaityPresenceSync {
         return colors;
     }
 
-    private static void applyPayload(String json, boolean overrideOwnState) {
+    private static void applyPayload(String json, boolean overrideOwnState, boolean forceRemoteSync) {
         JsonElement rootElement = JsonParser.parseString(json);
         if (!rootElement.isJsonObject()) return;
 
@@ -1038,11 +1062,15 @@ public final class BaityPresenceSync {
         CHROMA_BY_NAME.putAll(newChromaByName);
 
         if (overrideOwnState) {
-            tryPushLocalIfRemoteDiffers();
+            tryPushLocalIfRemoteDiffers(forceRemoteSync);
         }
     }
 
-    private static void tryPushLocalIfRemoteDiffers() {
+    private static void applyPayload(String json, boolean overrideOwnState) {
+        applyPayload(json, overrideOwnState, false);
+    }
+
+    private static void tryPushLocalIfRemoteDiffers(boolean forceRemoteSync) {
         Minecraft client = Minecraft.getInstance();
         if (client == null) return;
         LocalPlayer player = client.player;
@@ -1051,12 +1079,12 @@ public final class BaityPresenceSync {
         LocalUserState local = snapshotLocalState();
         if (local == null) return;
         if (remote == null) {
-            attemptReport(System.currentTimeMillis(), false);
+            attemptReport(System.currentTimeMillis(), false, forceRemoteSync);
             return;
         }
         String remoteSig = buildRemoteLikeSignature(remote);
         if (!remoteSig.equals(local.signature())) {
-            attemptReport(System.currentTimeMillis(), false);
+            attemptReport(System.currentTimeMillis(), false, forceRemoteSync);
         }
     }
 

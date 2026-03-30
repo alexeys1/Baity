@@ -36,6 +36,10 @@ public final class SyncCommands {
         root.then(
             ClientCommandManager.literal("sync")
                 .executes(context -> syncNow())
+                .then(ClientCommandManager.literal("on")
+                    .executes(context -> setSyncEnabled(true)))
+                .then(ClientCommandManager.literal("off")
+                    .executes(context -> setSyncEnabled(false)))
                 .then(ClientCommandManager.literal("help")
                     .executes(context -> {
                         com.shyeuar.baity.utils.MessageUtils.sendSyncHelpLinesInChat();
@@ -59,9 +63,15 @@ public final class SyncCommands {
     }
 
     private static int syncNow() {
-        BaityPresenceSync.syncOnce();
         MessageUtils.sendSyncStartForCommand();
-        BaityPresenceSync.sendConnectivityHintNow();
+        BaityPresenceSync.syncOnce();
+        return 1;
+    }
+
+    private static int setSyncEnabled(boolean enabled) {
+        ConfigManager.baityPresenceSyncEnabled = enabled;
+        ConfigManager.requestSave();
+        MessageUtils.sendBaityMessage("remote data autosync" + (enabled ? "enabled." : "disabled."));
         return 1;
     }
 }

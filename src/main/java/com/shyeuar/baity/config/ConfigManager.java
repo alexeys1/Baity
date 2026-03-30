@@ -109,6 +109,7 @@ public class ConfigManager {
     public static boolean nickTweaksChromaGroupExpanded = false;
     public static int nickTweaksGradientStartColor = 0xFF4D4D;
     public static int nickTweaksGradientEndColor = 0xC299FF;
+    public static boolean nametagDefaultNametag = false;
     public static String baityPresenceSyncUrl = "https://baity-presence-sync.1427637445.workers.dev/users.json";
     public static boolean baityPresenceSyncEnabled = true;
     public static String baityPresenceReportUrl = "";
@@ -161,6 +162,9 @@ public class ConfigManager {
         registerField("Nametag", Boolean.class,
             c -> ConfigManager.nametagEnabled,
             (c, v) -> ConfigManager.nametagEnabled = (Boolean) v);
+        registerField("  DefaultNametag", Boolean.class,
+            c -> ConfigManager.nametagDefaultNametag,
+            (c, v) -> ConfigManager.nametagDefaultNametag = (Boolean) v);
         registerField("  ShowDistance", Boolean.class,
             c -> ConfigManager.nametagShowDistance,
             (c, v) -> ConfigManager.nametagShowDistance = (Boolean) v);

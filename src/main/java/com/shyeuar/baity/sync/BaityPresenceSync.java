@@ -78,7 +78,7 @@ public final class BaityPresenceSync {
     }
 
     public static void init() {
-        enableJvmNetworkCompatibility();
+        System.setProperty("java.net.preferIPv4Stack", "true");
         nextReportAllowedAt = 0L;
         lastReportedSignature = "";
         lastSeenLocalPlayerUuid = null;
@@ -91,11 +91,6 @@ public final class BaityPresenceSync {
         if (ConfigManager.baityPresenceSyncEnabled) {
             startConnectivitySelfCheck();
         }
-    }
-
-    private static void enableJvmNetworkCompatibility() {
-        System.setProperty("java.net.useSystemProxies", "true");
-        System.setProperty("java.net.preferIPv4Stack", "true");
     }
 
     public static void tick() {

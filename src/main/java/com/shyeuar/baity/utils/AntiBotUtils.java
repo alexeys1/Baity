@@ -219,7 +219,7 @@ public class AntiBotUtils {
         boolean inSkyBlock = isInSkyBlock();
         
         tickCount++;
-        if (tickCount % 60 == 0) {
+        if (tickCount % 100 == 0) {
             playerMap.clear();
             for (Player worldPlayer : mc.level.players()) {
                 try {

@@ -43,6 +43,7 @@ public final class NickRenderUtils {
             return size() > REPLACEMENT_CACHE_MAX;
         }
     };
+    private static final char[] HEX = "0123456789ABCDEF".toCharArray();
 
     private NickRenderUtils() {
     }
@@ -51,6 +52,10 @@ public final class NickRenderUtils {
         targetsCacheAt = 0L;
         cachePlayerName = "";
         cachedTargets = List.of();
+    }
+
+    public static long getTargetsCacheAt() {
+        return targetsCacheAt;
     }
 
     private static boolean isBaityClickGuiScreen() {
@@ -248,11 +253,14 @@ public final class NickRenderUtils {
     }
 
     private static void appendHexColor(StringBuilder sb, int rgb) {
-        String hex = String.format("%06X", rgb & 0xFFFFFF);
+        int v = rgb & 0xFFFFFF;
         sb.append('\u00A7').append('x');
-        for (char c : hex.toCharArray()) {
-            sb.append('\u00A7').append(c);
-        }
+        sb.append('\u00A7').append(HEX[(v >> 20) & 0xF]);
+        sb.append('\u00A7').append(HEX[(v >> 16) & 0xF]);
+        sb.append('\u00A7').append(HEX[(v >> 12) & 0xF]);
+        sb.append('\u00A7').append(HEX[(v >> 8) & 0xF]);
+        sb.append('\u00A7').append(HEX[(v >> 4) & 0xF]);
+        sb.append('\u00A7').append(HEX[v & 0xF]);
     }
 
     private static TargetMatch[] matchTargets(int[] codePoints, List<Target> targets) {

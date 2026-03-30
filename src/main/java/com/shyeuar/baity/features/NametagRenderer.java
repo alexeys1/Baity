@@ -26,12 +26,31 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
     
     private static long lastTimeUpdate = 0;
     private static double cachedSinValue = 0.0;
-    
+    private static final Object NAME_CACHE_LOCK = new Object();
+    private static final java.util.LinkedHashMap<String, CachedName> NAME_CACHE = new java.util.LinkedHashMap<>(64, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<String, CachedName> eldest) {
+            return size() > 512;
+        }
+    };
+    private static final class CachedName {
+        final String processed;
+        final int width;
+        CachedName(String processed, int width) {
+            this.processed = processed;
+            this.width = width;
+        }
+    }
+
     @Override
     public void afterEntities(WorldRenderContext context) {
         Module m = ModuleManager.getModuleByName("Nametag");
         if (m == null || !m.isEnabled()) {
             return; 
+        }
+        boolean defaultNametag = ModuleUtils.getOptionBoolean(m, "default nametag", false);
+        if (defaultNametag) {
+            return;
         }
         
         if (mc.level == null || mc.player == null) return;
@@ -55,7 +74,6 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         updateCache();
         
         com.shyeuar.baity.utils.AntiBotUtils.updatePlayerMap();
-        
         for (Player player : mc.level.players()) {
             if (com.shyeuar.baity.utils.AntiBotUtils.isBot(player)) {
                 continue;
@@ -127,16 +145,18 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         String baseName;
         if (forcePinkColor) {
             baseName = originalNameComponent.getString();
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < baseName.length(); i++) {
-                char c = baseName.charAt(i);
-                if (c == '\u00A7' && i + 1 < baseName.length()) {
-                    i++;
-                    continue;
+            if (baseName.indexOf('\u00A7') >= 0) {
+                StringBuilder sb = new StringBuilder(baseName.length());
+                for (int i = 0; i < baseName.length(); i++) {
+                    char c = baseName.charAt(i);
+                    if (c == '\u00A7' && i + 1 < baseName.length()) {
+                        i++;
+                        continue;
+                    }
+                    sb.append(c);
                 }
-                sb.append(c);
+                baseName = sb.toString();
             }
-            baseName = sb.toString();
             nameComponent = Component.literal(baseName).withStyle(Style.EMPTY.withColor(0xFFFF69B4));
         } else {
             nameComponent = originalNameComponent;
@@ -145,8 +165,24 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         
         Font textRenderer = mc.font;
 
-        String processedForWidth = NickRenderUtils.handleString(baseName);
-        int nameWidth = textRenderer.width(processedForWidth);
+        String cacheKey = NickRenderUtils.getTargetsCacheAt() + "|" + baseName;
+        CachedName cached;
+        synchronized (NAME_CACHE_LOCK) {
+            cached = NAME_CACHE.get(cacheKey);
+        }
+        String processedForWidth;
+        int nameWidth;
+        if (cached != null) {
+            processedForWidth = cached.processed;
+            nameWidth = cached.width;
+        } else {
+            processedForWidth = NickRenderUtils.handleString(baseName);
+            nameWidth = textRenderer.width(processedForWidth);
+            CachedName newEntry = new CachedName(processedForWidth, nameWidth);
+            synchronized (NAME_CACHE_LOCK) {
+                NAME_CACHE.put(cacheKey, newEntry);
+            }
+        }
         int totalWidth = nameWidth;
         if (isDeveloper) {
             totalWidth += textRenderer.width(DevConfig.DEV_PREFIX) + 2; 

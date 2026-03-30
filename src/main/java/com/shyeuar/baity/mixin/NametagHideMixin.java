@@ -26,16 +26,20 @@ public class NametagHideMixin {
             return; 
         }
 
+        boolean defaultNametag = ModuleUtils.getOptionBoolean(m, "default nametag", false);
+        if (defaultNametag) {
+            return;
+        }
+
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
         
         boolean isSelf = mc.player.getId() == state.id;
-        if (!isSelf) {
-            net.minecraft.world.entity.Entity entity = mc.level.getEntity(state.id);
-            if (entity instanceof Player player) {
-                if (com.shyeuar.baity.utils.AntiBotUtils.isBot(player)) {
-                    return;
-                }
+        net.minecraft.world.entity.Entity entity = mc.level.getEntity(state.id);
+        if (entity instanceof Player player) {
+            if (com.shyeuar.baity.utils.AntiBotUtils.isBot(player)) {
+                ci.cancel();
+                return;
             }
         }
 
@@ -57,6 +61,12 @@ public class NametagHideMixin {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
+
+        boolean defaultNametag = ModuleUtils.getOptionBoolean(m, "default nametag", false);
+        if (defaultNametag) {
+            if (avatar == mc.player) cir.setReturnValue(true);
+            return;
+        }
 
         if (avatar == mc.player) {
             boolean showOwnNametag = ModuleUtils.getOptionBoolean(m, "show own nametag", false);

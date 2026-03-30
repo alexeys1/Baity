@@ -89,7 +89,7 @@ public class MessageUtils {
     }
 
     public static void sendSyncStartForCommand() {
-        sendCustomMessage(createMessageWithPrefix(createColoredText("Syncing to remote data...", 0xFFFFFF)));
+        sendCustomMessage(createMessageWithPrefix(createColoredText("Syncing remote data...", 0xFFFFFF)));
     }
 
     public static void sendSyncResult(boolean success, boolean isNotification) {

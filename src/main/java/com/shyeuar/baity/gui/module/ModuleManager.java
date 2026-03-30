@@ -35,22 +35,28 @@ public class ModuleManager {
             new ModuleRegistry.ValueConfigInfo[]{}
         );
         
+        GroupValue customHandPosGroup = new GroupValue("pos", "pos", ModuleCategory.MISC)
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("position x", "position x", 0, -2.5, 1.5, 0.05, ModuleCategory.MISC))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("position y", "position y", 0, -1.5, 1.5, 0.05, ModuleCategory.MISC))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("position z", "position z", 0, -1.5, 3.0, 0.05, ModuleCategory.MISC));
+
+        GroupValue customHandRotGroup = new GroupValue("rot", "rot", ModuleCategory.MISC)
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("rotation x", "rotation x", 0, -180, 180, 1, ModuleCategory.MISC))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("rotation y", "rotation y", 0, -180, 180, 1, ModuleCategory.MISC))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("rotation z", "rotation z", 0, -180, 180, 1, ModuleCategory.MISC));
+
         ModuleRegistry.registerModuleWithValues(
             "CustomHandHolding", "CustomHandHolding", ModuleCategory.MISC,
             () -> ConfigManager.customHandHoldingEnabled,
             val -> ConfigManager.customHandHoldingEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new com.shyeuar.baity.gui.value.SliderValue("position x", "position x", 0, -2.5, 1.5, 0.05, ModuleCategory.MISC),
-                new com.shyeuar.baity.gui.value.SliderValue("position y", "position y", 0, -1.5, 1.5, 0.05, ModuleCategory.MISC),
-                new com.shyeuar.baity.gui.value.SliderValue("position z", "position z", 0, -1.5, 3.0, 0.05, ModuleCategory.MISC),
-                withSeparator(new com.shyeuar.baity.gui.value.SliderValue("rotation x", "rotation x", 0, -180, 180, 1, ModuleCategory.MISC)),
-                new com.shyeuar.baity.gui.value.SliderValue("rotation y", "rotation y", 0, -180, 180, 1, ModuleCategory.MISC),
-                new com.shyeuar.baity.gui.value.SliderValue("rotation z", "rotation z", 0, -180, 180, 1, ModuleCategory.MISC),
-                withSeparator(new com.shyeuar.baity.gui.value.SliderValue("scale", "size", 1, 0.1, 3.0, 0.05, ModuleCategory.MISC)),
+                customHandPosGroup,
+                customHandRotGroup,
+                new com.shyeuar.baity.gui.value.SliderValue("scale", "size", 1, 0.1, 3.0, 0.05, ModuleCategory.MISC),
                 new com.shyeuar.baity.gui.value.SliderValue("swing duration", "swing duration", 6, 1, 20, 1, ModuleCategory.MISC),
                 new com.shyeuar.baity.gui.value.Option("no swing", "no swing", false, ModuleCategory.MISC)
             },
-                new ModuleRegistry.ValueConfigInfo[]{
+            new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
                     "position x",
                     () -> ConfigManager.customHandHoldingPosX,
@@ -448,13 +454,19 @@ public class ModuleManager {
             () -> ConfigManager.nametagEnabled,
             val -> ConfigManager.nametagEnabled = val,
             new Option[]{
-                new Option("show distance", "show distance", false, ModuleCategory.RENDER),
+                new Option("default nametag", "default nametag", false, ModuleCategory.RENDER),
+                withSeparator(new Option("show distance", "show distance", false, ModuleCategory.RENDER)),
                 new Option("show own nametag", "show own nametag", true, ModuleCategory.RENDER),
                 withSeparator(new Option("force pink color", "force pink color", true, ModuleCategory.RENDER)),
                 new Option("focus player nametag", "focus player nametag", false, ModuleCategory.RENDER),
                 withSeparator(new Option("transparentize other tags", "transparentize other tags", false, ModuleCategory.RENDER))
             },
             new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "default nametag",
+                    () -> ConfigManager.nametagDefaultNametag,
+                    val -> ConfigManager.nametagDefaultNametag = (Boolean) val
+                ),
                 new ModuleRegistry.ValueConfigInfo(
                     "show distance",
                     () -> ConfigManager.nametagShowDistance,

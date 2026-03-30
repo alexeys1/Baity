@@ -63,6 +63,7 @@ public final class SyncCommands {
     }
 
     private static int syncNow() {
+        MessageUtils.sendSyncStartForCommand();
         BaityPresenceSync.syncOnce();
         return 1;
     }
@@ -70,7 +71,7 @@ public final class SyncCommands {
     private static int setSyncEnabled(boolean enabled) {
         ConfigManager.baityPresenceSyncEnabled = enabled;
         ConfigManager.requestSave();
-        MessageUtils.sendBaityMessage("remote data autosync" + (enabled ? "enabled" : "disabled"));
+        MessageUtils.sendBaityMessage("remote data autosync" + (enabled ? "enabled." : "disabled."));
         return 1;
     }
 }

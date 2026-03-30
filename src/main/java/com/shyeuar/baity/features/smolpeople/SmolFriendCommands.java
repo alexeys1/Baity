@@ -5,6 +5,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.shyeuar.baity.client.Baity;
 import com.shyeuar.baity.utils.MessageUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -21,6 +22,11 @@ public final class SmolFriendCommands {
 
     public static void attachSubCommands(LiteralArgumentBuilder<FabricClientCommandSource> root) {
         root.then(
+            ClientCommandManager.literal("fgui")
+                .executes(context -> openFriendsScreen())
+        );
+
+        root.then(
             ClientCommandManager.literal("fadd")
                 .executes(context -> handleMissingName())
                 .then(ClientCommandManager.argument("name", StringArgumentType.word())
@@ -35,6 +41,11 @@ public final class SmolFriendCommands {
                     .executes(context -> executeRemove(StringArgumentType.getString(context, "name"))))
         );
 
+    }
+
+    private static int openFriendsScreen() {
+        Baity.openSmolFriendsNextTick = true;
+        return 1;
     }
 
     private static int executeAdd(String name) {

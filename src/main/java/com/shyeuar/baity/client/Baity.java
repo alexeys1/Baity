@@ -3,6 +3,7 @@ package com.shyeuar.baity.client;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.ClickGui;
 import com.shyeuar.baity.gui.module.ModuleManager;
+import com.shyeuar.baity.gui.smol.SmolFriendsScreen;
 import com.shyeuar.baity.managers.KeybindManager;
 import com.shyeuar.baity.managers.ModuleInitializer;
 import com.shyeuar.baity.sync.BaityPresenceSync;
@@ -26,6 +27,7 @@ public class Baity implements ClientModInitializer {
     
     private static long lastKeyPressTime = 0;
     public static boolean openGuiNextTick = false;
+    public static boolean openSmolFriendsNextTick = false;
 
     @Override
     @SuppressWarnings("deprecation")
@@ -55,6 +57,12 @@ public class Baity implements ClientModInitializer {
             if (openGuiNextTick) {
                 openGuiNextTick = false;
                 Minecraft.getInstance().setScreen(new ClickGui());
+                return;
+            }
+
+            if (openSmolFriendsNextTick) {
+                openSmolFriendsNextTick = false;
+                Minecraft.getInstance().setScreen(new SmolFriendsScreen(null));
                 return;
             }
             

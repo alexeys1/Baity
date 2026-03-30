@@ -18,11 +18,16 @@ import java.util.Map;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Pattern;
 
 @Environment(EnvType.CLIENT)
 public final class SmolFriendManager {
     private static final Map<String, String> FRIENDS = new LinkedHashMap<>();
     private static final String FRIENDS_FILE_NAME = "synced_players.txt";
+    private static final Pattern VALID_PLAYER_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9_]{3,16}$");
+    private static final long LOBBY_PLAYERS_REFRESH_INTERVAL_MS = 500L;
+    private static List<String> cachedLobbyPlayers = List.of();
+    private static long lastLobbyPlayersRefreshTime = 0L;
 
     private SmolFriendManager() {
     }
@@ -93,6 +98,7 @@ public final class SmolFriendManager {
 
         FRIENDS.put(normalized, name.trim());
         persistToConfig();
+        refreshLobbyPlayersCache();
         return true;
     }
 
@@ -107,6 +113,7 @@ public final class SmolFriendManager {
         }
 
         persistToConfig();
+        refreshLobbyPlayersCache();
         return true;
     }
 
@@ -129,6 +136,46 @@ public final class SmolFriendManager {
         return names;
     }
 
+    public static List<String> getCurrentLobbyPlayers() {
+        long now = System.currentTimeMillis();
+        if (now - lastLobbyPlayersRefreshTime >= LOBBY_PLAYERS_REFRESH_INTERVAL_MS) {
+            refreshLobbyPlayersCache();
+        }
+        return cachedLobbyPlayers;
+    }
+
+    public static void refreshLobbyPlayersCache() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getConnection() == null) {
+            cachedLobbyPlayers = List.of();
+            lastLobbyPlayersRefreshTime = System.currentTimeMillis();
+            return;
+        }
+
+        String selfName = mc.player != null ? mc.player.getName().getString() : null;
+        String normalizedSelfName = normalizeName(selfName);
+        Map<String, String> lobbyPlayers = new LinkedHashMap<>();
+
+        for (var entry : mc.getConnection().getOnlinePlayers()) {
+            if (entry == null || entry.getProfile() == null) {
+                continue;
+            }
+
+            String rawName = entry.getProfile().name();
+            String normalizedName = normalizeLobbyPlayerName(rawName);
+            if (normalizedName == null || normalizedName.equals(normalizedSelfName) || FRIENDS.containsKey(normalizedName)) {
+                continue;
+            }
+
+            lobbyPlayers.putIfAbsent(normalizedName, rawName.trim());
+        }
+
+        List<String> names = new ArrayList<>(lobbyPlayers.values());
+        names.sort(String.CASE_INSENSITIVE_ORDER);
+        cachedLobbyPlayers = List.copyOf(names);
+        lastLobbyPlayersRefreshTime = System.currentTimeMillis();
+    }
+
     private static void persistToConfig() {
         saveToFile();
         syncLegacyConfigField();
@@ -145,6 +192,24 @@ public final class SmolFriendManager {
         }
 
         return trimmed.toLowerCase(Locale.ROOT);
+    }
+
+    private static String normalizeLobbyPlayerName(String name) {
+        String normalized = normalizeName(name);
+        if (normalized == null) {
+            return null;
+        }
+
+        String trimmed = name.trim();
+        if (trimmed.startsWith("!")) {
+            return null;
+        }
+
+        if (!VALID_PLAYER_NAME_PATTERN.matcher(trimmed).matches()) {
+            return null;
+        }
+
+        return normalized;
     }
 
     private static void addNameToMemory(String rawName) {

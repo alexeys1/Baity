@@ -17,18 +17,28 @@ import java.util.List;
 
 @Environment(EnvType.CLIENT)
 public class SmolFriendsScreen extends Screen {
-    private static final int PANEL_WIDTH = 420;
+    private static final int PANEL_WIDTH = 560;
     private static final int PANEL_HEIGHT = 280;
     private static final int ROW_HEIGHT = 16;
     private static final int LIST_PADDING = 12;
+    private static final int LIST_GAP = 12;
 
     private final Screen parentScreen;
+    private int lobbyScroll = 0;
     private int friendsScroll = 0;
+    private int selectedLobbyPlayer = -1;
     private int selectedFriend = -1;
+    private String selectedLobbyPlayerName = null;
 
     public SmolFriendsScreen(Screen parentScreen) {
         super(Component.literal("Smol Friends"));
         this.parentScreen = parentScreen;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        SmolFriendManager.refreshLobbyPlayersCache();
     }
 
     @Override
@@ -51,28 +61,49 @@ public class SmolFriendsScreen extends Screen {
 
         guiGraphics.drawString(this.font, "SmolPeople Friends", panelX + 10, panelY + 7, 0xFFFFFFFF, false);
 
-        int listTop = panelY + 34;
+        int listLabelY = panelY + 30;
+        int listTop = panelY + 42;
         int listBottom = panelY + PANEL_HEIGHT - 54;
-        int listX1 = panelX + LIST_PADDING;
-        int listX2 = panelX2 - LIST_PADDING;
+        int totalListWidth = PANEL_WIDTH - LIST_PADDING * 2 - LIST_GAP;
+        int singleListWidth = totalListWidth / 2;
+        int lobbyListX1 = panelX + LIST_PADDING;
+        int lobbyListX2 = lobbyListX1 + singleListWidth;
+        int friendsListX1 = lobbyListX2 + LIST_GAP;
+        int friendsListX2 = panelX2 - LIST_PADDING;
 
+        guiGraphics.drawString(this.font, "Current Lobby", lobbyListX1 + 2, listLabelY, LinearTheme.TEXT_SECONDARY.getRGB(), false);
+        guiGraphics.drawString(this.font, "Friends", friendsListX1 + 2, listLabelY, LinearTheme.TEXT_SECONDARY.getRGB(), false);
+
+        List<String> lobbyPlayers = SmolFriendManager.getCurrentLobbyPlayers();
         List<String> friends = SmolFriendManager.getFriends();
+        selectedLobbyPlayer = resolveSelection(selectedLobbyPlayerName, selectedLobbyPlayer, lobbyPlayers);
+        selectedLobbyPlayerName = selectedLobbyPlayer >= 0 && selectedLobbyPlayer < lobbyPlayers.size()
+            ? lobbyPlayers.get(selectedLobbyPlayer)
+            : null;
         selectedFriend = clampSelection(selectedFriend, friends.size());
 
+        lobbyScroll = clampScroll(lobbyScroll, lobbyPlayers.size(), listBottom - listTop);
         friendsScroll = clampScroll(friendsScroll, friends.size(), listBottom - listTop);
-        drawList(guiGraphics, friends, listX1, listTop, listX2, listBottom, friendsScroll, selectedFriend, mouseX, mouseY);
+        drawList(guiGraphics, lobbyPlayers, lobbyListX1, listTop, lobbyListX2, listBottom, lobbyScroll, selectedLobbyPlayer, mouseX, mouseY);
+        drawList(guiGraphics, friends, friendsListX1, listTop, friendsListX2, listBottom, friendsScroll, selectedFriend, mouseX, mouseY);
 
         int buttonY = panelY2 - 30;
-        int removeX1 = panelX2 - 290;
-        int removeX2 = panelX2 - 158;
+        int addX1 = panelX + 18;
+        int addX2 = addX1 + 132;
+        int removeX1 = addX2 + 8;
+        int removeX2 = removeX1 + 132;
         int toggleX1 = panelX2 - 150;
         int toggleX2 = panelX2 - 18;
+        boolean canAdd = selectedLobbyPlayer >= 0
+            && selectedLobbyPlayer < lobbyPlayers.size()
+            && !SmolFriendManager.isFriend(lobbyPlayers.get(selectedLobbyPlayer));
         boolean canRemove = selectedFriend >= 0 && selectedFriend < friends.size();
 
+        drawButton(guiGraphics, addX1, buttonY, addX2, buttonY + 18, "Add", canAdd, mouseX, mouseY);
         drawButton(guiGraphics, removeX1, buttonY, removeX2, buttonY + 18, "Remove", canRemove, mouseX, mouseY);
         String toggleText = ConfigManager.smolFriendsEnabled ? "FriendSmol ON" : "FriendSmol OFF";
         drawButton(guiGraphics, toggleX1, buttonY, toggleX2, buttonY + 18, toggleText, true, mouseX, mouseY);
-        guiGraphics.drawString(this.font, "Use /baity fadd <name> to add friend.", panelX + 12, panelY2 - 44, LinearTheme.TEXT_TERTIARY.getRGB(), false);
+        guiGraphics.drawString(this.font, "Select player on the left click Add, or use /baity fadd <name>.", panelX + 12, panelY2 - 44, LinearTheme.TEXT_TERTIARY.getRGB(), false);
 
         super.render(guiGraphics, mouseX, mouseY, delta);
     }
@@ -87,29 +118,59 @@ public class SmolFriendsScreen extends Screen {
         int panelY = (this.height - PANEL_HEIGHT) / 2;
         int panelX2 = panelX + PANEL_WIDTH;
         int panelY2 = panelY + PANEL_HEIGHT;
-        int listTop = panelY + 34;
+        int listTop = panelY + 42;
         int listBottom = panelY + PANEL_HEIGHT - 54;
-        int listX1 = panelX + LIST_PADDING;
-        int listX2 = panelX2 - LIST_PADDING;
+        int totalListWidth = PANEL_WIDTH - LIST_PADDING * 2 - LIST_GAP;
+        int singleListWidth = totalListWidth / 2;
+        int lobbyListX1 = panelX + LIST_PADDING;
+        int lobbyListX2 = lobbyListX1 + singleListWidth;
+        int friendsListX1 = lobbyListX2 + LIST_GAP;
+        int friendsListX2 = panelX2 - LIST_PADDING;
 
+        List<String> lobbyPlayers = SmolFriendManager.getCurrentLobbyPlayers();
         List<String> friends = SmolFriendManager.getFriends();
 
-        int clickedFriend = getClickedIndex(click.x(), click.y(), listX1, listTop, listX2, listBottom, friendsScroll, friends.size());
+        int clickedLobbyPlayer = getClickedIndex(click.x(), click.y(), lobbyListX1, listTop, lobbyListX2, listBottom, lobbyScroll, lobbyPlayers.size());
+        if (clickedLobbyPlayer >= 0) {
+            selectedLobbyPlayer = clickedLobbyPlayer;
+            selectedLobbyPlayerName = lobbyPlayers.get(clickedLobbyPlayer);
+            return true;
+        }
+
+        int clickedFriend = getClickedIndex(click.x(), click.y(), friendsListX1, listTop, friendsListX2, listBottom, friendsScroll, friends.size());
         if (clickedFriend >= 0) {
             selectedFriend = clickedFriend;
             return true;
         }
 
         int buttonY = panelY2 - 30;
-        int removeX1 = panelX2 - 290;
-        int removeX2 = panelX2 - 158;
+        int addX1 = panelX + 18;
+        int addX2 = addX1 + 132;
+        int removeX1 = addX2 + 8;
+        int removeX2 = removeX1 + 132;
         int toggleX1 = panelX2 - 150;
         int toggleX2 = panelX2 - 18;
+
+        if (GuiRenderUtil.isHovered(addX1, buttonY, addX2, buttonY + 18, (float) click.x(), (float) click.y())) {
+            if (selectedLobbyPlayer >= 0 && selectedLobbyPlayer < lobbyPlayers.size()) {
+                String name = lobbyPlayers.get(selectedLobbyPlayer);
+                if (SmolFriendManager.addFriend(name)) {
+                    selectedLobbyPlayer = -1;
+                    selectedLobbyPlayerName = null;
+                    selectedFriend = SmolFriendManager.getFriends().indexOf(name);
+                    MessageUtils.sendBaityMessage("Added SmolPeople friend: " + name);
+                } else {
+                    MessageUtils.sendBaityMessage(name + " is already in SmolPeople friends.");
+                }
+            }
+            return true;
+        }
 
         if (GuiRenderUtil.isHovered(removeX1, buttonY, removeX2, buttonY + 18, (float) click.x(), (float) click.y())) {
             if (selectedFriend >= 0 && selectedFriend < friends.size()) {
                 String name = friends.get(selectedFriend);
                 if (SmolFriendManager.removeFriend(name)) {
+                    selectedFriend = -1;
                     MessageUtils.sendBaityMessage("Removed friend: " + name);
                 } else {
                     MessageUtils.sendBaityMessage(name + " is not in SmolPeople friends.");
@@ -137,12 +198,22 @@ public class SmolFriendsScreen extends Screen {
         int panelX = (this.width - PANEL_WIDTH) / 2;
         int panelY = (this.height - PANEL_HEIGHT) / 2;
         int panelX2 = panelX + PANEL_WIDTH;
-        int listTop = panelY + 34;
+        int listTop = panelY + 42;
         int listBottom = panelY + PANEL_HEIGHT - 54;
-        int listX1 = panelX + LIST_PADDING;
-        int listX2 = panelX2 - LIST_PADDING;
+        int totalListWidth = PANEL_WIDTH - LIST_PADDING * 2 - LIST_GAP;
+        int singleListWidth = totalListWidth / 2;
+        int lobbyListX1 = panelX + LIST_PADDING;
+        int lobbyListX2 = lobbyListX1 + singleListWidth;
+        int friendsListX1 = lobbyListX2 + LIST_GAP;
+        int friendsListX2 = panelX2 - LIST_PADDING;
 
-        if (GuiRenderUtil.isHovered(listX1, listTop, listX2, listBottom, (float) mouseX, (float) mouseY)) {
+        if (GuiRenderUtil.isHovered(lobbyListX1, listTop, lobbyListX2, listBottom, (float) mouseX, (float) mouseY)) {
+            lobbyScroll += verticalAmount > 0 ? -1 : 1;
+            lobbyScroll = clampScroll(lobbyScroll, SmolFriendManager.getCurrentLobbyPlayers().size(), listBottom - listTop);
+            return true;
+        }
+
+        if (GuiRenderUtil.isHovered(friendsListX1, listTop, friendsListX2, listBottom, (float) mouseX, (float) mouseY)) {
             friendsScroll += verticalAmount > 0 ? -1 : 1;
             friendsScroll = clampScroll(friendsScroll, SmolFriendManager.getFriends().size(), listBottom - listTop);
             return true;
@@ -236,6 +307,16 @@ public class SmolFriendsScreen extends Screen {
             return -1;
         }
         return selected;
+    }
+
+    private int resolveSelection(String selectedName, int selectedIndex, List<String> values) {
+        if (selectedName != null) {
+            int index = values.indexOf(selectedName);
+            if (index >= 0) {
+                return index;
+            }
+        }
+        return clampSelection(selectedIndex, values.size());
     }
 
     private int getClickedIndex(double mouseX, double mouseY, int x1, int y1, int x2, int y2, int scroll, int size) {

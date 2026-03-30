@@ -18,7 +18,7 @@ This mod is provided **for personal learning and experimentation only**.
 The author does **not** guarantee that the mod is safe, permitted, or compliant on any specific server, and will **not** be responsible for any consequences (including but not limited to account penalties, data loss, or other damage) arising from the use of this mod.
 By using this mod, you agree that you do so at your own risk.
 
-Sync Protocol / 同步协议：see [docs/sync-protocol.md](docs/sync-protocol.md).
+Sync Protocol：see [docs/sync-protocol.md](docs/sync-protocol.md).
 
 本模组仅用于**个人学习和研究**用途。  
 作者**不保证**本模组在任何特定服务器环境下的安全性、合规性或被允许使用，也**不对**因使用本模组所产生的任何后果（包括但不限于账号处罚、数据丢失或其他损失）承担责任。  

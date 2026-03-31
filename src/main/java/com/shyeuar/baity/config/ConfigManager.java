@@ -531,11 +531,11 @@ public class ConfigManager {
             }
             boolean needSave = false;
             if (!seenKeys.contains("BaityPresenceProxyHost")) {
-                ConfigManager.baityPresenceProxyHost = "127.0.0.1";
+                ConfigManager.baityPresenceProxyHost = "";
                 needSave = true;
             }
             if (!seenKeys.contains("BaityPresenceProxyPort")) {
-                ConfigManager.baityPresenceProxyPort = 7892;
+                ConfigManager.baityPresenceProxyPort = 0;
                 needSave = true;
             }
             if (!seenKeys.contains("BaityPresenceProxyAuth")) {

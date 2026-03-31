@@ -375,15 +375,17 @@ public final class BaityPresenceSync {
             firstWorldSyncMsgShown = true;
         }
         if (enteredWorld && !autoSyncTriggeredInWorld) {
-            autoSyncTriggeredInWorld = true;
             if (ConfigManager.baityPresenceSyncEnabled) {
-                startReadThenWrite(System.currentTimeMillis(), true);
+                autoSyncTriggeredInWorld = true;
+                startAutoProbeThenAutoSync(System.currentTimeMillis());
             }
         }
-        if (inWorld && !autoStartupResultShownInWorld && autoStartupSyncResult != 0 && !autoRetryScheduled) {
+        if (inWorld && ConfigManager.baityPresenceSyncEnabled && !autoStartupResultShownInWorld && autoStartupSyncResult != 0 && !autoRetryScheduled) {
             autoStartupResultShownInWorld = true;
             if (ConfigManager.baityPresenceSyncNotificationEnabled) {
                 MessageUtils.sendSyncResult(autoStartupSyncResult > 0, true);
+            } else if (autoStartupSyncResult < 0) {
+                MessageUtils.sendSyncResult(false, false);
             }
         }
         lastInWorld = inWorld;
@@ -893,8 +895,32 @@ public final class BaityPresenceSync {
         return u + "/health";
     }
 
+    private static void startAutoProbeThenAutoSync(long now) {
+        String fetchUrl = resolveFetchUrl();
+        if (fetchUrl == null || fetchUrl.isBlank()) {
+            startReadThenWrite(now, true);
+            return;
+        }
+        String health = toHealthUrl(fetchUrl);
+
+        String host = ConfigManager.baityPresenceProxyHost == null ? "" : ConfigManager.baityPresenceProxyHost.trim();
+        int port = ConfigManager.baityPresenceProxyPort;
+        boolean hasConfiguredProxy = !host.isEmpty() && port > 0;
+
+        CompletableFuture.runAsync(() -> {
+            boolean okWithConfigured = false;
+            if (hasConfiguredProxy) {
+                okWithConfigured = healthCheck(health);
+            }
+            if (!hasConfiguredProxy || !okWithConfigured) {
+                probeAndSetProxy(health);
+            }
+            startReadThenWrite(System.currentTimeMillis(), true);
+        });
+    }
+
     private static boolean probeAndSetProxy(String healthUrl) {
-        int[] ports = new int[]{7892, 7890, 8080, 8889};
+        int[] ports = new int[]{7892, 7890, 7891, 8080, 8081, 8000, 8008, 8888, 8889, 3128, 10808, 10809};
         for (int p : ports) {
             try {
                 URI uri = URI.create(healthUrl);

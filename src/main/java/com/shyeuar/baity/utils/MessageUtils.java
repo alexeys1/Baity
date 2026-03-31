@@ -129,7 +129,21 @@ public class MessageUtils {
 
     public static void sendSyncTimeoutForCommand() {
         int color = 0xDC143C;
-        MutableComponent msg = createColoredText("Failed to sync remote data.(time out)", color);
+        MutableComponent msg = createColoredText("Failed to sync remote data.(timed out)", color);
+        sendCustomMessage(createMessageWithPrefix(msg));
+    }
+
+    public static void sendSyncTimeoutForAuto() {
+        int color = 0xDC143C;
+        MutableComponent msg = createColoredText("Failed to sync remote data.(timed out) ", color);
+        MutableComponent stop = Component.literal("[stop to prompt]")
+            .withStyle(style -> style
+                .withColor(0xFF69B4)
+                .withUnderlined(true)
+                .withClickEvent(new ClickEvent.RunCommand("/baity notification off")));
+        msg.append(stop);
+        msg.append(Component.literal(" "));
+        msg.append(buildHelpClickable());
         sendCustomMessage(createMessageWithPrefix(msg));
     }
 
@@ -138,7 +152,7 @@ public class MessageUtils {
         int yellow = 0xFFFF00;
         MutableComponent line = Component.literal("--------------------------------------------------").withStyle(s -> s.withColor(yellow));
         Minecraft.getInstance().gui.getChat().addMessage(line);
-        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("检查你代理工具的 HTTP 端口，确保其与配置文件中的 BaityPresenceProxyPort 参数值相同。Host一般为127.0.0.1，如有差异也请自行调整为正确的值.").withStyle(s -> s.withColor(0xFFFFFF)));
+        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("检查你代理工具的 HTTP 代理端口，确保其与配置文件中的 BaityPresenceProxyPort 参数值相同。BaityPresenceProxyHost 为代理地址：代理运行在本机时一般填 127.0.0.1（或 localhost）；只有当代理运行在局域网的另一台设备上时，才需要填写那台设备的内网 IP。").withStyle(s -> s.withColor(0xFFFFFF)));
         Minecraft.getInstance().gui.getChat().addMessage(line);
     }
 }

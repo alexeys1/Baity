@@ -531,11 +531,11 @@ public class ConfigManager {
             }
             boolean needSave = false;
             if (!seenKeys.contains("BaityPresenceProxyHost")) {
-                ConfigManager.baityPresenceProxyHost = "127.0.0.1";
+                ConfigManager.baityPresenceProxyHost = "";
                 needSave = true;
             }
             if (!seenKeys.contains("BaityPresenceProxyPort")) {
-                ConfigManager.baityPresenceProxyPort = 7892;
+                ConfigManager.baityPresenceProxyPort = 0;
                 needSave = true;
             }
             if (!seenKeys.contains("BaityPresenceProxyAuth")) {
@@ -555,17 +555,22 @@ public class ConfigManager {
     }
     
     private static Object parseValue(String valueStr, Class<?> type) {
+        String raw = valueStr == null ? "" : valueStr.trim();
         if (type == Boolean.class) {
-            return Boolean.parseBoolean(valueStr);
+            if (raw.isEmpty()) return false;
+            return Boolean.parseBoolean(raw);
         } else if (type == Integer.class) {
-            return Integer.parseInt(valueStr);
+            if (raw.isEmpty()) return 0;
+            return Integer.parseInt(raw);
         } else if (type == Double.class) {
-            return Double.parseDouble(valueStr);
+            if (raw.isEmpty()) return 0.0;
+            return Double.parseDouble(raw);
         } else if (type == Float.class) {
-            return Float.parseFloat(valueStr);
+            if (raw.isEmpty()) return 0.0f;
+            return Float.parseFloat(raw);
         } else if (type == String.class) {
-            return valueStr;
+            return valueStr == null ? "" : valueStr;
         }
-        return valueStr;
+        return valueStr == null ? "" : valueStr;
     }
 }

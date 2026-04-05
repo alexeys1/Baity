@@ -26,6 +26,7 @@ public final class NickRenderUtils {
     private static volatile long targetsCacheAt = 0L;
     private static volatile String cachePlayerName = "";
     private static volatile List<Target> cachedTargets = List.of();
+    private static final ThreadLocal<Boolean> PREVIEW_OVERRIDE = ThreadLocal.withInitial(() -> Boolean.FALSE);
     private static final int MATCH_CACHE_MAX = 2048;
     private static final Object MATCH_CACHE_LOCK = new Object();
     private static final LinkedHashMap<String, TargetMatch[]> MATCH_CACHE = new LinkedHashMap<>(16, 0.75f, true) {
@@ -59,11 +60,15 @@ public final class NickRenderUtils {
     }
 
     private static boolean isBaityClickGuiScreen() {
+        if (Boolean.TRUE.equals(PREVIEW_OVERRIDE.get())) {
+            return false;
+        }
         Minecraft client = Minecraft.getInstance();
         if (client == null) return false;
         if (client.screen == null) return false;
         return client.screen instanceof com.shyeuar.baity.gui.ClickGui;
     }
+    
 
     public static String handleString(String text) {
         if (text == null || text.isEmpty()) return text;
@@ -115,20 +120,102 @@ public final class NickRenderUtils {
         return out;
     }
 
+    public static void beginPreviewOverride() {
+        PREVIEW_OVERRIDE.set(Boolean.TRUE);
+    }
+    public static void endPreviewOverride() {
+        PREVIEW_OVERRIDE.set(Boolean.FALSE);
+    }
+
+    
+
     public static FormattedText handleFormattedText(FormattedText text) {
-        return text;
+        if (text == null) return null;
+        if (isBaityClickGuiScreen()) return text;
+        List<Target> targets = collectTargets();
+        if (targets.isEmpty()) return text;
+        StringBuilder sbPlain = new StringBuilder();
+        List<Glyph> originalGlyphs = new ArrayList<>();
+        try {
+            text.visit((style, str) -> {
+                if (str == null || str.isEmpty()) return java.util.Optional.empty();
+                for (int i = 0; i < str.length();) {
+                    int cp = str.codePointAt(i);
+                    sbPlain.appendCodePoint(cp);
+                    originalGlyphs.add(new Glyph(cp, style));
+                    i += Character.charCount(cp);
+                }
+                return java.util.Optional.empty();
+            }, Style.EMPTY);
+        } catch (Throwable ignore) {
+            String plainFallback = text.toString();
+            for (int i = 0; i < plainFallback.length();) {
+                int cp = plainFallback.codePointAt(i);
+                sbPlain.appendCodePoint(cp);
+                originalGlyphs.add(new Glyph(cp, Style.EMPTY));
+                i += Character.charCount(cp);
+            }
+        }
+        String plain = sbPlain.toString();
+        if (plain.isEmpty()) return text;
+
+        long version = targetsCacheAt;
+        String cacheKey = version + "|" + plain;
+        TargetMatch[] matchByIndex;
+        synchronized (MATCH_CACHE_LOCK) {
+            matchByIndex = MATCH_CACHE.get(cacheKey);
+        }
+        if (matchByIndex == null) {
+            int[] codePoints = plain.codePoints().toArray();
+            if (codePoints.length == 0) return text;
+            String lower = plain.toLowerCase(Locale.ROOT);
+            List<Target> matchingTargets = null;
+            for (Target target : targets) {
+                if (!lower.contains(target.nameLower())) continue;
+                if (matchingTargets == null) matchingTargets = new ArrayList<>();
+                matchingTargets.add(target);
+            }
+            if (matchingTargets == null || matchingTargets.isEmpty()) return text;
+            matchByIndex = matchTargets(codePoints, matchingTargets);
+            synchronized (MATCH_CACHE_LOCK) {
+                MATCH_CACHE.put(cacheKey, matchByIndex);
+            }
+        }
+        boolean matched = false;
+        for (TargetMatch value : matchByIndex) {
+            if (value != null) {
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) return text;
+
+        List<Glyph> outGlyphs = applyReplacementAndStyle(originalGlyphs, matchByIndex, System.currentTimeMillis());
+        if (outGlyphs.isEmpty()) return text;
+
+        net.minecraft.network.chat.MutableComponent result = Component.empty();
+        StringBuilder run = new StringBuilder();
+        Style current = outGlyphs.get(0).style();
+        for (Glyph g : outGlyphs) {
+            if (!g.style().equals(current)) {
+                if (run.length() > 0) {
+                    result = result.append(Component.literal(run.toString()).setStyle(current));
+                    run.setLength(0);
+                }
+                current = g.style();
+            }
+            run.appendCodePoint(g.codepoint());
+        }
+        if (run.length() > 0) {
+            result = result.append(Component.literal(run.toString()).setStyle(current));
+        }
+        return result;
     }
 
     public static Component handleComponent(Component component) {
         return component;
     }
 
-    public static String getLocalPreviewName(String fallback) {
-        String raw = ConfigManager.nickTweaksNickChanger;
-        if (raw == null || raw.isEmpty()) return fallback;
-        String plain = stripLegacyCodes(raw);
-        return plain.isEmpty() ? fallback : plain;
-    }
 
     public static FormattedCharSequence handleCharSequence(FormattedCharSequence original) {
         if (original == null) return null;
@@ -508,14 +595,6 @@ public final class NickRenderUtils {
         }
     }
 
-    private static String stripLegacyCodes(String raw) {
-        List<ReplacementCodepoint> cps = parseCustomNick(raw);
-        StringBuilder out = new StringBuilder();
-        for (ReplacementCodepoint cp : cps) {
-            out.appendCodePoint(cp.codepoint());
-        }
-        return out.toString();
-    }
 
     private static List<ReplacementCodepoint> parseCustomNick(String raw) {
         ArrayList<ReplacementCodepoint> out = new ArrayList<>();

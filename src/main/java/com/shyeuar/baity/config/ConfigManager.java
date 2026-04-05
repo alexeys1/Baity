@@ -107,8 +107,8 @@ public class ConfigManager {
     public static double nickTweaksChromaSize = 3.1;
     public static double nickTweaksChromaSpeed = 1.0;
     public static boolean nickTweaksChromaGroupExpanded = false;
-    public static int nickTweaksGradientStartColor = 0xFF4D4D;
-    public static int nickTweaksGradientEndColor = 0xC299FF;
+    public static int nickTweaksGradientStartColor = 0xFFFFFF;
+    public static int nickTweaksGradientEndColor = 0xFFFFFF;
     public static boolean nametagDefaultNametag = false;
     public static String baityPresenceSyncUrl = "https://baity-presence-sync.1427637445.workers.dev/users.json";
     public static boolean baityPresenceSyncEnabled = true;

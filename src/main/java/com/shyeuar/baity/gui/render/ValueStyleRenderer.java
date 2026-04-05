@@ -541,19 +541,21 @@ public class ValueStyleRenderer {
           hoveredTooltipInfo.y = (int) (mouseY + 5);
       }
 
-      String preview = NickRenderUtils.getLocalPreviewName(client.player != null ? client.player.getName().getString() : "NickTweaks");
-      boolean boldPreview = com.shyeuar.baity.config.ConfigManager.nickTweaksBoldSelf;
-      if (com.shyeuar.baity.config.ConfigManager.nickTweaksChromaEnabled) {
-          drawChromaPreview(context, client, preview, x1 + 10, y + blockHeight - 18);
-          if (boldPreview) {
-              drawChromaPreview(context, client, preview, x1 + 11, y + blockHeight - 18);
-          }
-      } else {
-          drawGradientText(context, client, preview, x1 + 10, y + blockHeight - 18, value.getStartColor(), value.getEndColor());
-          if (boldPreview) {
-              drawGradientText(context, client, preview, x1 + 11, y + blockHeight - 18, value.getStartColor(), value.getEndColor());
-          }
+      String raw = com.shyeuar.baity.config.ConfigManager.nickTweaksNickChanger;
+      if (raw == null || raw.isBlank()) {
+          raw = (client.player != null ? client.player.getName().getString() : "NickTweaks");
       }
+      String baseName = (client.player != null ? client.player.getName().getString() : "NickTweaks");
+      NickRenderUtils.invalidateLocalTargetsCache();
+      NickRenderUtils.beginPreviewOverride();
+      net.minecraft.util.FormattedCharSequence seq;
+      try {
+          net.minecraft.util.FormattedCharSequence base = net.minecraft.util.FormattedCharSequence.forward(baseName, net.minecraft.network.chat.Style.EMPTY);
+          seq = NickRenderUtils.handleCharSequence(base);
+      } finally {
+          NickRenderUtils.endPreviewOverride();
+      }
+      context.drawString(client.font, seq, (int) (x1 + 10), (int) (y + blockHeight - 18), 0xFFFFFFFF, false);
    }
 
    private static void drawHueSatMap(GuiGraphics context, float x1, float y1, float x2, float y2, int alpha) {
@@ -570,37 +572,7 @@ public class ValueStyleRenderer {
        }
    }
 
-   private static void drawChromaPreview(GuiGraphics context, Minecraft client, String text, float x, float y) {
-       if (text == null || text.isEmpty()) return;
-       long nowMs = System.currentTimeMillis();
-       double lightness = Math.max(0.2, Math.min(1.0, com.shyeuar.baity.config.ConfigManager.nickTweaksChromaLightness));
-       double chroma = Math.max(0.0, Math.min(0.4, com.shyeuar.baity.config.ConfigManager.nickTweaksChromaChroma));
-       double size = Math.max(0.1, com.shyeuar.baity.config.ConfigManager.nickTweaksChromaSize);
-       double speed = Math.max(0.0, Math.min(8.0, com.shyeuar.baity.config.ConfigManager.nickTweaksChromaSpeed));
-       double phase = (nowMs / 1000.0) * (speed * 0.5);
-       float saturation = (float) (chroma / 0.4);
 
-       int len = text.codePointCount(0, text.length());
-       int index = 0;
-       float cursor = x;
-       for (int offset = 0; offset < text.length(); ) {
-           int cp = text.codePointAt(offset);
-           int charCount = Character.charCount(cp);
-           String chunk = new String(Character.toChars(cp));
-           double progress = len <= 1 ? 0.0 : (double) index / (double) (len - 1);
-           float hue = (float) positiveModulo((progress / size) - phase, 1.0);
-           int color = 0xFF000000 | (net.minecraft.util.Mth.hsvToRgb(hue, saturation, (float) lightness) & 0xFFFFFF);
-           context.drawString(client.font, chunk, (int) cursor, (int) y, color, false);
-           cursor += client.font.width(chunk);
-           offset += charCount;
-           index++;
-       }
-   }
-
-   private static double positiveModulo(double value, double mod) {
-       double result = value % mod;
-        return result < 0 ? result + mod : result;
-   }
 
    private static void drawValueSlider(GuiGraphics context, float x1, float y1, float x2, float y2, float hue, float sat, int alpha) {
        int height = Math.max(1, (int) (y2 - y1));
@@ -612,28 +584,6 @@ public class ValueStyleRenderer {
        }
    }
 
-   private static void drawGradientText(GuiGraphics context, Minecraft client, String text, float x, float y, int startColor, int endColor) {
-       if (text == null || text.isEmpty()) {
-           return;
-       }
-       int len = text.codePointCount(0, text.length());
-       int index = 0;
-       float cursor = x;
-       for (int offset = 0; offset < text.length(); ) {
-           int cp = text.codePointAt(offset);
-           int charCount = Character.charCount(cp);
-           String chunk = new String(Character.toChars(cp));
-           double t = len <= 1 ? 0.0 : (double) index / (double) (len - 1);
-           int r = (int) Math.round(((startColor >> 16) & 0xFF) + (((endColor >> 16) & 0xFF) - ((startColor >> 16) & 0xFF)) * t);
-           int g = (int) Math.round(((startColor >> 8) & 0xFF) + (((endColor >> 8) & 0xFF) - ((startColor >> 8) & 0xFF)) * t);
-           int b = (int) Math.round((startColor & 0xFF) + ((endColor & 0xFF) - (startColor & 0xFF)) * t);
-           int color = 0xFF000000 | (r << 16) | (g << 8) | b;
-           context.drawString(client.font, chunk, (int) cursor, (int) y, color, false);
-           cursor += client.font.width(chunk);
-           offset += charCount;
-           index++;
-       }
-   }
 
    private static void drawScaledLabel(GuiGraphics context, Minecraft client, String text, float x, float y, int color, float scale) {
       var pose = context.pose();

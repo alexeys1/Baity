@@ -714,12 +714,16 @@ public class ClickGuiInputHandler {
             coords.mouseY >= versionY && coords.mouseY <= versionY + baseHeight) {
             
             try {
-                net.minecraft.util.Util.getPlatform().openUri(new java.net.URI("https://github.com/raueyhs/Baity/releases"));
+                String latestTag = latest;
+                if (!latestTag.startsWith("v") && !latestTag.startsWith("V")) {
+                    latestTag = "v" + latestTag;
+                }
+                net.minecraft.util.Util.getPlatform().openUri(new java.net.URI("https://github.com/raueyhs/Baity/releases/tag/" + latestTag));
                 return true;
             } catch (Exception e) {
                 if (client.player != null) {
                     client.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://github.com/raueyhs/Baity/releases"),
+                        net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://github.com/raueyhs/Baity/releases/tag/" + latest),
                         false
                     );
                 }

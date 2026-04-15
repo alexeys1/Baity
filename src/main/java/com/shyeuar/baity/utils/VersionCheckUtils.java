@@ -23,7 +23,7 @@ import com.google.gson.JsonParser;
 public class VersionCheckUtils {
     private static final String GITHUB_API_URL = "https://api.github.com/repos/raueyhs/Baity/releases";
     private static final String MC_VERSION_PREFIX = "1.21.11";
-    private static final Pattern VERSION_PATTERN = Pattern.compile("[vV]?([0-9]+\\.[0-9]+\\.[0-9]+)");
+    private static final Pattern MOD_VERSION_PATTERN = Pattern.compile("(?i)\\bv([0-9]+\\.[0-9]+\\.[0-9]+)\\b");
     
     public static class VersionCheckResult {
         public final boolean isLatest;
@@ -113,9 +113,12 @@ public class VersionCheckUtils {
     private static String extractVersionFromTag(String tagName) {
         if (tagName == null || tagName.isEmpty()) return null;
         
-        Matcher matcher = VERSION_PATTERN.matcher(tagName);
-        if (matcher.find()) {
+        Matcher matcher = MOD_VERSION_PATTERN.matcher(tagName);
+        while (matcher.find()) {
             String version = matcher.group(1);
+            if (version == null || version.isEmpty()) {
+                continue;
+            }
             return "v" + version;
         }
         
@@ -189,10 +192,10 @@ public class VersionCheckUtils {
         if (value == null) return false;
         String normalized = normalizeForMatch(value);
         if (normalized == null) return false;
-        return normalized.contains(MC_VERSION_PREFIX + "-")
-            || normalized.contains(MC_VERSION_PREFIX + "_")
-            || normalized.contains(MC_VERSION_PREFIX + " ")
-            || normalized.contains(MC_VERSION_PREFIX);
+        return normalized.startsWith(MC_VERSION_PREFIX + "-")
+            || normalized.startsWith(MC_VERSION_PREFIX + "_")
+            || normalized.startsWith(MC_VERSION_PREFIX + " ")
+            || normalized.equals(MC_VERSION_PREFIX);
     }
 
     private static String normalizeForMatch(String value) {
@@ -206,21 +209,20 @@ public class VersionCheckUtils {
     private static int[] parseVXYZ(String version) {
         if (version == null) return null;
         String v = version.trim();
-        Matcher matcher = VERSION_PATTERN.matcher(v);
-        if (matcher.find()) {
-            String[] parts = matcher.group(1).split("\\.");
-            if (parts.length != 3) return null;
-            try {
-                return new int[] {
-                    Integer.parseInt(parts[0]),
-                    Integer.parseInt(parts[1]),
-                    Integer.parseInt(parts[2])
-                };
-            } catch (NumberFormatException e) {
-                return null;
-            }
+        if (v.startsWith("v") || v.startsWith("V")) {
+            v = v.substring(1);
         }
-        return null;
+        String[] parts = v.split("\\.");
+        if (parts.length != 3) return null;
+        try {
+            return new int[] {
+                Integer.parseInt(parts[0]),
+                Integer.parseInt(parts[1]),
+                Integer.parseInt(parts[2])
+            };
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static int compareParts(int[] a, int[] b) {

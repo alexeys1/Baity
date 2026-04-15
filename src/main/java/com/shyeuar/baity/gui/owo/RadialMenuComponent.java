@@ -1,9 +1,9 @@
 package com.shyeuar.baity.gui.owo;
 
 import com.shyeuar.baity.gui.theme.LinearTheme;
-import io.wispforest.owo.ui.base.BaseComponent;
+import io.wispforest.owo.ui.base.BaseUIComponent;
 import io.wispforest.owo.ui.core.Color;
-import io.wispforest.owo.ui.core.OwoUIDrawContext;
+import io.wispforest.owo.ui.core.OwoUIGraphics;
 import io.wispforest.owo.ui.core.Positioning;
 import io.wispforest.owo.ui.core.Sizing;
 import net.minecraft.client.Minecraft;
@@ -11,7 +11,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
-public class RadialMenuComponent extends BaseComponent {
+public class RadialMenuComponent extends BaseUIComponent {
 
     public record Entry(String id, String icon, String displayName) {}
 
@@ -69,7 +69,7 @@ public class RadialMenuComponent extends BaseComponent {
     }
 
     @Override
-    public void draw(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
+    public void draw(OwoUIGraphics context, int mouseX, int mouseY, float partialTicks, float delta) {
         final int centerX = this.x + this.width / 2;
         final int centerY = this.y + this.height / 2;
 
@@ -103,7 +103,7 @@ public class RadialMenuComponent extends BaseComponent {
         drawIconsAndText(context, centerX, centerY);
     }
 
-    private void drawRingSplit(OwoUIDrawContext context, int centerX, int centerY,
+    private void drawRingSplit(OwoUIGraphics context, int centerX, int centerY,
                                double fromDeg, double toDeg, int segments,
                                double innerRadius, double outerRadius,
                                Color innerColor, Color outerColor) {
@@ -119,7 +119,7 @@ public class RadialMenuComponent extends BaseComponent {
         }
     }
 
-    private void drawIconsAndText(OwoUIDrawContext context, int centerX, int centerY) {
+    private void drawIconsAndText(OwoUIGraphics context, int centerX, int centerY) {
         if (entries.isEmpty()) return;
 
         final var mc = Minecraft.getInstance();

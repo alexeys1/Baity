@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.13-SNAPSHOT'
+    id 'fabric-loom' version '1.15-SNAPSHOT'
 }
 
 version = project.mod_version
@@ -23,6 +23,10 @@ repositories {
         name = 'TerraformersMC'
         url = 'https://maven.terraformersmc.com/releases'
     }
+    maven {
+        name = 'JitPack'
+        url = 'https://jitpack.io'
+    }
 }
 
 loom {
@@ -38,10 +42,13 @@ dependencies {
     include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:0.4.1")))
     
     // owo-lib 依赖
-    modImplementation "io.wispforest:owo-lib:0.12.24+1.21.9"
-    include "io.wispforest:owo-sentinel:0.12.24+1.21.9"
+    modImplementation "io.wispforest:owo-lib:0.13.0+1.21.11"
+    include "io.wispforest:owo-sentinel:0.13.0+1.21.11"
     
-    modCompileOnly("com.terraformersmc:modmenu:17.0.0-alpha.1") {
+    modCompileOnly("com.terraformersmc:modmenu:17.0.0") {
+        exclude(group: "net.fabricmc.fabric-api")
+    }
+    modLocalRuntime("com.terraformersmc:modmenu:17.0.0") {
         exclude(group: "net.fabricmc.fabric-api")
     }
 }

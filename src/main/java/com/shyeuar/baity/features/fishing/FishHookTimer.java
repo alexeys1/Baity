@@ -7,7 +7,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.projectile.FishingHook;
@@ -57,7 +57,7 @@ public class FishHookTimer implements HudElement {
     
     private static void registerSounds() {
         for (int i = 0; i < 12; i++) {
-            var id = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(ASSET_NAMESPACE, "fishing_timer_" + i);
+            var id = net.minecraft.resources.Identifier.fromNamespaceAndPath(ASSET_NAMESPACE, "fishing_timer_" + i);
             FRAME_SOUNDS[i] = net.minecraft.core.Registry.register(
                 net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT,
                 id,
@@ -451,7 +451,7 @@ public class FishHookTimer implements HudElement {
         int py = getAbsY(h);
         boolean useTexture = false;
         try {
-            var texId = ResourceLocation.fromNamespaceAndPath(ASSET_NAMESPACE, BAR_TEXTURE_PATH);
+            var texId = Identifier.fromNamespaceAndPath(ASSET_NAMESPACE, BAR_TEXTURE_PATH);
             if (mc.getResourceManager().getResource(texId).isPresent()) useTexture = true;
         } catch (Exception ignored) {}
         if (useTexture) {
@@ -466,7 +466,7 @@ public class FishHookTimer implements HudElement {
             matrices.scale(getScale(), getScale());
             guiGraphics.blit(
                 net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
-                ResourceLocation.fromNamespaceAndPath(ASSET_NAMESPACE, BAR_TEXTURE_PATH),
+                Identifier.fromNamespaceAndPath(ASSET_NAMESPACE, BAR_TEXTURE_PATH),
                 0, 0, 0, FRAME_STRIDE * (11 - frame),
                 FRAME_W, FRAME_H, SHEET_W, SHEET_H
             );

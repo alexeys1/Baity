@@ -2,7 +2,7 @@ package com.shyeuar.baity.features.radialmenu;
 
 import com.shyeuar.baity.gui.theme.LinearTheme;
 import io.wispforest.owo.ui.core.Color;
-import io.wispforest.owo.ui.core.OwoUIDrawContext;
+import io.wispforest.owo.ui.core.OwoUIGraphics;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -11,7 +11,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -104,8 +104,8 @@ public class WarpMenuScreen extends Screen {
             this.iconId = iconId;
         }
         
-        public ResourceLocation getIconTexture() {
-            return ResourceLocation.fromNamespaceAndPath("baity", "textures/gui/warp/" + iconId + ".png");
+        public Identifier getIconTexture() {
+            return Identifier.fromNamespaceAndPath("baity", "textures/gui/warp/" + iconId + ".png");
         }
     }
 
@@ -190,7 +190,7 @@ public class WarpMenuScreen extends Screen {
         double anglePerSection = 360.0 / sectionCount;
         double startAngle = getStartAngle(sectionCount);
 
-        final var owo = OwoUIDrawContext.of(context);
+        final var owo = OwoUIGraphics.of(context);
         final int segments = 220;
 
         final int baseOuter = OUTER_RADIUS;
@@ -295,7 +295,7 @@ public class WarpMenuScreen extends Screen {
         context.drawString(this.font, title, (this.width - titleWidth) / 2, 20, 0xFFFFFF, true);
     }
 
-    private void drawRingSplit(OwoUIDrawContext context, int centerX, int centerY,
+    private void drawRingSplit(OwoUIGraphics context, int centerX, int centerY,
                                double fromDeg, double toDeg, int segments,
                                double innerRadius, double outerRadius,
                                Color innerColor, Color outerColor) {

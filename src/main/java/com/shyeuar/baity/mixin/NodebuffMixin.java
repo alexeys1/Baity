@@ -55,8 +55,7 @@ public class NodebuffMixin {
         @Inject(method = "renderLevel", at = @At("HEAD"))
         private void baity$clearBlindnessFog(DeltaTracker deltaTracker, CallbackInfo ci) {
             if (shouldRemoveBlindness()) {
-                FogRendererAccessor accessor = (FogRendererAccessor) fogRenderer;
-                accessor.baity$getFogEnvironments().removeIf(env -> env instanceof BlindnessFogEnvironment);
+                FogRendererAccessor.baity$getFogEnvironments().removeIf(env -> env instanceof BlindnessFogEnvironment);
             }
         }
 

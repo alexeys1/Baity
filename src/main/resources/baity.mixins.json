@@ -1,5 +1,5 @@
 {
-  "required": true,
+  "required": false,
   "package": "com.shyeuar.baity.mixin",
   "refmap": "baity.refmap.json",
   "compatibilityLevel": "JAVA_21",
@@ -68,6 +68,6 @@
     "accessor.CameraRenderStateAccessor"
   ],
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   }
 }

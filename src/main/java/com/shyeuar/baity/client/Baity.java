@@ -104,7 +104,7 @@ public class Baity implements ClientModInitializer {
     public static final net.minecraft.sounds.SoundEvent LAUGHTER_SOUND = registerSoundEvent("sounds.laughter");
     
     private static net.minecraft.sounds.SoundEvent registerSoundEvent(String name) {
-        net.minecraft.resources.ResourceLocation identifier = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("baity", name);
+        net.minecraft.resources.Identifier identifier = net.minecraft.resources.Identifier.fromNamespaceAndPath("baity", name);
         return net.minecraft.core.Registry.register(net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT, identifier, net.minecraft.sounds.SoundEvent.createVariableRangeEvent(identifier));
     }
     

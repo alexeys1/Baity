@@ -125,11 +125,14 @@ public abstract class BlockAnimationMixin {
             at = @At(
                 value = "INVOKE",
                 target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;applyItemArmTransform(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/entity/HumanoidArm;F)V",
-                shift = At.Shift.AFTER
+                shift = At.Shift.AFTER,
+                ordinal = 0
             ),
             slice = @Slice(
-                from = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;getUseAnimation()Lnet/minecraft/world/item/ItemUseAnimation;"),
-                to = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;applyItemArmTransform(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/entity/HumanoidArm;F)V", ordinal = 6)
+                from = @At(
+                        value = "INVOKE",
+                        target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;applyEatTransform(Lcom/mojang/blaze3d/vertex/PoseStack;FLnet/minecraft/world/entity/HumanoidArm;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/player/Player;)V"
+                )
             )
         )
         private void baity$applyUseItemSwingOffset(net.minecraft.client.player.AbstractClientPlayer player, float partialTicks, float pitch,
@@ -211,6 +214,7 @@ public abstract class BlockAnimationMixin {
         @Inject(method = "submitArmWithItem", at = @At("HEAD"), cancellable = true)
         private void baity$submitArmWithItem(S renderState,
                 net.minecraft.client.renderer.item.ItemStackRenderState itemStackRenderState,
+                net.minecraft.world.item.ItemStack itemStack,
                 HumanoidArm humanoidArm,
                 com.mojang.blaze3d.vertex.PoseStack poseStack,
                 net.minecraft.client.renderer.SubmitNodeCollector submitNodeCollector,

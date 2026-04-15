@@ -35,8 +35,8 @@ public class DroppedItem2DMixin {
         float baseOffset = -((float) box.minY) + 0.0625F;
         float bob = (float) Math.sin(state.ageInTicks / 10.0F + state.bobOffset) * 0.1F + 0.1F;
         poseStack.translate(0.0F, bob + baseOffset, 0.0F);
-        float yaw = camera.getYRot();
-        float pitch = camera.getXRot();
+        float yaw = camera.yRot();
+        float pitch = camera.xRot();
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - yaw));
         poseStack.mulPose(Axis.XP.rotationDegrees(-pitch));
         poseStack.scale(1.0F, 1.0F, 0.01F);

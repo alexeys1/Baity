@@ -16,6 +16,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
@@ -58,8 +59,8 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         Vec3 cameraPos = context.worldState().cameraRenderState.pos;
         Camera camera = mc.gameRenderer.getMainCamera();
         float tickDelta = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        float cameraYaw = camera.getYRot();
-        float cameraPitch = camera.getXRot();
+        float cameraYaw = camera.yRot();
+        float cameraPitch = camera.xRot();
         
         PoseStack matrices = context.matrices();
         if (matrices == null) {
@@ -140,10 +141,16 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         boolean isDeveloper = DevConfig.isDeveloper(player);
         boolean showDistance = ModuleUtils.getOptionBoolean(module, "show distance", true);
         boolean forcePinkColor = ModuleUtils.getOptionBoolean(module, "force pink color", true);
-        
+
+        FormattedText nickProcessed = NickRenderUtils.handleFormattedText(originalNameComponent);
+        boolean nickTweaksModifiesDisplay = nickProcessed != originalNameComponent;
+
         Component nameComponent;
         String baseName;
-        if (forcePinkColor) {
+        if (nickTweaksModifiesDisplay) {
+            nameComponent = (Component) nickProcessed;
+            baseName = originalNameComponent.getString();
+        } else if (forcePinkColor) {
             baseName = originalNameComponent.getString();
             if (baseName.indexOf('\u00A7') >= 0) {
                 StringBuilder sb = new StringBuilder(baseName.length());
@@ -162,7 +169,6 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
             nameComponent = originalNameComponent;
             baseName = nameComponent.getString();
         }
-        
         Font textRenderer = mc.font;
 
         String cacheKey = NickRenderUtils.getTargetsCacheAt() + "|" + baseName;

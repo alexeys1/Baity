@@ -13,9 +13,9 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
@@ -23,7 +23,7 @@ import org.joml.Matrix4f;
 public class FancyCreeperVeil implements WorldRenderEvents.AfterEntities {
     
     private static final Minecraft MC = Minecraft.getInstance();
-    private static final ResourceLocation WITHER_CLOAK_SHIELD = ResourceLocation.fromNamespaceAndPath("baity", "textures/item/wither_cloak_shield.png");
+    private static final Identifier WITHER_CLOAK_SHIELD = Identifier.fromNamespaceAndPath("baity", "textures/item/wither_cloak_shield.png");
     
     public static long lastCreeperRender = 0;
     public static long lastDeactivate = System.currentTimeMillis();
@@ -94,7 +94,7 @@ public class FancyCreeperVeil implements WorldRenderEvents.AfterEntities {
     }
     
     private void renderShield(PoseStack matrices, MultiBufferSource buffers) {
-        VertexConsumer consumer = buffers.getBuffer(RenderType.entityTranslucent(WITHER_CLOAK_SHIELD));
+        VertexConsumer consumer = buffers.getBuffer(RenderTypes.entityTranslucent(WITHER_CLOAK_SHIELD));
         PoseStack.Pose pose = matrices.last();
         Matrix4f matrix = pose.pose();
         

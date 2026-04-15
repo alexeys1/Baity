@@ -3,7 +3,7 @@ package com.shyeuar.baity.features.radialmenu;
 import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.gui.owo.RadialMenuComponent;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
-import io.wispforest.owo.ui.container.Containers;
+import io.wispforest.owo.ui.container.UIContainers;
 import io.wispforest.owo.ui.container.StackLayout;
 import io.wispforest.owo.ui.core.OwoUIAdapter;
 import net.fabricmc.api.EnvType;
@@ -38,7 +38,7 @@ public class RadialMenuScreen extends BaseOwoScreen<StackLayout> {
 
     @Override
     protected @NotNull OwoUIAdapter<StackLayout> createAdapter() {
-        return OwoUIAdapter.create(this, Containers::stack);
+        return OwoUIAdapter.create(this, UIContainers::stack);
     }
 
     @Override

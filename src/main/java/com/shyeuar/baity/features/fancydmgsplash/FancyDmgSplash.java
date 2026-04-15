@@ -257,8 +257,8 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         long currentTime = System.currentTimeMillis();
         Vec3 cameraPos = context.worldState().cameraRenderState.pos;
         Camera camera = mc.gameRenderer.getMainCamera();
-        float cameraYaw = camera.getYRot();
-        float cameraPitch = camera.getXRot();
+        float cameraYaw = camera.yRot();
+        float cameraPitch = camera.xRot();
         
         PoseStack matrices = context.matrices();
         if (matrices == null) {

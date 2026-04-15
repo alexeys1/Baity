@@ -14,43 +14,36 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.LayeringTransform;
+import net.minecraft.client.renderer.rendertype.OutputTarget;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.OptionalDouble;
-
 @Environment(EnvType.CLIENT)
 public class ShulkerHighlights implements WorldRenderEvents.AfterEntities {
 
     private static final Minecraft MC = Minecraft.getInstance();
- 
-    private static RenderType createNoDepthLines(float lineWidth) {
-  
-        RenderPipeline noDepthPipeline = RenderPipeline.builder(new com.mojang.blaze3d.pipeline.RenderPipeline.Snippet[]{RenderPipelines.LINES_SNIPPET})
-                .withLocation("pipeline/baity_shulker_lines_pipeline")
-                .withDepthWrite(false)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                .build();
+    private static final float LINE_WIDTH = 3.5f;
 
-        return RenderType.create(
+    private static final RenderPipeline BAITY_SHULKER_LINES = RenderPipelines.register(
+            RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
+                    .withLocation("pipeline/baity_shulker_lines")
+                    .withDepthWrite(false)
+                    .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                    .build()
+    );
+
+    private static final RenderType NO_DEPTH_LINES = RenderType.create(
             "baity_shulker_lines",
-            1536,
-            false,
-            false,
-            noDepthPipeline,
-            RenderType.CompositeState.builder()
-                .setLineState(new RenderStateShard.LineStateShard(OptionalDouble.of(lineWidth)))
-                .setLayeringState(RenderStateShard.VIEW_OFFSET_Z_LAYERING)
-                .setOutputState(RenderStateShard.ITEM_ENTITY_TARGET)
-                .createCompositeState(false)
-        );
-    }
-    
-    private static final RenderType NO_DEPTH_LINES = createNoDepthLines(3.5f);
+            RenderSetup.builder(BAITY_SHULKER_LINES)
+                    .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
+                    .setOutputTarget(OutputTarget.ITEM_ENTITY_TARGET)
+                    .createRenderSetup()
+    );
 
     @Override
     public void afterEntities(WorldRenderContext context) {
@@ -91,17 +84,17 @@ public class ShulkerHighlights implements WorldRenderEvents.AfterEntities {
             drawLine(pose, lines, x2, y1, z1, x2, y1, z2, r, g, b, a);
             drawLine(pose, lines, x2, y1, z2, x1, y1, z2, r, g, b, a);
             drawLine(pose, lines, x1, y1, z2, x1, y1, z1, r, g, b, a);
-            
+
             drawLine(pose, lines, x1, y2, z1, x2, y2, z1, r, g, b, a);
             drawLine(pose, lines, x2, y2, z1, x2, y2, z2, r, g, b, a);
             drawLine(pose, lines, x2, y2, z2, x1, y2, z2, r, g, b, a);
             drawLine(pose, lines, x1, y2, z2, x1, y2, z1, r, g, b, a);
-            
+
             drawLine(pose, lines, x1, y1, z1, x1, y2, z1, r, g, b, a);
             drawLine(pose, lines, x2, y1, z1, x2, y2, z1, r, g, b, a);
             drawLine(pose, lines, x2, y1, z2, x2, y2, z2, r, g, b, a);
             drawLine(pose, lines, x1, y1, z2, x1, y2, z2, r, g, b, a);
-            
+
             drawLine(pose, lines, x1, y1, z1, x2, y1, z1, r, g, b, a);
             drawLine(pose, lines, x2, y1, z1, x2, y1, z2, r, g, b, a);
             drawLine(pose, lines, x2, y1, z2, x1, y1, z2, r, g, b, a);
@@ -128,13 +121,13 @@ public class ShulkerHighlights implements WorldRenderEvents.AfterEntities {
             float ny = (float) (dy / length);
             float nz = (float) (dz / length);
             vc.addVertex(pose.pose(), (float) x1, (float) y1, (float) z1)
-                .setColor(r, g, b, a)
-                .setNormal(pose, nx, ny, nz);
+                    .setColor(r, g, b, a)
+                    .setNormal(pose, nx, ny, nz)
+                    .setLineWidth(LINE_WIDTH);
             vc.addVertex(pose.pose(), (float) x2, (float) y2, (float) z2)
-                .setColor(r, g, b, a)
-                .setNormal(pose, nx, ny, nz);
+                    .setColor(r, g, b, a)
+                    .setNormal(pose, nx, ny, nz)
+                    .setLineWidth(LINE_WIDTH);
         }
     }
 }
-
-

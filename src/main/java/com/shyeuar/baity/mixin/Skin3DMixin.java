@@ -7,7 +7,7 @@ import com.shyeuar.baity.features.Skin3DRenderer.OffsetProvider;
 import com.shyeuar.baity.features.Skin3DRenderer.SkinData;
 import com.shyeuar.baity.features.Skin3DRenderer.VoxelMesh;
 import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.player.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.entity.layers.Deadmau5EarsLayer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
@@ -134,7 +134,7 @@ public class Skin3DMixin {
                 PoseStack matrices,
                 net.minecraft.client.renderer.SubmitNodeCollector queue,
                 int light,
-                net.minecraft.resources.ResourceLocation skinTexture,
+            net.minecraft.resources.Identifier skinTexture,
                 boolean sleeveVisible,
                 CallbackInfo ci
         ) {
@@ -146,7 +146,7 @@ public class Skin3DMixin {
                 PoseStack matrices,
                 net.minecraft.client.renderer.SubmitNodeCollector queue,
                 int light,
-                net.minecraft.resources.ResourceLocation skinTexture,
+            net.minecraft.resources.Identifier skinTexture,
                 boolean sleeveVisible,
                 CallbackInfo ci
         ) {

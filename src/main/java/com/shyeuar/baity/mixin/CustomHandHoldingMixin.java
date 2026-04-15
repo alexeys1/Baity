@@ -102,7 +102,7 @@ public class CustomHandHoldingMixin {
             at = @At("HEAD"),
             cancellable = true
         )
-        private void baity$handleNoSwing(float swingProgress, float equipProgress, 
+        private void baity$handleNoSwing(float swingProgress,
                 com.mojang.blaze3d.vertex.PoseStack poseStack, int handSide, HumanoidArm arm, CallbackInfo ci) {
             Module customHandHoldingModule = ModuleManager.getModuleByName("CustomHandHolding");
             if (customHandHoldingModule == null || !customHandHoldingModule.isEnabled()) {
@@ -124,9 +124,8 @@ public class CustomHandHoldingMixin {
             }
 
             ci.cancel();
-            
+
             ItemInHandRendererAccessor accessor = (ItemInHandRendererAccessor) this;
-            accessor.baity$callApplyItemArmTransform(poseStack, arm, equipProgress);
             accessor.baity$callApplyItemArmAttackTransform(poseStack, arm, swingProgress);
         }
     }

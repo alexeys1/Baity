@@ -11,5 +11,7 @@ import java.util.List;
 public interface FogRendererAccessor {
     
     @Accessor("FOG_ENVIRONMENTS")
-    List<FogEnvironment> baity$getFogEnvironments();
+    static List<FogEnvironment> baity$getFogEnvironments() {
+        throw new AssertionError("Mixin accessor");
+    }
 }

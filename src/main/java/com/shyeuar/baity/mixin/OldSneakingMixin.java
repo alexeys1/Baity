@@ -21,6 +21,7 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
@@ -135,7 +136,10 @@ public class OldSneakingMixin {
 					&& (Minecraft.getInstance().screen == null)) {
 				final float cameraLerpValue = baity$interpolateCameraEyeHeight((CameraRenderStateAccessor) cameraRenderState);
 				AvatarRenderStateAccessor avatarAccessor = (AvatarRenderStateAccessor) livingEntityRenderState;
-				poseStack.translate(0.0F, (avatarAccessor.baity$getStandingDimensions().eyeHeight() * livingEntityRenderState.scale) - cameraLerpValue, 0.0F);
+				EntityDimensions standingDimensions = avatarAccessor.baity$getStandingDimensions();
+				if (standingDimensions != null) {
+					poseStack.translate(0.0F, (standingDimensions.eyeHeight() * livingEntityRenderState.scale) - cameraLerpValue, 0.0F);
+				}
 			}
 		}
 		

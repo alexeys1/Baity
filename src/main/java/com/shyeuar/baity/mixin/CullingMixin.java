@@ -33,9 +33,9 @@ public class CullingMixin {
         @Final
         private static List<FogEnvironment> FOG_ENVIRONMENTS;
         
-        @Inject(method = "setupFog(Lnet/minecraft/client/Camera;IZLnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lorg/joml/Vector4f;",
+        @Inject(method = "setupFog(Lnet/minecraft/client/Camera;ILnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lorg/joml/Vector4f;",
                 at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/fog/FogData;renderDistanceEnd:F", shift = At.Shift.AFTER, ordinal = 0))
-        private void baity$removeWaterFog(Camera camera, int viewDistance, boolean thick, 
+        private void baity$removeWaterFog(Camera camera, int viewDistance,
                 DeltaTracker tickCounter, float skyDarkness, ClientLevel world, 
                 CallbackInfoReturnable<Vector4f> cir, @Local FogData fogData) {
             
@@ -44,7 +44,7 @@ public class CullingMixin {
             if (!ConfigManager.cullingRemoveUnderwaterFog) return;
             
             FogType submersionType = camera.getFluidInCamera();
-            Entity entity = camera.getEntity();
+            Entity entity = camera.entity();
             
             if (submersionType != FogType.WATER) return;
             

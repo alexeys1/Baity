@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.text.Normalizer;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,8 +22,8 @@ import com.google.gson.JsonParser;
 
 public class VersionCheckUtils {
     private static final String GITHUB_API_URL = "https://api.github.com/repos/raueyhs/Baity/releases";
-    private static final String MC_VERSION_PREFIX = "1.21.10";
-    private static final Pattern VERSION_PATTERN = Pattern.compile("v([0-9]+\\.[0-9]+\\.[0-9]+)");
+    private static final String MC_VERSION_PREFIX = "1.21.11";
+    private static final Pattern VERSION_PATTERN = Pattern.compile("[vV]?([0-9]+\\.[0-9]+\\.[0-9]+)");
     
     public static class VersionCheckResult {
         public final boolean isLatest;
@@ -68,7 +69,7 @@ public class VersionCheckUtils {
 
                     String latestVersion = findLatestMatchingReleaseVersion(jsonResponse);
                     if (latestVersion == null) {
-                        return new VersionCheckResult(true, "Unknown error", true);
+                        return new VersionCheckResult(true, null, false);
                     }
 
                     return compareWithLatest(currentVersion, latestVersion);
@@ -97,7 +98,7 @@ public class VersionCheckUtils {
 
                     String latestVersion = findLatestMatchingReleaseVersion(jsonResponse);
                     if (latestVersion == null) {
-                        return new VersionCheckResult(true, "Unknown error", true);
+                        return new VersionCheckResult(true, null, false);
                     }
 
                     return compareWithLatest(currentVersion, latestVersion);
@@ -156,14 +157,19 @@ public class VersionCheckUtils {
 
             String releaseName = getStringOrNull(releaseObj, "name");
             String tagName = getStringOrNull(releaseObj, "tag_name");
+            String normalizedReleaseName = normalizeForMatch(releaseName);
+            String normalizedTagName = normalizeForMatch(tagName);
 
-            if (releaseName == null) continue;
-            if (!releaseName.startsWith(MC_VERSION_PREFIX + "-")) continue;
+            if (normalizedReleaseName == null && normalizedTagName == null) continue;
+            boolean releaseNameMatches = normalizedReleaseName != null && containsMcPrefix(normalizedReleaseName);
+            boolean tagNameMatches = normalizedTagName != null && containsMcPrefix(normalizedTagName);
+            if (!releaseNameMatches && !tagNameMatches) continue;
 
-            String extracted = extractVersionFromTag(releaseName);
-            if (extracted == null && tagName != null) {
-                extracted = extractVersionFromTag(tagName);
-            }
+            String extracted = null;
+            if (releaseNameMatches) extracted = extractVersionFromTag(normalizedReleaseName);
+            if (extracted == null && tagNameMatches) extracted = extractVersionFromTag(normalizedTagName);
+            if (extracted == null && normalizedReleaseName != null) extracted = extractVersionFromTag(normalizedReleaseName);
+            if (extracted == null && normalizedTagName != null) extracted = extractVersionFromTag(normalizedTagName);
             if (extracted == null) continue;
 
             String normalizedLatest = normalizeVersion(extracted);
@@ -177,6 +183,24 @@ public class VersionCheckUtils {
         }
 
         return bestVersionRaw;
+    }
+
+    private static boolean containsMcPrefix(String value) {
+        if (value == null) return false;
+        String normalized = normalizeForMatch(value);
+        if (normalized == null) return false;
+        return normalized.contains(MC_VERSION_PREFIX + "-")
+            || normalized.contains(MC_VERSION_PREFIX + "_")
+            || normalized.contains(MC_VERSION_PREFIX + " ")
+            || normalized.contains(MC_VERSION_PREFIX);
+    }
+
+    private static String normalizeForMatch(String value) {
+        if (value == null) return null;
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFKC);
+        normalized = normalized.replaceAll("[\\u200B-\\u200D\\uFEFF\\u2060]", "");
+        normalized = normalized.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private static int[] parseVXYZ(String version) {

@@ -15,7 +15,7 @@ import com.shyeuar.baity.gui.value.ButtonValue;
 import com.shyeuar.baity.sync.BaityPresenceSync;
 import com.shyeuar.baity.utils.TimerUtils;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
-import io.wispforest.owo.ui.container.Containers;
+import io.wispforest.owo.ui.container.UIContainers;
 import io.wispforest.owo.ui.container.FlowLayout;
 import io.wispforest.owo.ui.core.OwoUIAdapter;
 import net.fabricmc.api.EnvType;
@@ -68,7 +68,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     
     @Override
     protected @NotNull OwoUIAdapter<FlowLayout> createAdapter() {
-        return OwoUIAdapter.create(this, Containers::horizontalFlow);
+        return OwoUIAdapter.create(this, UIContainers::horizontalFlow);
     }
     
     @Override
@@ -133,37 +133,35 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         
         Minecraft mc = this.minecraft;
         com.shyeuar.baity.utils.VersionCheckUtils.checkVersionAsync(currentVersion).thenAccept(result -> {
-            if (mc != null && mc.level != null) {
-                mc.schedule(() -> {
-                    state.setVersionChecking(false);
-                    if (result.hasError) {
-                        state.setVersionCheckStatus(null);
-                        state.setAutoCheck(false);
-                        return;
-                    }
-                    
-                    if (result.isLatest) {
-                        state.setVersionCheckStatus("latest");
-                    } else {
-                        state.setVersionCheckStatus("update_available");
-                        state.setLatestVersion(result.latestVersion);
-                    }
+            if (mc == null) {
+                return;
+            }
+            mc.schedule(() -> {
+                state.setVersionChecking(false);
+                if (result.hasError) {
+                    state.setVersionCheckStatus("error");
+                    state.setLatestVersion(null);
                     state.setVersionCheckStartTime(System.currentTimeMillis());
-                });
-            } else {
-                state.setVersionChecking(false);
-                state.setAutoCheck(false);
-            }
-        }).exceptionally(throwable -> {
-            if (this.minecraft != null && this.minecraft.level != null) {
-                this.minecraft.schedule(() -> {
-                    state.setVersionChecking(false);
                     state.setAutoCheck(false);
-                });
-            } else {
+                    return;
+                }
+                
+                if (result.isLatest) {
+                    state.setVersionCheckStatus("latest");
+                } else {
+                    state.setVersionCheckStatus("update_available");
+                    state.setLatestVersion(result.latestVersion);
+                }
+                state.setVersionCheckStartTime(System.currentTimeMillis());
+            });
+        }).exceptionally(throwable -> {
+            if (this.minecraft == null) {
+                return null;
+            }
+            this.minecraft.schedule(() -> {
                 state.setVersionChecking(false);
                 state.setAutoCheck(false);
-            }
+            });
             return null;
         });
     }
@@ -238,8 +236,8 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     }
     
     @Override
-    public void resize(Minecraft client, int width, int height) {
-        super.resize(client, width, height);
+    public void resize(int width, int height) {
+        super.resize(width, height);
         if (this.minecraft != null && this.minecraft.getWindow() != null) {
             int screenW = this.minecraft.getWindow().getGuiScaledWidth();
             int screenH = this.minecraft.getWindow().getGuiScaledHeight();

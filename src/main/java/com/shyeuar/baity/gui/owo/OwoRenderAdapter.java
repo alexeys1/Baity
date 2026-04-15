@@ -1,21 +1,21 @@
 package com.shyeuar.baity.gui.owo;
 
 import io.wispforest.owo.ui.core.Color;
-import io.wispforest.owo.ui.core.OwoUIDrawContext;
+import io.wispforest.owo.ui.core.OwoUIGraphics;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class OwoRenderAdapter {
-    private final OwoUIDrawContext owoContext;
+    private final OwoUIGraphics owoContext;
     private final GuiGraphics guiGraphics;
     
-    public OwoRenderAdapter(OwoUIDrawContext owoContext, GuiGraphics guiGraphics) {
+    public OwoRenderAdapter(OwoUIGraphics owoContext, GuiGraphics guiGraphics) {
         this.owoContext = owoContext;
         this.guiGraphics = guiGraphics;
     }
     
-    public static OwoRenderAdapter of(OwoUIDrawContext owoContext, GuiGraphics guiGraphics) {
+    public static OwoRenderAdapter of(OwoUIGraphics owoContext, GuiGraphics guiGraphics) {
         return new OwoRenderAdapter(owoContext, guiGraphics);
     }
     
@@ -44,11 +44,11 @@ public class OwoRenderAdapter {
         guiGraphics.drawString(font, text, x, y, color, shadow);
     }
     
-    public void blit(ResourceLocation texture, int x, int y, float u, float v, int width, int height, int textureWidth, int textureHeight, int color) {
+    public void blit(Identifier texture, int x, int y, float u, float v, int width, int height, int textureWidth, int textureHeight, int color) {
         guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height, textureWidth, textureHeight, color);
     }
     
-    public void blit(ResourceLocation texture, int x, int y, float u, float v, int width, int height, int textureWidth, int textureHeight) {
+    public void blit(Identifier texture, int x, int y, float u, float v, int width, int height, int textureWidth, int textureHeight) {
         guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height, textureWidth, textureHeight);
     }
     
@@ -60,7 +60,7 @@ public class OwoRenderAdapter {
         guiGraphics.disableScissor();
     }
     
-    public OwoUIDrawContext getOwoContext() {
+    public OwoUIGraphics getOwoContext() {
         return owoContext;
     }
     

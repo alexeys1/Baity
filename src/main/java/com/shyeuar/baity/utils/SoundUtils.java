@@ -6,14 +6,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 
 @Environment(EnvType.CLIENT)
 public class SoundUtils {
 
-    private static final ResourceLocation WOODEN_BUTTON_ID = ResourceLocation.fromNamespaceAndPath("baity", "wooden_button");
-    private static final ResourceLocation BUBBLE_ID = ResourceLocation.fromNamespaceAndPath("baity", "bubble");
+    private static final Identifier WOODEN_BUTTON_ID = Identifier.fromNamespaceAndPath("baity", "wooden_button");
+    private static final Identifier BUBBLE_ID = Identifier.fromNamespaceAndPath("baity", "bubble");
 
     public static SoundEvent WOODEN_BUTTON;
     public static SoundEvent BUBBLE;

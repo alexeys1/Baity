@@ -19,7 +19,7 @@ public abstract class AvatarRenderStateMixin implements EntityRenderStateInterfa
 	private EntityDimensions baity$standingDimensions = null;
 	
 	@Inject(method = "extractArmedEntityRenderState", at = @At("TAIL"))
-	private static void baity$storeStandingDimensions(LivingEntity livingEntity, ArmedEntityRenderState armedEntityRenderState, ItemModelResolver itemModelResolver, CallbackInfo ci) {
+	private static void baity$storeStandingDimensions(LivingEntity livingEntity, ArmedEntityRenderState armedEntityRenderState, ItemModelResolver itemModelResolver, float tickDelta, CallbackInfo ci) {
 		EntityRenderStateInterface interfaceImpl = (EntityRenderStateInterface) armedEntityRenderState;
 		if (livingEntity instanceof Avatar avatar) {
 			interfaceImpl.baity$setStandingDimensions(avatar.getDefaultDimensions(Pose.STANDING));

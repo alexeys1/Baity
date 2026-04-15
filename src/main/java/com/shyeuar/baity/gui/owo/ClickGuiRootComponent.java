@@ -10,18 +10,19 @@ import com.shyeuar.baity.gui.render.ValueStyleRenderer;
 import com.shyeuar.baity.gui.value.Value;
 import com.shyeuar.baity.gui.value.ModuleCategory;
 import com.shyeuar.baity.gui.value.ValueTreeUtils;
-import io.wispforest.owo.ui.base.BaseComponent;
-import io.wispforest.owo.ui.core.OwoUIDrawContext;
+import io.wispforest.owo.ui.base.BaseUIComponent;
+import io.wispforest.owo.ui.core.OwoUIGraphics;
 import io.wispforest.owo.ui.core.Positioning;
 import io.wispforest.owo.ui.core.Sizing;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.List;
 import java.util.function.Function;
 
-public class ClickGuiRootComponent extends BaseComponent {
+public class ClickGuiRootComponent extends BaseUIComponent {
+    private static final float VERSION_RIGHT_PADDING = 8.0f;
     
     private final ClickGuiState state;
     private final Theme theme;
@@ -68,7 +69,7 @@ public class ClickGuiRootComponent extends BaseComponent {
     }
     
     @Override
-    public void draw(OwoUIDrawContext context, int mouseX, int mouseY, float partialTicks, float delta) {
+    public void draw(OwoUIGraphics context, int mouseX, int mouseY, float partialTicks, float delta) {
         if (guiGraphics == null) return;
         
         Minecraft client = Minecraft.getInstance();
@@ -248,7 +249,7 @@ public class ClickGuiRootComponent extends BaseComponent {
         int logoX = (int)((availableWidth - logoSize) / 2);
         int logoY = (int)((availableHeight - logoSize) / 2);
         
-        ResourceLocation logoTexture = ResourceLocation.fromNamespaceAndPath("baity", "textures/gui/logo.png");
+        Identifier logoTexture = Identifier.fromNamespaceAndPath("baity", "textures/gui/logo.png");
         
         guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, logoTexture, logoX, logoY, 0.0f, 0.0f, logoSize, logoSize, logoSize, logoSize);
     }
@@ -265,7 +266,7 @@ public class ClickGuiRootComponent extends BaseComponent {
         float alpha = isHovered ? 1.0f : 0.7f;
         int color = (int)(alpha * 255) << 24 | 0xFFFFFF;
         
-        ResourceLocation githubIcon = ResourceLocation.fromNamespaceAndPath("baity", "textures/gui/github.png");
+        Identifier githubIcon = Identifier.fromNamespaceAndPath("baity", "textures/gui/github.png");
         
         guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, githubIcon, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize, color);
     }
@@ -279,7 +280,7 @@ public class ClickGuiRootComponent extends BaseComponent {
         
         float searchWidth = ClickGuiState.CONTENT_WIDTH - 40;
         
-        ResourceLocation searchIcon = ResourceLocation.fromNamespaceAndPath("baity", "textures/gui/search.png");
+        Identifier searchIcon = Identifier.fromNamespaceAndPath("baity", "textures/gui/search.png");
         int iconX = (int)(searchX + iconPadding);
         int iconY = (int)(searchY + (searchHeight - iconSize) / 2);
         int iconColor = 0xFFFFFFFF;
@@ -591,7 +592,7 @@ public class ClickGuiRootComponent extends BaseComponent {
     
     private void renderWatermark(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
         String prefix = "Baity by ";
-        String handleName = "@raueyhs";
+        String handleName = "@11YearCookieBuff";
 
         float wmScale = 0.70f;
         int prefixWidth = client.font.width(prefix);
@@ -652,7 +653,7 @@ public class ClickGuiRootComponent extends BaseComponent {
         int currentVersionWidth = client.font.width(currentVersion);
         float scaledCurrentVersionWidth = versionScale * currentVersionWidth;
         
-        float baseX = ClickGuiState.WIDTH - scaledCurrentVersionWidth - 8;
+        float baseX = ClickGuiState.WIDTH - scaledCurrentVersionWidth - VERSION_RIGHT_PADDING;
         float baseY = ClickGuiState.HEIGHT - (int)(client.font.lineHeight * versionScale) - 8;
         
         var matrices = guiGraphics.pose();
@@ -710,14 +711,8 @@ public class ClickGuiRootComponent extends BaseComponent {
                     }
                 } else if ("error".equals(checkStatus)) {
                     showFeedback = true;
-                    String errorMsg = state.getLatestVersion();
-                    if (errorMsg != null && errorMsg.equals("Unknown error")) {
-                        displayText = "Unknown error";
-                        isError = true;
-                    } else {
-                        displayText = "It's already the latest version！Network error！";
-                        isError = true;
-                    }
+                    displayText = "Network error！";
+                    isError = true;
                 } else if ("update_available".equals(checkStatus)) {
                     showFeedback = true;
                     String latest = state.getLatestVersion();
@@ -774,24 +769,9 @@ public class ClickGuiRootComponent extends BaseComponent {
                                 versionColor, false);
             }
         } else if (showFeedback && isError) {
-            String errorMsg = state.getLatestVersion();
-            if (errorMsg != null && errorMsg.equals("Unknown error")) {
-                guiGraphics.drawString(client.font, displayText,
-                                (int)(renderX / versionScale), (int)(baseY / versionScale),
-                                com.shyeuar.baity.config.DevConfig.DEV_PREFIX_COLOR, false);
-            } else {
-                String prefix = "It's already the latest version！";
-                String suffix = "Network error！";
-                int prefixWidth = client.font.width(prefix);
-                
-                guiGraphics.drawString(client.font, prefix,
-                                (int)(renderX / versionScale), (int)(baseY / versionScale),
-                                0xFFFFFF00, false);
-                guiGraphics.drawString(client.font, suffix,
-                                (int)((renderX + prefixWidth * versionScale) / versionScale),
-                                (int)(baseY / versionScale),
-                                com.shyeuar.baity.config.DevConfig.DEV_PREFIX_COLOR, false);
-            }
+            guiGraphics.drawString(client.font, displayText,
+                            (int)(renderX / versionScale), (int)(baseY / versionScale),
+                            com.shyeuar.baity.config.DevConfig.DEV_PREFIX_COLOR, false);
         } else if (showFeedback) {
             guiGraphics.drawString(client.font, displayText,
                             (int)(renderX / versionScale), (int)(baseY / versionScale),

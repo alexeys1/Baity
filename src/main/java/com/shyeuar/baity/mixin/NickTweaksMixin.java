@@ -23,7 +23,7 @@ public class NickTweaksMixin {
     }
 
     @ModifyVariable(
-            method = "prepareText(Lnet/minecraft/util/FormattedCharSequence;FFIZI)Lnet/minecraft/client/gui/Font$PreparedText;",
+            method = "prepareText(Lnet/minecraft/util/FormattedCharSequence;FFIZZI)Lnet/minecraft/client/gui/Font$PreparedText;",
             at = @At("HEAD"),
             argsOnly = true
     )

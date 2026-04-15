@@ -22,7 +22,7 @@ public abstract class GameRendererMixin {
 	@Inject(method = "extractCamera", at = @At("TAIL"))
 	private void baity$populateCameraRenderState(CallbackInfo ci, @Local CameraRenderState cameraRenderState) {
 		CameraRenderStateAccessor cameraAccessor = (CameraRenderStateAccessor) cameraRenderState;
-		cameraAccessor.baity$setId(this.mainCamera.getEntity().getId());
+		cameraAccessor.baity$setId(this.mainCamera.entity().getId());
 		cameraAccessor.baity$setPartialTickTime(this.mainCamera.getPartialTickTime());
 		cameraAccessor.baity$setOldEyeHeight(((CameraAccessor) this.mainCamera).baity$getOldEyeHeight());
 		cameraAccessor.baity$setEyeHeight(((CameraAccessor) this.mainCamera).baity$getEyeHeight());

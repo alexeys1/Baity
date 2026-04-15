@@ -19,7 +19,7 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.PlayerSkin;
 
@@ -31,7 +31,7 @@ public class Skin3DRenderer {
     public static final boolean FAST_RENDER = false; 
 
     private static final double MAX_RENDER_DIST_SQ = 64.0 * 64.0;
-    private static final Map<ResourceLocation, CachedSkinData> skinCache = new ConcurrentHashMap<>();
+    private static final Map<Identifier, CachedSkinData> skinCache = new ConcurrentHashMap<>();
     private static final long CACHE_EXPIRE_MS = 60000;
 
     private static final Set<Object> registeredMainModels = Collections.newSetFromMap(new WeakHashMap<>());
@@ -80,9 +80,10 @@ public class Skin3DRenderer {
     public static boolean inRange(AvatarRenderState state) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return false;
-        double dx = state.x - mc.gameRenderer.getMainCamera().getPosition().x;
-        double dy = state.y - mc.gameRenderer.getMainCamera().getPosition().y;
-        double dz = state.z - mc.gameRenderer.getMainCamera().getPosition().z;
+        var cameraPos = ((com.shyeuar.baity.mixin.accessor.CameraAccessor) mc.gameRenderer.getMainCamera()).baity$getPosition();
+        double dx = state.x - cameraPos.x;
+        double dy = state.y - cameraPos.y;
+        double dz = state.z - cameraPos.z;
         return dx * dx + dy * dy + dz * dz <= MAX_RENDER_DIST_SQ;
     }
 
@@ -92,7 +93,7 @@ public class Skin3DRenderer {
         PlayerSkin skinTextures = state.skin;
         if (skinTextures == null || skinTextures.body() == null) return null;
 
-        ResourceLocation skinId = skinTextures.body().texturePath();
+        Identifier skinId = skinTextures.body().texturePath();
         if (skinId == null) return null;
 
         boolean slim = skinTextures.model() == net.minecraft.world.entity.player.PlayerModelType.SLIM;
@@ -140,7 +141,7 @@ public class Skin3DRenderer {
         skinCache.clear();
     }
 
-    private static NativeImage getSkinImage(ResourceLocation id) {
+    private static NativeImage getSkinImage(Identifier id) {
         Minecraft mc = Minecraft.getInstance();
         AbstractTexture tex = mc.getTextureManager().getTexture(id);
 
@@ -168,7 +169,7 @@ public class Skin3DRenderer {
         PlayerSkin skinTextures = player.getSkin();
         if (skinTextures == null || skinTextures.body() == null) return null;
 
-        ResourceLocation skinId = skinTextures.body().texturePath();
+        Identifier skinId = skinTextures.body().texturePath();
         if (skinId == null) return null;
 
         boolean slim = skinTextures.model() == net.minecraft.world.entity.player.PlayerModelType.SLIM;
@@ -305,7 +306,7 @@ public class Skin3DRenderer {
     }
 
     public static class SkinData {
-        public ResourceLocation skinId;
+        public Identifier skinId;
         public boolean slim;
         public VoxelMesh head, body, leftArm, rightArm, leftLeg, rightLeg;
     }

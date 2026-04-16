@@ -69,7 +69,8 @@ public class CustomHandHoldingMixin {
             method = "renderArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At(
                 value = "INVOKE",
-                target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V"
+                target = "Lcom/mojang/blaze3d/vertex/PoseStack;pushPose()V",
+                shift = At.Shift.AFTER
             )
         )
         private void baity$applyTransform(AbstractClientPlayer player, float tickDelta, float pitch,
@@ -83,17 +84,32 @@ public class CustomHandHoldingMixin {
             if (mc.player == null || player != mc.player) return;
             if (item.isEmpty()) return;
 
-            if (com.shyeuar.baity.utils.BlockAnimationUtils.isFeatureActive() 
-                    && com.shyeuar.baity.utils.BlockAnimationUtils.isPlayerBlockingWithSword(player)) {
-                InteractionHand blockingHand = com.shyeuar.baity.utils.BlockAnimationUtils.getBlockingHand(player);
-                if (blockingHand == hand) {
-                    return;
-                }
-            }
-
             HumanoidArm arm = hand == InteractionHand.MAIN_HAND ? player.getMainArm() : player.getMainArm().getOpposite();
-            
-            CustomHandHoldingManager.getInstance().applyTransform(matrices, arm);
+
+            // Apply translation/rotation before vanilla swing/block transforms so the pivot follows pos/rot.
+            // Scale is applied later (right before item render) to avoid scaling vanilla arm translations.
+            CustomHandHoldingManager.getInstance().applyPositionAndRotation(matrices, arm);
+        }
+
+        @Inject(
+            method = "renderArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+            at = @At(
+                value = "INVOKE",
+                target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V"
+            )
+        )
+        private void baity$applyScaleOnly(AbstractClientPlayer player, float tickDelta, float pitch,
+                InteractionHand hand, float swingProgress, ItemStack item, float equipProgress,
+                com.mojang.blaze3d.vertex.PoseStack matrices, net.minecraft.client.renderer.SubmitNodeCollector queue,
+                int light, CallbackInfo ci) {
+            Module customHandHoldingModule = ModuleManager.getModuleByName("CustomHandHolding");
+            if (customHandHoldingModule == null || !customHandHoldingModule.isEnabled()) return;
+
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player == null || player != mc.player) return;
+            if (item.isEmpty()) return;
+
+            CustomHandHoldingManager.getInstance().applyScale(matrices);
         }
 
 

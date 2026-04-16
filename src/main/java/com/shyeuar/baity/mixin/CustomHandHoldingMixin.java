@@ -73,7 +73,7 @@ public class CustomHandHoldingMixin {
                 shift = At.Shift.AFTER
             )
         )
-        private void baity$applyTransform(AbstractClientPlayer player, float tickDelta, float pitch,
+        private void baity$applyPositionOnly(AbstractClientPlayer player, float tickDelta, float pitch,
                 InteractionHand hand, float swingProgress, ItemStack item, float equipProgress,
                 com.mojang.blaze3d.vertex.PoseStack matrices, net.minecraft.client.renderer.SubmitNodeCollector queue,
                 int light, CallbackInfo ci) {
@@ -86,9 +86,7 @@ public class CustomHandHoldingMixin {
 
             HumanoidArm arm = hand == InteractionHand.MAIN_HAND ? player.getMainArm() : player.getMainArm().getOpposite();
 
-            // Apply translation/rotation before vanilla swing/block transforms so the pivot follows pos/rot.
-            // Scale is applied later (right before item render) to avoid scaling vanilla arm translations.
-            CustomHandHoldingManager.getInstance().applyPositionAndRotation(matrices, arm);
+            CustomHandHoldingManager.getInstance().applyPosition(matrices, arm);
         }
 
         @Inject(
@@ -98,7 +96,7 @@ public class CustomHandHoldingMixin {
                 target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V"
             )
         )
-        private void baity$applyScaleOnly(AbstractClientPlayer player, float tickDelta, float pitch,
+        private void baity$applyTransform(AbstractClientPlayer player, float tickDelta, float pitch,
                 InteractionHand hand, float swingProgress, ItemStack item, float equipProgress,
                 com.mojang.blaze3d.vertex.PoseStack matrices, net.minecraft.client.renderer.SubmitNodeCollector queue,
                 int light, CallbackInfo ci) {
@@ -109,6 +107,17 @@ public class CustomHandHoldingMixin {
             if (mc.player == null || player != mc.player) return;
             if (item.isEmpty()) return;
 
+            if (com.shyeuar.baity.utils.BlockAnimationUtils.isFeatureActive() 
+                    && com.shyeuar.baity.utils.BlockAnimationUtils.isPlayerBlockingWithSword(player)) {
+                InteractionHand blockingHand = com.shyeuar.baity.utils.BlockAnimationUtils.getBlockingHand(player);
+                if (blockingHand == hand) {
+                    return;
+                }
+            }
+
+            HumanoidArm arm = hand == InteractionHand.MAIN_HAND ? player.getMainArm() : player.getMainArm().getOpposite();
+
+            CustomHandHoldingManager.getInstance().applyRotation(matrices, arm);
             CustomHandHoldingManager.getInstance().applyScale(matrices);
         }
 
@@ -140,7 +149,6 @@ public class CustomHandHoldingMixin {
             }
 
             ci.cancel();
-
             ItemInHandRendererAccessor accessor = (ItemInHandRendererAccessor) this;
             accessor.baity$callApplyItemArmAttackTransform(poseStack, arm, swingProgress);
         }

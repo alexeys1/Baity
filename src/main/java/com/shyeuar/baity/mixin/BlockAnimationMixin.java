@@ -13,6 +13,8 @@ import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
@@ -125,14 +127,11 @@ public abstract class BlockAnimationMixin {
             at = @At(
                 value = "INVOKE",
                 target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;applyItemArmTransform(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/entity/HumanoidArm;F)V",
-                shift = At.Shift.AFTER,
-                ordinal = 0
+                shift = At.Shift.AFTER
             ),
             slice = @Slice(
-                from = @At(
-                        value = "INVOKE",
-                        target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;applyEatTransform(Lcom/mojang/blaze3d/vertex/PoseStack;FLnet/minecraft/world/entity/HumanoidArm;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/player/Player;)V"
-                )
+                from = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;getUseAnimation()Lnet/minecraft/world/item/ItemUseAnimation;"),
+                to = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;applyItemArmTransform(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/entity/HumanoidArm;F)V", ordinal = 6)
             )
         )
         private void baity$applyUseItemSwingOffset(net.minecraft.client.player.AbstractClientPlayer player, float partialTicks, float pitch,
@@ -141,6 +140,28 @@ public abstract class BlockAnimationMixin {
                                                     net.minecraft.client.renderer.SubmitNodeCollector submitNodeCollector, int combinedLight,
                                                     CallbackInfo callback, @Local HumanoidArm arm) {
             if (!BlockAnimationUtils.isFeatureActive()) return;
+            this.baity$callApplyItemArmAttackTransform(poseStack, arm, swingProgress);
+        }
+
+        @Inject(
+            method = "renderArmWithItem",
+            at = @At(
+                value = "INVOKE",
+                target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V"
+            )
+        )
+        private void baity$keepSwingWhileUsingBow(net.minecraft.client.player.AbstractClientPlayer player, float partialTicks, float pitch,
+                                                   InteractionHand interactionHand, float swingProgress, net.minecraft.world.item.ItemStack stack,
+                                                   float equippedProgress, com.mojang.blaze3d.vertex.PoseStack poseStack,
+                                                   net.minecraft.client.renderer.SubmitNodeCollector submitNodeCollector, int combinedLight,
+                                                   CallbackInfo callback) {
+            if (!BlockAnimationUtils.isFeatureActive()) return;
+            if (player == null) return;
+            if (swingProgress <= 0.0f) return;
+            if (!player.isUsingItem() || player.getUsedItemHand() != interactionHand) return;
+            if (!(stack.is(Items.BOW) || stack.is(Items.CROSSBOW))) return;
+
+            HumanoidArm arm = interactionHand == InteractionHand.MAIN_HAND ? player.getMainArm() : player.getMainArm().getOpposite();
             this.baity$callApplyItemArmAttackTransform(poseStack, arm, swingProgress);
         }
     }
@@ -152,6 +173,13 @@ public abstract class BlockAnimationMixin {
         @Shadow @Nullable public HitResult hitResult;
         @Shadow @Nullable public ClientLevel level;
 
+        @org.spongepowered.asm.mixin.Unique
+        private static boolean baity$lastSwinging = false;
+        @org.spongepowered.asm.mixin.Unique
+        private static int baity$lastSwingTime = 0;
+        @org.spongepowered.asm.mixin.Unique
+        private static InteractionHand baity$lastSwingArm = InteractionHand.MAIN_HAND;
+
         @Inject(method = "tick", at = @At("TAIL"))
         private void baity$applySwingWhilstMining(CallbackInfo ci) {
             if (!BlockAnimationUtils.isFeatureActive()) return;
@@ -160,6 +188,34 @@ public abstract class BlockAnimationMixin {
             if (!this.player.isUsingItem()) return;
             if (!this.options.keyAttack.isDown()) return;
             BlockAnimationUtils.applySwingWhilstMining(this.level, this.player, this.hitResult);
+        }
+
+        @Inject(method = "tick", at = @At("TAIL"))
+        private void baity$preserveSwingWhenStartingUse(CallbackInfo ci) {
+            if (!BlockAnimationUtils.isFeatureActive()) return;
+            if (this.player == null || this.options == null) return;
+
+            // Capture previous swing state first.
+            boolean prevSwinging = baity$lastSwinging;
+            int prevSwingTime = baity$lastSwingTime;
+            InteractionHand prevSwingArm = baity$lastSwingArm;
+
+            baity$lastSwinging = this.player.swinging;
+            baity$lastSwingTime = this.player.swingTime;
+            baity$lastSwingArm = this.player.swingingArm;
+
+            // If starting to use a bow/crossbow during a left-click swing, vanilla may cancel the swing.
+            // We preserve the ongoing swing so the animation can finish while the bow pull begins.
+            if (!this.player.isUsingItem()) return;
+            ItemStack using = this.player.getUseItem();
+            if (using == null || using.isEmpty()) return;
+            if (!(using.is(Items.BOW) || using.is(Items.CROSSBOW))) return;
+
+            if (prevSwinging && !this.player.swinging) {
+                this.player.swinging = true;
+                this.player.swingTime = prevSwingTime;
+                this.player.swingingArm = prevSwingArm;
+            }
         }
     }
 
@@ -175,9 +231,7 @@ public abstract class BlockAnimationMixin {
             super(root);
         }
 
-        @Inject(method = "setupAnim",
-                at = @At(value = "INVOKE",
-                        target = "Lnet/minecraft/client/model/HumanoidModel;setupAttackAnimation(Lnet/minecraft/client/renderer/entity/state/HumanoidRenderState;F)V"))
+        @Inject(method = "setupAnim", at = @At("TAIL"))
         private void baity$setupAnim(T renderState, CallbackInfo callback) {
             if (!BlockAnimationUtils.isFeatureActive()) return;
             if (!(renderState instanceof AvatarRenderState)) return;

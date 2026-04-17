@@ -22,6 +22,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.Scoreboard;
 
 @Environment(EnvType.CLIENT)
 public class ShulkerHighlights implements WorldRenderEvents.AfterEntities {
@@ -51,6 +54,7 @@ public class ShulkerHighlights implements WorldRenderEvents.AfterEntities {
         if (module == null || !module.isEnabled()) return;
         if (!ConfigManager.highlightsShulkerEnabled) return;
         if (MC.level == null || MC.player == null) return;
+        if (!isInGalatea()) return;
 
         Vec3 cameraPos = context.worldState().cameraRenderState.pos;
         PoseStack matrices = context.matrices();
@@ -106,6 +110,89 @@ public class ShulkerHighlights implements WorldRenderEvents.AfterEntities {
 
             matrices.popPose();
         }
+    }
+
+    private static boolean isInGalatea() {
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.getConnection() != null) {
+                for (var entry : mc.getConnection().getOnlinePlayers()) {
+                    if (entry.getTabListDisplayName() == null) continue;
+                    String text = removeColorCodes(entry.getTabListDisplayName().getString()).trim();
+                    if (text.isEmpty()) continue;
+                    if (text.startsWith("Area:") && text.contains("Galatea")) return true;
+                    if (text.startsWith("Island:") && text.contains("Galatea")) return true;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.level == null) return false;
+            Scoreboard scoreboard = mc.level.getScoreboard();
+            if (scoreboard == null) return false;
+            Objective sidebarObjective = scoreboard.getDisplayObjective(DisplaySlot.SIDEBAR);
+            if (sidebarObjective == null) return false;
+
+            java.util.List<?> scores = tryGetSortedScores(scoreboard, sidebarObjective);
+            if (scores == null || scores.isEmpty()) return false;
+            for (Object scoreObj : scores) {
+                String raw = extractScoreOwnerText(scoreObj);
+                String line = removeColorCodes(raw).trim();
+                if (line.contains("Galatea")) return true;
+            }
+        } catch (Exception ignored) {
+        }
+
+        return false;
+    }
+
+    private static String removeColorCodes(String text) {
+        if (text == null || text.isEmpty()) return text;
+        return text
+            .replaceAll("(?i)\u00A7x(\u00A7[0-9a-f]){6}", "")
+            .replaceAll("§[0-9a-fk-or]", "");
+    }
+
+    private static java.util.List<?> tryGetSortedScores(Scoreboard scoreboard, Objective objective) {
+        try {
+            for (java.lang.reflect.Method m : scoreboard.getClass().getMethods()) {
+                if (!"getSortedScores".equals(m.getName())) continue;
+                if (m.getParameterCount() != 1) continue;
+                try {
+                    Object res = m.invoke(scoreboard, objective);
+                    if (res instanceof java.util.List<?> list) return list;
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return java.util.Collections.emptyList();
+    }
+
+    private static String extractScoreOwnerText(Object scoreObj) {
+        if (scoreObj == null) return "";
+        try {
+            for (String methodName : new String[]{"getOwner", "getName", "getPlayerName"}) {
+                try {
+                    java.lang.reflect.Method m = scoreObj.getClass().getMethod(methodName);
+                    Object v = m.invoke(scoreObj);
+                    if (v == null) continue;
+                    try {
+                        java.lang.reflect.Method getString = v.getClass().getMethod("getString");
+                        Object s = getString.invoke(v);
+                        if (s != null) return String.valueOf(s);
+                    } catch (Exception ignored) {
+                    }
+                    if (v instanceof String) return (String) v;
+                    return String.valueOf(v);
+                } catch (Exception ignored) {
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return String.valueOf(scoreObj);
     }
 
     private static void drawLine(PoseStack.Pose pose, VertexConsumer vc,

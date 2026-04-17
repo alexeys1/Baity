@@ -316,6 +316,14 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             return;
         }
 
+        if ("Crosshair".equals(module.getName()) && "anima mode".equals(buttonValue.getName())) {
+            String current = buttonValue.getValue() == null ? "always" : String.valueOf(buttonValue.getValue());
+            String next = "bow only".equalsIgnoreCase(current) ? "always" : "bow only";
+            buttonValue.setValue(next);
+            ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
+            return;
+        }
+
         if ("SmolPeople".equals(module.getName()) && "friends".equals(buttonValue.getName())) {
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {

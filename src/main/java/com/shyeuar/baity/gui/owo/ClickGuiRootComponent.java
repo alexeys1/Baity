@@ -159,7 +159,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
     }
     
     private void renderWindowBackground(OwoRenderAdapter adapter) {
-        com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, 0, 0, ClickGuiState.WIDTH, ClickGuiState.HEIGHT, 
+        com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, 0, 0, ClickGuiState.WIDTH, ClickGuiState.HEIGHT,
                                  theme.BG.getRGB(), 6f);
     }
     
@@ -188,7 +188,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         
         return modules;
     }
-    
+
     private void renderSidebar(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
         com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, 0, 0, (int)ClickGuiState.SIDEBAR_WIDTH, (int)ClickGuiState.HEIGHT, 
                                  theme.BG.getRGB(), 0f);
@@ -550,6 +550,8 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                     currentHeight = dims.subOptionHeight * 2;
                 } else if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.GRADIENT_EDITOR) {
                     currentHeight = dims.subOptionHeight * 6;
+                } else if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.CROSSHAIR_PAINTER) {
+                    currentHeight = dims.subOptionHeight * 8;
                 }
                 if (subModY + currentHeight < ClickGuiState.HEADER_HEIGHT ||
                     subModY > ClickGuiState.HEIGHT - ClickGuiState.FOOTER_HEIGHT) {

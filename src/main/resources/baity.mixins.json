@@ -35,6 +35,7 @@
     "NonStarredMobTagsMixin",
     "FancyDmgSplashMixin",
     "CullingMixin$RemoveWaterFogMixin",
+    "CullingMixin$RemoveRainSnowVisualMixin",
     "CullingMixin$HideDyingMobMixin",
     "CullingMixin$NoHurtCamMixin",
     "Skin3DMixin$PlayerModelMixin",

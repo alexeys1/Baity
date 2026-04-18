@@ -204,8 +204,6 @@ public abstract class BlockAnimationMixin {
             baity$lastSwingTime = this.player.swingTime;
             baity$lastSwingArm = this.player.swingingArm;
 
-            // If starting to use a bow/crossbow during a left-click swing, vanilla may cancel the swing.
-            // We preserve the ongoing swing so the animation can finish while the bow pull begins.
             if (!this.player.isUsingItem()) return;
             ItemStack using = this.player.getUseItem();
             if (using == null || using.isEmpty()) return;

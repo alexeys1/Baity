@@ -1,7 +1,7 @@
 package com.shyeuar.baity.mixin;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import com.shyeuar.baity.utils.BlockAnimationUtils;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.HitResult;
@@ -27,7 +28,6 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Slice;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,6 +52,7 @@ public abstract class BlockAnimationMixin {
 
             if (this.minecraft.player != null && this.minecraft.player.isUsingItem() 
                     && this.minecraft.player.getUsedItemHand() == interactionHand) {
+                if (BlockAnimationUtils.isUsingConsumableAnimation(this.minecraft.player)) return;
                 if (BlockAnimationUtils.isPlayerBlockingWithSword(this.minecraft.player)) {
                     callback.cancel();
                 }
@@ -63,6 +64,9 @@ public abstract class BlockAnimationMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;isUsingItem()Z")
         )
         private boolean baity$wrapIsUsingItem(net.minecraft.client.player.AbstractClientPlayer player, Operation<Boolean> original) {
+            if (player != null && BlockAnimationUtils.isUsingConsumableAnimation(player)) {
+                return original.call(player);
+            }
             if (player != null && BlockAnimationUtils.isPlayerBlockingWithSword(player)) {
                 return true;
             }
@@ -74,6 +78,9 @@ public abstract class BlockAnimationMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;getUseItemRemainingTicks()I")
         )
         private int baity$wrapGetItemUseTimeLeft(net.minecraft.client.player.AbstractClientPlayer player, Operation<Integer> original) {
+            if (player != null && BlockAnimationUtils.isUsingConsumableAnimation(player)) {
+                return original.call(player);
+            }
             if (player != null && BlockAnimationUtils.isPlayerBlockingWithSword(player)) {
                 return BlockAnimationUtils.DEFAULT_ITEM_USE_DURATION;
             }
@@ -85,6 +92,9 @@ public abstract class BlockAnimationMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;getUsedItemHand()Lnet/minecraft/world/InteractionHand;")
         )
         private InteractionHand baity$wrapGetActiveHand(net.minecraft.client.player.AbstractClientPlayer player, Operation<InteractionHand> original) {
+            if (player != null && BlockAnimationUtils.isUsingConsumableAnimation(player)) {
+                return original.call(player);
+            }
             if (player != null && BlockAnimationUtils.isPlayerBlockingWithSword(player)) {
                 InteractionHand blockingHand = BlockAnimationUtils.getBlockingHand(player);
                 if (blockingHand != null) {
@@ -126,20 +136,20 @@ public abstract class BlockAnimationMixin {
             method = "renderArmWithItem",
             at = @At(
                 value = "INVOKE",
-                target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;applyItemArmTransform(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/entity/HumanoidArm;F)V",
-                shift = At.Shift.AFTER
-            ),
-            slice = @Slice(
-                from = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;getUseAnimation()Lnet/minecraft/world/item/ItemUseAnimation;"),
-                to = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;applyItemArmTransform(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/entity/HumanoidArm;F)V", ordinal = 6)
+                target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+                shift = At.Shift.BEFORE
             )
         )
-        private void baity$applyUseItemSwingOffset(net.minecraft.client.player.AbstractClientPlayer player, float partialTicks, float pitch,
-                                                    InteractionHand interactionHand, float swingProgress, net.minecraft.world.item.ItemStack stack,
-                                                    float equippedProgress, com.mojang.blaze3d.vertex.PoseStack poseStack,
-                                                    net.minecraft.client.renderer.SubmitNodeCollector submitNodeCollector, int combinedLight,
-                                                    CallbackInfo callback, @Local HumanoidArm arm) {
+        private void baity$applyConsumableUseSwingBeforeRenderItem(net.minecraft.client.player.AbstractClientPlayer player, float partialTicks, float pitch,
+                InteractionHand interactionHand, float swingProgress, net.minecraft.world.item.ItemStack stack,
+                float equippedProgress, com.mojang.blaze3d.vertex.PoseStack poseStack,
+                net.minecraft.client.renderer.SubmitNodeCollector submitNodeCollector, int combinedLight,
+                CallbackInfo callback) {
             if (!BlockAnimationUtils.isFeatureActive()) return;
+            if (player == null || !player.isUsingItem()) return;
+            if (player.getUsedItemHand() != interactionHand) return;
+            if (!BlockAnimationUtils.isUsingConsumableAnimation(player)) return;
+            HumanoidArm arm = interactionHand == InteractionHand.MAIN_HAND ? player.getMainArm() : player.getMainArm().getOpposite();
             this.baity$callApplyItemArmAttackTransform(poseStack, arm, swingProgress);
         }
 
@@ -181,13 +191,24 @@ public abstract class BlockAnimationMixin {
         private static InteractionHand baity$lastSwingArm = InteractionHand.MAIN_HAND;
 
         @Inject(method = "tick", at = @At("TAIL"))
+        private void baity$blockAnimationCircleTick(CallbackInfo ci) {
+            if (this.player == null) return;
+            Minecraft self = (Minecraft) (Object) this;
+            if (self.isPaused()) return;
+            com.shyeuar.baity.features.blockanimation.BlockAnimationCircleController.tick(
+                    this.player, self);
+        }
+
+        @Inject(method = "tick", at = @At("TAIL"))
         private void baity$applySwingWhilstMining(CallbackInfo ci) {
             if (!BlockAnimationUtils.isFeatureActive()) return;
             if (this.player == null) return;
-            if (this.player.getItemInHand(this.player.getUsedItemHand()).isEmpty()) return;
             if (!this.player.isUsingItem()) return;
-            if (!this.options.keyAttack.isDown()) return;
-            BlockAnimationUtils.applySwingWhilstMining(this.level, this.player, this.hitResult);
+            if (!BlockAnimationUtils.isUsingConsumableAnimation(this.player)) return;
+            if (this.player.getItemInHand(this.player.getUsedItemHand()).isEmpty()) return;
+            KeyMapping attack = this.options.keyAttack;
+            if (!attack.isDown() && !attack.consumeClick()) return;
+            BlockAnimationUtils.applySwingWhileUsingConsumable(this.level, this.player, this.hitResult);
         }
 
         @Inject(method = "tick", at = @At("TAIL"))
@@ -195,7 +216,6 @@ public abstract class BlockAnimationMixin {
             if (!BlockAnimationUtils.isFeatureActive()) return;
             if (this.player == null || this.options == null) return;
 
-            // Capture previous swing state first.
             boolean prevSwinging = baity$lastSwinging;
             int prevSwingTime = baity$lastSwingTime;
             InteractionHand prevSwingArm = baity$lastSwingArm;
@@ -229,6 +249,20 @@ public abstract class BlockAnimationMixin {
             super(root);
         }
 
+        @Inject(method = "setupAnim", at = @At("HEAD"))
+        private void baity$zeroAttackAnimCircleBlock(T renderState, CallbackInfo callback) {
+            if (!BlockAnimationUtils.isFeatureActive() || !BlockAnimationUtils.isSpinAnimaMode()) return;
+            if (!(renderState instanceof AvatarRenderState avatarState)) return;
+
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null) return;
+            if (avatarState.id != mc.player.getId()) return;
+            if (BlockAnimationUtils.isUsingConsumableAnimation(mc.player)) return;
+            if (!BlockAnimationUtils.isPlayerBlockingWithSword(mc.player)) return;
+
+            avatarState.attackTime = 0f;
+        }
+
         @Inject(method = "setupAnim", at = @At("TAIL"))
         private void baity$setupAnim(T renderState, CallbackInfo callback) {
             if (!BlockAnimationUtils.isFeatureActive()) return;
@@ -239,7 +273,8 @@ public abstract class BlockAnimationMixin {
             
             AvatarRenderState avatarState = (AvatarRenderState) renderState;
             if (avatarState.id != mc.player.getId()) return;
-            
+
+            if (BlockAnimationUtils.isUsingConsumableAnimation(mc.player)) return;
             if (!BlockAnimationUtils.isPlayerBlockingWithSword(mc.player)) return;
 
             InteractionHand blockingHand = BlockAnimationUtils.getBlockingHand(mc.player);
@@ -247,11 +282,20 @@ public abstract class BlockAnimationMixin {
             
             InteractionHand interactionHand =
                     renderState.mainArm == HumanoidArm.RIGHT ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
-            
+
+            float raiseFactor = 1f;
+            float rotorWobble = 0f;
+            if (BlockAnimationUtils.isRotorAnimaMode()) {
+                raiseFactor = com.shyeuar.baity.features.blockanimation.BlockAnimationCircleController
+                        .getRotorAimNow();
+                rotorWobble = com.shyeuar.baity.features.blockanimation.BlockAnimationCircleController
+                        .getRotorThirdPersonWobbleArmRadians();
+            }
+
             if (blockingHand == interactionHand) {
-                this.rightArm.xRot = this.rightArm.xRot - Mth.PI * 2.0F / 10.0F;
+                this.rightArm.xRot = this.rightArm.xRot - (Mth.PI * 2.0F / 10.0F) * raiseFactor + rotorWobble;
             } else {
-                this.leftArm.xRot = this.leftArm.xRot - Mth.PI * 2.0F / 10.0F;
+                this.leftArm.xRot = this.leftArm.xRot - (Mth.PI * 2.0F / 10.0F) * raiseFactor + rotorWobble;
             }
         }
     }
@@ -272,7 +316,6 @@ public abstract class BlockAnimationMixin {
                 net.minecraft.client.renderer.SubmitNodeCollector submitNodeCollector,
                 int packedLight,
                 CallbackInfo callback) {
-            
             if (!BlockAnimationUtils.isFeatureActive()) return;
             if (itemStackRenderState.isEmpty()) return;
             
@@ -280,9 +323,14 @@ public abstract class BlockAnimationMixin {
             if (mc == null || mc.player == null) return;
             
             if (renderState.id != mc.player.getId()) return;
-            
-            if (!BlockAnimationUtils.isPlayerBlockingWithSword(mc.player)) return;
-            
+
+            if (BlockAnimationUtils.isUsingConsumableAnimation(mc.player)) return;
+
+            boolean blockingNow = BlockAnimationUtils.isPlayerBlockingWithSword(mc.player);
+            boolean keepCircleSpin = BlockAnimationUtils.isSpinAnimaMode()
+                    && com.shyeuar.baity.features.blockanimation.BlockAnimationCircleController.hasActiveSpin();
+            if (!blockingNow && !keepCircleSpin) return;
+
             InteractionHand interactionHand =
                     humanoidArm == renderState.mainArm ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
             InteractionHand blockingHand = BlockAnimationUtils.getBlockingHand(mc.player);
@@ -300,9 +348,37 @@ public abstract class BlockAnimationMixin {
                     humanoidArm,
                     poseStack,
                     submitNodeCollector,
-                    packedLight);
+                    packedLight,
+                    itemStack,
+                    mc.player,
+                    blockingNow);
             
             callback.cancel();
+        }
+    }
+
+    @Mixin(net.minecraft.world.entity.LivingEntity.class)
+    public static class LivingEntitySwingMixin {
+        @Inject(method = "swing(Lnet/minecraft/world/InteractionHand;Z)V", at = @At("HEAD"))
+        private void baity$queueCircleSpinWhileBlocking(InteractionHand hand, boolean fromServer, CallbackInfo ci) {
+            net.minecraft.world.entity.LivingEntity self = (net.minecraft.world.entity.LivingEntity) (Object) this;
+            if (self.level() == null || !self.level().isClientSide()) return;
+            if (!(self instanceof LocalPlayer player)) return;
+            if (!BlockAnimationUtils.isFeatureActive()) return;
+            if (!BlockAnimationUtils.isSpinAnimaMode()) return;
+            if (fromServer) return;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null && mc.isPaused()) return;
+            if (BlockAnimationUtils.isUsingConsumableAnimation(player)) return;
+            InteractionHand swordHand = BlockAnimationUtils.getBlockingHand(player);
+            if (swordHand == null || hand != swordHand) {
+                return;
+            }
+            if (BlockAnimationUtils.isPlayerBlockingWithSword(player)) {
+                com.shyeuar.baity.features.blockanimation.BlockAnimationCircleController.queueSpin();
+            } else {
+                com.shyeuar.baity.features.blockanimation.BlockAnimationCircleController.queueSwingGraceSpin();
+            }
         }
     }
     

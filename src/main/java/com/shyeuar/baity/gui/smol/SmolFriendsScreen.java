@@ -20,7 +20,6 @@ import java.util.List;
 
 @Environment(EnvType.CLIENT)
 public class SmolFriendsScreen extends Screen {
-    /** 与 ClickGui 相同的逻辑尺寸（BASE_GUI_SCALE=3 下的设计像素） */
     private static final int PANEL_WIDTH = 560;
     private static final int PANEL_HEIGHT = 280;
     private static final int ROW_HEIGHT = 16;
@@ -45,7 +44,6 @@ public class SmolFriendsScreen extends Screen {
         return (guiScaleOption <= 0) ? (float) mc.getWindow().getGuiScale() : guiScaleOption;
     }
 
-    /** 与 ClickGuiLayout / ClickGuiRootComponent 一致：界面在屏幕上的缩放比例 */
     private static float scaleRatio(Minecraft mc) {
         return ClickGuiState.BASE_GUI_SCALE / actualGuiScale(mc);
     }

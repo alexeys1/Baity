@@ -21,6 +21,8 @@ public class InvisibleBugHighlights implements WorldRenderEvents.AfterEntities {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
+    private static final float LINE_WIDTH = 3.5f;
+
     private static final float R = 1.0f;
     private static final float G = 0.9f;
     private static final float B = 0.2f;
@@ -124,10 +126,12 @@ public class InvisibleBugHighlights implements WorldRenderEvents.AfterEntities {
             float nz = (float) (dz / length);
             vc.addVertex(pose.pose(), (float) x1, (float) y1, (float) z1)
                 .setColor(r, g, b, a)
-                .setNormal(pose, nx, ny, nz);
+                .setNormal(pose, nx, ny, nz)
+                .setLineWidth(LINE_WIDTH);
             vc.addVertex(pose.pose(), (float) x2, (float) y2, (float) z2)
                 .setColor(r, g, b, a)
-                .setNormal(pose, nx, ny, nz);
+                .setNormal(pose, nx, ny, nz)
+                .setLineWidth(LINE_WIDTH);
         }
     }
     

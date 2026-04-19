@@ -364,5 +364,5 @@ public final class BlockAnimationRenderer {
             applyCircleSpinAboutWorldDirection(poseStack, dir, -angle, axisWorld);
         }
     }
-
+    
 }

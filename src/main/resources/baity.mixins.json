@@ -50,6 +50,8 @@
     "NoSwapAnimationMixin",
     "ImmuneReactionMixin$ChatDetectorMixin",
     "NickTweaksMixin",
+    "NametagOffsetMixin",
+    "NametagOffsetMixin$LayoutCompatMixin",
     "ImmuneReactionMixin$PlayerTickMixin",
     "InvisibleBugHighlightsMixin$ParticlePacketMixin",
     "InvisibleBugHighlightsMixin$EntityRemovalMixin",

@@ -31,6 +31,7 @@ public class CrosshairMixin {
     private static int bowReleaseStartGap = 3;
     private static boolean lastSwinging = false;
     private static int lastSwingTime = 0;
+    private static float lastObservedNowTick = -1.0f;
     private static final Identifier WHITE_1PX = Identifier.fromNamespaceAndPath("minecraft", "textures/misc/white.png");
 
     @ModifyExpressionValue(method = "renderCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Options;getCameraType()Lnet/minecraft/client/CameraType;"))
@@ -67,6 +68,11 @@ public class CrosshairMixin {
         int baseGap = 3;
         float partialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         float nowTick = mc.player.tickCount + partialTick;
+        // World/server switch can rewind player ticks, so stale animation state must be cleared.
+        if (lastObservedNowTick >= 0.0f && nowTick + 1.0f < lastObservedNowTick) {
+            resetDynamicState(baseGap);
+        }
+        lastObservedNowTick = nowTick;
         int animatedGap = computeDynamicBowGap(mc.player, baseGap, partialTick, nowTick);
         boolean bowOnly = "bow only".equalsIgnoreCase(ConfigManager.crosshairAnimaMode);
         if (!bowOnly) {
@@ -149,9 +155,21 @@ public class CrosshairMixin {
     private static float evaluateSwingBurstValue(float nowTick) {
         if (swingBurstStartTick < 0.0f) return 0.0f;
         float elapsed = nowTick - swingBurstStartTick;
-        if (elapsed <= 0.0f) return SWING_BURST_MAX_GAP;
+        if (elapsed < 0.0f) {
+            swingBurstStartTick = -1.0f;
+            return 0.0f;
+        }
+        if (elapsed == 0.0f) return SWING_BURST_MAX_GAP;
         if (elapsed >= SWING_BURST_FALL_TICKS) return 0.0f;
         return SWING_BURST_MAX_GAP * (1.0f - (elapsed / SWING_BURST_FALL_TICKS));
+    }
+
+    private static void resetDynamicState(int baseGap) {
+        swingBurstStartTick = -1.0f;
+        bowReleaseUntilTick = -1.0f;
+        bowReleaseStartGap = baseGap;
+        lastSwinging = false;
+        lastSwingTime = 0;
     }
 
 

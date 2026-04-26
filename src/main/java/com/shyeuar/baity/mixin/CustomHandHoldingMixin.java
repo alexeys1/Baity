@@ -14,6 +14,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import com.shyeuar.baity.mixin.accessor.ItemInHandRendererAccessor;
@@ -94,7 +95,7 @@ public class CustomHandHoldingMixin {
     @Mixin(value = ItemInHandRenderer.class, priority = 300)
     public static abstract class HeldItemTransformMixin {
         @Inject(method = "itemUsed(Lnet/minecraft/world/InteractionHand;)V", at = @At("HEAD"), cancellable = true)
-        private void baity$disableRodUseEquipJitter(InteractionHand hand, CallbackInfo ci) {
+        private void baity$disableThrowableUseEquipJitter(InteractionHand hand, CallbackInfo ci) {
             Module customHandHoldingModule = ModuleManager.getModuleByName("CustomHandHolding");
             if (customHandHoldingModule == null || !customHandHoldingModule.isEnabled()) return;
             if (!CustomHandHoldingManager.getInstance().isNoSwingEnabled()) return;
@@ -103,9 +104,21 @@ public class CustomHandHoldingMixin {
             if (mc == null || mc.player == null) return;
 
             ItemStack held = mc.player.getItemInHand(hand);
-            if (held == null || !held.is(Items.FISHING_ROD)) return;
+            if (held == null || held.isEmpty()) return;
+            if (!baity$isThrowableLikeUseItem(held.getItem())) return;
 
             ci.cancel();
+        }
+
+        private static boolean baity$isThrowableLikeUseItem(Item item) {
+            return item == Items.FISHING_ROD
+                || item == Items.SNOWBALL
+                || item == Items.EGG
+                || item == Items.ENDER_PEARL
+                || item == Items.EXPERIENCE_BOTTLE
+                || item == Items.SPLASH_POTION
+                || item == Items.LINGERING_POTION
+                || item == Items.WIND_CHARGE;
         }
 
         @Inject(

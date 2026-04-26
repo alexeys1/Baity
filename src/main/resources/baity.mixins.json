@@ -22,7 +22,6 @@
     "PlayerListHudMixin",
     "CustomHandHoldingMixin$SwingDurationMixin",
     "CustomHandHoldingMixin$AttackCooldownMixin",
-    "CustomHandHoldingMixin$ItemInHandCooldownMixin",
     "CustomHandHoldingMixin$HeldItemTransformMixin",
     "CustomHandHoldingMixin$LevelRendererTickMixin",
     "RadialMenuMouseMixin",

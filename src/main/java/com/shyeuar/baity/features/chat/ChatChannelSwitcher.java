@@ -6,6 +6,7 @@ import com.shyeuar.baity.gui.hud.HudManager;
 import com.shyeuar.baity.gui.render.GuiRenderUtil;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.Minecraft;
@@ -60,7 +61,8 @@ public final class ChatChannelSwitcher implements HudElement {
     private static boolean chatListenerRegistered = false;
     private static final long CHANNEL_SWITCH_DEBOUNCE_MS = 60L;
     private static final long CHANNEL_SWITCH_CONFIRM_TIMEOUT_MS = 1500L;
-    private static final long JOIN_CHANNEL_QUERY_COOLDOWN_MS = 2500L;
+    private static final long HYPIXEL_RESET_PROCESS_COOLDOWN_MS = 5L * 60L * 1000L;
+    private static boolean sessionHypixelResetDone = false;
 
     private boolean selected;
     private boolean clicked;
@@ -69,7 +71,6 @@ public final class ChatChannelSwitcher implements HudElement {
     private String pendingChannelRollback = "";
     private long pendingChannelSinceAt = 0L;
     private long lastChannelSwitchAt = 0L;
-    private long lastJoinChannelQueryAt = 0L;
 
     private static volatile long altHotkeyLastAtMs = 0L;
     private static volatile char altHotkeyExpectedLower = 0;
@@ -88,6 +89,10 @@ public final class ChatChannelSwitcher implements HudElement {
             });
             ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
                 INSTANCE.handleServerJoin(client);
+            });
+            ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+                ConfigManager.chatChannelSwitcherLastProcessExitAtMs = System.currentTimeMillis();
+                ConfigManager.requestSave();
             });
         }
     }
@@ -351,11 +356,20 @@ public final class ChatChannelSwitcher implements HudElement {
 
     private void handleServerJoin(Minecraft client) {
         if (client == null || client.player == null) return;
+        if (!ConfigManager.chatChannelSwitcherEnabled) return;
         if (!isHypixelServer(client)) return;
+        if (sessionHypixelResetDone) return;
+
+        sessionHypixelResetDone = true;
+
+        long lastExit = ConfigManager.chatChannelSwitcherLastProcessExitAtMs;
         long now = System.currentTimeMillis();
-        if (now - lastJoinChannelQueryAt < JOIN_CHANNEL_QUERY_COOLDOWN_MS) return;
-        lastJoinChannelQueryAt = now;
-        client.player.connection.sendCommand("chat");
+        if (lastExit > 0L && now - lastExit < HYPIXEL_RESET_PROCESS_COOLDOWN_MS) {
+            return;
+        }
+
+        setLastSelectedChannel("all");
+        client.player.connection.sendCommand("chat all");
     }
 
     private boolean isHypixelServer(Minecraft client) {
@@ -561,10 +575,19 @@ public final class ChatChannelSwitcher implements HudElement {
     }
 
     private String parseCurrentChannel(String normalizedMessage) {
-        if (!(normalizedMessage.contains("currently in the") && normalizedMessage.contains("channel"))) {
-            return "";
+        if (normalizedMessage == null || normalizedMessage.isEmpty()) return "";
+
+        if (normalizedMessage.startsWith("you are now in the ") && normalizedMessage.contains(" channel")) {
+            return parseChannelNameFromMessage(normalizedMessage);
         }
-        return parseChannelNameFromMessage(normalizedMessage);
+        if (normalizedMessage.contains("were moved to the all channel")
+                || normalizedMessage.contains("moved back to the all channel")) {
+            return "all";
+        }
+        if (normalizedMessage.contains("currently in the") && normalizedMessage.contains("channel")) {
+            return parseChannelNameFromMessage(normalizedMessage);
+        }
+        return "";
     }
 
     private String parseAlreadyInChannel(String normalizedMessage) {

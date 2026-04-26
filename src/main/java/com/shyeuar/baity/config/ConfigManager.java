@@ -54,6 +54,7 @@ public class ConfigManager {
     public static double chatChannelSwitcherY = Double.NaN;
     public static float chatChannelSwitcherScale = 1.0f;
     public static boolean chatChannelSwitcherHintHidden = false;
+    public static long chatChannelSwitcherLastProcessExitAtMs = 0L;
     
     public static boolean fancyDmgSplashEnabled = false;
     public static boolean fancyDmgSplashGenshinReaction = false;
@@ -278,6 +279,9 @@ public class ConfigManager {
         registerField("ChatChannelSwitcherHintHidden", Boolean.class,
             c -> ConfigManager.chatChannelSwitcherHintHidden,
             (c, v) -> ConfigManager.chatChannelSwitcherHintHidden = (Boolean) v);
+        registerField("ChatChannelSwitcherLastProcessExitAtMs", Long.class,
+            c -> ConfigManager.chatChannelSwitcherLastProcessExitAtMs,
+            (c, v) -> ConfigManager.chatChannelSwitcherLastProcessExitAtMs = (Long) v);
         registerField("FancyDmgSplash", Boolean.class,
             c -> ConfigManager.fancyDmgSplashEnabled,
             (c, v) -> ConfigManager.fancyDmgSplashEnabled = (Boolean) v);

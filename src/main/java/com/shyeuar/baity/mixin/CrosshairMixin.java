@@ -68,7 +68,6 @@ public class CrosshairMixin {
         int baseGap = 3;
         float partialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         float nowTick = mc.player.tickCount + partialTick;
-        // World/server switch can rewind player ticks, so stale animation state must be cleared.
         if (lastObservedNowTick >= 0.0f && nowTick + 1.0f < lastObservedNowTick) {
             resetDynamicState(baseGap);
         }

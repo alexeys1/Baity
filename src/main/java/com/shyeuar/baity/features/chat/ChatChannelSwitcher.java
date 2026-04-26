@@ -6,6 +6,7 @@ import com.shyeuar.baity.gui.hud.HudManager;
 import com.shyeuar.baity.gui.render.GuiRenderUtil;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -14,6 +15,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.multiplayer.ServerData;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -58,6 +60,7 @@ public final class ChatChannelSwitcher implements HudElement {
     private static boolean chatListenerRegistered = false;
     private static final long CHANNEL_SWITCH_DEBOUNCE_MS = 60L;
     private static final long CHANNEL_SWITCH_CONFIRM_TIMEOUT_MS = 1500L;
+    private static final long JOIN_CHANNEL_QUERY_COOLDOWN_MS = 2500L;
 
     private boolean selected;
     private boolean clicked;
@@ -66,6 +69,7 @@ public final class ChatChannelSwitcher implements HudElement {
     private String pendingChannelRollback = "";
     private long pendingChannelSinceAt = 0L;
     private long lastChannelSwitchAt = 0L;
+    private long lastJoinChannelQueryAt = 0L;
 
     private static volatile long altHotkeyLastAtMs = 0L;
     private static volatile char altHotkeyExpectedLower = 0;
@@ -81,6 +85,9 @@ public final class ChatChannelSwitcher implements HudElement {
             chatListenerRegistered = true;
             ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
                 INSTANCE.handleChannelFeedback(message.getString());
+            });
+            ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+                INSTANCE.handleServerJoin(client);
             });
         }
     }
@@ -342,6 +349,23 @@ public final class ChatChannelSwitcher implements HudElement {
         client.setScreen(new ChatScreen(restoredText, false));
     }
 
+    private void handleServerJoin(Minecraft client) {
+        if (client == null || client.player == null) return;
+        if (!isHypixelServer(client)) return;
+        long now = System.currentTimeMillis();
+        if (now - lastJoinChannelQueryAt < JOIN_CHANNEL_QUERY_COOLDOWN_MS) return;
+        lastJoinChannelQueryAt = now;
+        client.player.connection.sendCommand("chat");
+    }
+
+    private boolean isHypixelServer(Minecraft client) {
+        if (client == null || client.isLocalServer()) return false;
+        ServerData server = client.getCurrentServer();
+        if (server == null || server.ip == null) return false;
+        String ip = server.ip.toLowerCase(Locale.ROOT);
+        return ip.contains("hypixel.net");
+    }
+
     private String computeRestoredChatTextAfterPermanentSwitch(String existingText, String clickedChannel, String beforeActiveChannel) {
         if (existingText == null) return "";
         if (existingText.isEmpty()) return existingText;
@@ -463,12 +487,17 @@ public final class ChatChannelSwitcher implements HudElement {
     }
 
     private void handleChannelFeedback(String messageText) {
-        if (pendingChannel.isEmpty()) {
+        String normalizedMessage = messageText == null ? "" : messageText.trim().toLowerCase(Locale.ROOT);
+        if (normalizedMessage.isEmpty()) {
             return;
         }
 
-        String normalizedMessage = messageText == null ? "" : messageText.trim().toLowerCase(Locale.ROOT);
-        if (normalizedMessage.isEmpty()) {
+        String currentChannel = parseCurrentChannel(normalizedMessage);
+        if (!currentChannel.isEmpty()) {
+            setLastSelectedChannel(currentChannel);
+        }
+
+        if (pendingChannel.isEmpty()) {
             return;
         }
 
@@ -478,6 +507,15 @@ public final class ChatChannelSwitcher implements HudElement {
             pendingChannelRollback = "";
             pendingChannelSinceAt = 0L;
             setLastSelectedChannel(confirmedChannel);
+            return;
+        }
+
+        String alreadyInChannel = parseAlreadyInChannel(normalizedMessage);
+        if (!alreadyInChannel.isEmpty() && alreadyInChannel.equals(pendingChannel)) {
+            pendingChannel = "";
+            pendingChannelRollback = "";
+            pendingChannelSinceAt = 0L;
+            setLastSelectedChannel(alreadyInChannel);
             return;
         }
 
@@ -517,6 +555,38 @@ public final class ChatChannelSwitcher implements HudElement {
             return "guild";
         }
         if (normalizedMessage.contains(" skyblock co-op channel") || normalizedMessage.contains(" co-op channel") || normalizedMessage.contains(" coop channel")) {
+            return "coop";
+        }
+        return "";
+    }
+
+    private String parseCurrentChannel(String normalizedMessage) {
+        if (!(normalizedMessage.contains("currently in the") && normalizedMessage.contains("channel"))) {
+            return "";
+        }
+        return parseChannelNameFromMessage(normalizedMessage);
+    }
+
+    private String parseAlreadyInChannel(String normalizedMessage) {
+        if (!(normalizedMessage.contains("already in") && normalizedMessage.contains("channel"))) {
+            return "";
+        }
+        return parseChannelNameFromMessage(normalizedMessage);
+    }
+
+    private String parseChannelNameFromMessage(String normalizedMessage) {
+        if (normalizedMessage.contains(" all channel")) {
+            return "all";
+        }
+        if (normalizedMessage.contains(" party channel")) {
+            return "party";
+        }
+        if (normalizedMessage.contains(" guild channel")) {
+            return "guild";
+        }
+        if (normalizedMessage.contains(" skyblock co-op channel")
+            || normalizedMessage.contains(" co-op channel")
+            || normalizedMessage.contains(" coop channel")) {
             return "coop";
         }
         return "";

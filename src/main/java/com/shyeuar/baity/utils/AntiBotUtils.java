@@ -190,13 +190,7 @@ public class AntiBotUtils {
             return lastIsInSkyblock;
         }
 
-        boolean fromScoreboardFirstLine = false;
-        String firstLine = getSidebarFirstLineText();
-        if (firstLine != null && !firstLine.isEmpty()) {
-            fromScoreboardFirstLine = safeLower(firstLine).contains("skyblock");
-        }
-
-        boolean inSkyblock = fromScoreboardFirstLine;
+        boolean inSkyblock = com.shyeuar.baity.utils.LocateUtils.inSkyBlock(mc);
         lastSkyblockSignature = signature;
         lastIsInSkyblock = inSkyblock;
         return inSkyblock;

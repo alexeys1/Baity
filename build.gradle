@@ -40,7 +40,7 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     
     include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:0.4.1")))
-    
+
     // owo-lib 依赖
     modImplementation "io.wispforest:owo-lib:0.13.0+1.21.11"
     include "io.wispforest:owo-sentinel:0.13.0+1.21.11"

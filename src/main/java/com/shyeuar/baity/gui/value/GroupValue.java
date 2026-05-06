@@ -14,12 +14,22 @@ public class GroupValue implements Value {
     private final List<Value> children = new ArrayList<>();
     private boolean expanded;
     private boolean needsSeparator;
+    private String subModuleSwitchChildName;
 
     public GroupValue(String name, String displayName, ModuleCategory category) {
         this.name = name;
         this.displayName = displayName;
         this.category = category;
         this.expanded = false;
+    }
+
+    public GroupValue setSubModuleSwitchChildName(String childName) {
+        this.subModuleSwitchChildName = childName;
+        return this;
+    }
+
+    public String getSubModuleSwitchChildName() {
+        return subModuleSwitchChildName;
     }
 
     public GroupValue setNeedsSeparator(boolean needsSeparator) {

@@ -37,10 +37,8 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         }
     };
     private static final class CachedName {
-        final String processed;
         final int width;
-        CachedName(String processed, int width) {
-            this.processed = processed;
+        CachedName(int width) {
             this.width = width;
         }
     }
@@ -175,20 +173,18 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         }
         Font textRenderer = mc.font;
 
-        String cacheKey = nametagLayoutVersion + "|" + baseName;
+        String renderedForWidth = nameComponent.getString();
+        String cacheKey = nametagLayoutVersion + "|" + renderedForWidth;
         CachedName cached;
         synchronized (NAME_CACHE_LOCK) {
             cached = NAME_CACHE.get(cacheKey);
         }
-        String processedForWidth;
         int nameWidth;
         if (cached != null) {
-            processedForWidth = cached.processed;
             nameWidth = cached.width;
         } else {
-            processedForWidth = NickRenderUtils.handleString(baseName);
-            nameWidth = textRenderer.width(processedForWidth);
-            CachedName newEntry = new CachedName(processedForWidth, nameWidth);
+            nameWidth = textRenderer.width(nameComponent.getVisualOrderText());
+            CachedName newEntry = new CachedName(nameWidth);
             synchronized (NAME_CACHE_LOCK) {
                 NAME_CACHE.put(cacheKey, newEntry);
             }
@@ -220,7 +216,7 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         
         if (showDistance) {
             double dist = mc.player != null ? mc.player.distanceTo(player) : 0.0;
-            String distanceText = " [" + (int)Math.round(dist) + "]";
+            String distanceText = " [" + (int) Math.round(dist) + "]";
             int distanceX;
             if (isDeveloper) {
                 distanceX = currentX + nameWidth + 2;

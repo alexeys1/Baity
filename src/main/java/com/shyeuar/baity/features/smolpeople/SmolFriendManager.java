@@ -23,7 +23,8 @@ import java.util.regex.Pattern;
 @Environment(EnvType.CLIENT)
 public final class SmolFriendManager {
     private static final Map<String, String> FRIENDS = new LinkedHashMap<>();
-    private static final String FRIENDS_FILE_NAME = "synced_players.txt";
+    private static final String FRIENDS_FILE_NAME = "smol-friends.txt";
+    private static final String LEGACY_FRIENDS_FILE_NAME = "synced_players.txt";
     private static final Pattern VALID_PLAYER_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9_]{3,16}$");
     private static final long LOBBY_PLAYERS_REFRESH_INTERVAL_MS = 500L;
     private static List<String> cachedLobbyPlayers = List.of();
@@ -62,7 +63,6 @@ public final class SmolFriendManager {
 
         Boolean remotePreference = BaityPresenceSync.getRemoteSmolPreference(targetPlayer.getUUID());
         if (remotePreference != null) {
-            // Remote feature switch has highest priority whenever remote data exists.
             return remotePreference;
         }
 
@@ -222,6 +222,10 @@ public final class SmolFriendManager {
 
     private static boolean loadFromFile() {
         Path filePath = getFriendsFilePath();
+        Path legacyPath = getLegacyFriendsFilePath();
+        if (!Files.exists(filePath) && Files.exists(legacyPath)) {
+            filePath = legacyPath;
+        }
         if (!Files.exists(filePath)) {
             return false;
         }
@@ -237,6 +241,9 @@ public final class SmolFriendManager {
                 for (String entry : entries) {
                     addNameToMemory(entry);
                 }
+            }
+            if (filePath.equals(legacyPath)) {
+                saveToFile();
             }
             return true;
         } catch (IOException e) {
@@ -257,6 +264,10 @@ public final class SmolFriendManager {
 
     private static Path getFriendsFilePath() {
         return BaityConfigDir.getBaityConfigDir().resolve(FRIENDS_FILE_NAME);
+    }
+
+    private static Path getLegacyFriendsFilePath() {
+        return BaityConfigDir.getBaityConfigDir().resolve(LEGACY_FRIENDS_FILE_NAME);
     }
 
     private static void syncLegacyConfigField() {

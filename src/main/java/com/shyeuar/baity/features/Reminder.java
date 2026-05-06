@@ -194,44 +194,16 @@ public class Reminder {
     private boolean isInSkyBlock() {
         Minecraft client = Minecraft.getInstance();
         if (client.level == null || client.player == null) return false;
-        
+
         if (client.isLocalServer()) {
             return net.fabricmc.loader.api.FabricLoader.getInstance().isDevelopmentEnvironment();
         }
-        
-        if (client.getCurrentServer() != null) {
-            String serverAddress = client.getCurrentServer().ip.toLowerCase();
-            return serverAddress.contains("hypixel");
-        }
-        
-        return false;
+
+        return com.shyeuar.baity.utils.LocateUtils.inSkyBlock(client);
     }
     
     private String getTabFooterText() {
-        Minecraft client = Minecraft.getInstance();
-        if (client.gui == null || client.gui.getTabList() == null) return null;
-        
-        try {
-            net.minecraft.network.chat.Component footer = ((com.shyeuar.baity.mixin.PlayerListHudMixin) client.gui.getTabList()).getFooter();
-            return footer != null ? footer.getString() : null;
-        } catch (Exception e) {
-            try {
-                if (client.getConnection() != null) {
-                    var playerList = client.getConnection().getOnlinePlayers();
-                    for (var entry : playerList) {
-                        if (entry.getTabListDisplayName() != null) {
-                            String name = entry.getTabListDisplayName().getString();
-                            if (name.contains("Cookie Buff")) {
-                                return name;
-                            }
-                        }
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        
-        return null;
+        return com.shyeuar.baity.utils.LocateUtils.getTabListFooterPlainBestEffort(Minecraft.getInstance());
     }
     
     public static void updateSettings() {

@@ -66,7 +66,7 @@ public class NametagOffsetMixin {
         return -mc.font.width(target.getVisualOrderText()) / 2.0F;
     }
 
-    static Component applyProcessedComponentIfNeeded(Component originalComponent) {
+    private static Component applyProcessedComponentIfNeeded(Component originalComponent) {
         if (!baity$shouldApplyDefaultNametagCompat()) {
             return originalComponent;
         }
@@ -80,13 +80,32 @@ public class NametagOffsetMixin {
 
     @Mixin(AvatarRenderer.class)
     public static class LayoutCompatMixin {
+        private boolean baity$shouldApplyDefaultNametagCompatLocal() {
+            Module nametag = ModuleManager.getModuleByName("Nametag");
+            if (nametag == null || !nametag.isEnabled()) {
+                return false;
+            }
+            return ModuleUtils.getOptionBoolean(nametag, "default nametag", false);
+        }
+
+        private Component baity$applyProcessedComponentLocal(Component originalComponent) {
+            if (!baity$shouldApplyDefaultNametagCompatLocal()) {
+                return originalComponent;
+            }
+            FormattedText processed = NickRenderUtils.handleFormattedText(originalComponent);
+            if (processed instanceof Component processedComponent) {
+                return processedComponent;
+            }
+            return originalComponent;
+        }
+
         @ModifyVariable(
             method = "submitNameTag(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
             at = @At("STORE"),
             ordinal = 0
         )
         private Component baity$applyNickTweaksBeforeLayout(Component originalComponent) {
-            return NametagOffsetMixin.applyProcessedComponentIfNeeded(originalComponent);
+            return baity$applyProcessedComponentLocal(originalComponent);
         }
     }
 }

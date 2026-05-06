@@ -13,4 +13,7 @@ public interface PlayerListHudMixin {
 
     @Accessor("footer")
     Component getFooter();
+
+    @Accessor("header")
+    Component getHeader();
 }

@@ -16,7 +16,7 @@ public final class ValueTreeUtils {
         List<ValueEntry> out = new ArrayList<>();
         for (Value value : module.getValues()) {
             if ("enabled".equals(value.getName())) continue;
-            appendVisible(value, 0, out);
+            appendVisible(value, 0, null, out);
         }
         return out;
     }
@@ -25,7 +25,7 @@ public final class ValueTreeUtils {
         List<ValueEntry> out = new ArrayList<>();
         for (Value value : module.getValues()) {
             if ("enabled".equals(value.getName())) continue;
-            appendAll(value, 0, out);
+            appendAll(value, 0, null, out);
         }
         return out;
     }
@@ -40,24 +40,26 @@ public final class ValueTreeUtils {
         return null;
     }
 
-    private static void appendVisible(Value value, int depth, List<ValueEntry> out) {
-        out.add(new ValueEntry(value, depth));
+    private static void appendVisible(Value value, int depth, String enclosingGroupName, List<ValueEntry> out) {
+        out.add(new ValueEntry(value, depth, enclosingGroupName));
         if (value instanceof GroupValue groupValue && groupValue.isExpanded()) {
+            String parentName = groupValue.getName();
             for (Value child : groupValue.getChildren()) {
-                appendVisible(child, depth + 1, out);
+                appendVisible(child, depth + 1, parentName, out);
             }
         }
     }
 
-    private static void appendAll(Value value, int depth, List<ValueEntry> out) {
-        out.add(new ValueEntry(value, depth));
+    private static void appendAll(Value value, int depth, String enclosingGroupName, List<ValueEntry> out) {
+        out.add(new ValueEntry(value, depth, enclosingGroupName));
         if (value instanceof GroupValue groupValue) {
+            String parentName = groupValue.getName();
             for (Value child : groupValue.getChildren()) {
-                appendAll(child, depth + 1, out);
+                appendAll(child, depth + 1, parentName, out);
             }
         }
     }
 
-    public record ValueEntry(Value value, int depth) {
+    public record ValueEntry(Value value, int depth, String enclosingGroupName) {
     }
 }

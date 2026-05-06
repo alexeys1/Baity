@@ -3,6 +3,8 @@ package com.shyeuar.baity.utils;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -12,6 +14,8 @@ import it.unimi.dsi.fastutil.ints.AbstractInt2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public final class TickSchedulerUtils {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("Baity/TickScheduler");
 
     private static TickSchedulerUtils instance;
 
@@ -93,7 +97,7 @@ public final class TickSchedulerUtils {
             task.run();
         } catch (Throwable error) {
             if (task instanceof ScheduledTask scheduled) {
-                System.err.println("[TickSchedulerUtils] Task #" + scheduled.taskId + " failed: " + error.getMessage());
+                LOGGER.warn("Task #{} failed: {}", scheduled.taskId, error.toString());
             }
             return false;
         }

@@ -19,9 +19,5 @@ public class CustomTotemItem {
         ResourceKey<Item> registryKey = ResourceKey.create(Registries.ITEM, id);
         CUSTOM_TOTEM = Registry.register(BuiltInRegistries.ITEM, id, new Item(new Item.Properties().setId(registryKey)));
     }
-    
-    public static void register() {
-        System.out.println("custom totem item registered: " + CUSTOM_TOTEM);
-    }
 }
 

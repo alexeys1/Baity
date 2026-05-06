@@ -1,9 +1,13 @@
 package com.shyeuar.baity.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public class ConfigManager {
+    private static final Logger LOGGER = LoggerFactory.getLogger("Baity/Config");
     private static final long SAVE_DEBOUNCE_MS = 750L;
 
     public static boolean smolpeopleMode = false;
@@ -84,6 +88,9 @@ public class ConfigManager {
     public static boolean nodebuffRemoveNausea = true;
     public static boolean nodebuffRemoveBlindness = true;
     
+    public static boolean soundsEnabled = true;
+    public static boolean soundsRestoreSoulcrySoundOfAtomsplitKatana = false;
+    
     public static boolean mufflerEnabled = false;
     public static boolean mufflerMuteEndermanScream = true;
     public static boolean mufflerMutePhantom = true;
@@ -93,7 +100,11 @@ public class ConfigManager {
     
     public static boolean highlightsEnabled = false;
     public static boolean highlightsShulkerEnabled = true;
-    public static boolean highlightsInvisibleBugEnabled = true;
+    public static boolean highlightsInvisibugEnabled = true;
+    public static boolean highlightsPestEnabled = true;
+    public static boolean highlightsPestDrawLineEnabled = true;
+    public static boolean highlightsPestDrawLineOnlyContestCropPests = false;
+    public static boolean highlightsPestGroupExpanded = false;
     
     public static boolean fancyCreeperVeilEnabled = false;
     
@@ -342,6 +353,12 @@ public class ConfigManager {
         registerField("  RemoveBlindness", Boolean.class,
             c -> ConfigManager.nodebuffRemoveBlindness,
             (c, v) -> ConfigManager.nodebuffRemoveBlindness = (Boolean) v);
+        registerField("Sounds", Boolean.class,
+            c -> ConfigManager.soundsEnabled,
+            (c, v) -> ConfigManager.soundsEnabled = (Boolean) v);
+        registerField("SoundsRestoreSoulcrySoundOfAtomsplitKatana", Boolean.class,
+            c -> ConfigManager.soundsRestoreSoulcrySoundOfAtomsplitKatana,
+            (c, v) -> ConfigManager.soundsRestoreSoulcrySoundOfAtomsplitKatana = (Boolean) v);
         registerField("Muffler", Boolean.class,
             c -> ConfigManager.mufflerEnabled,
             (c, v) -> ConfigManager.mufflerEnabled = (Boolean) v);
@@ -366,9 +383,21 @@ public class ConfigManager {
         registerField("  HighlightsShulker", Boolean.class,
             c -> ConfigManager.highlightsShulkerEnabled,
             (c, v) -> ConfigManager.highlightsShulkerEnabled = (Boolean) v);
-        registerField("  HighlightsInvisibleBug", Boolean.class,
-            c -> ConfigManager.highlightsInvisibleBugEnabled,
-            (c, v) -> ConfigManager.highlightsInvisibleBugEnabled = (Boolean) v);
+        registerField("  HighlightsInvisibug", Boolean.class,
+            c -> ConfigManager.highlightsInvisibugEnabled,
+            (c, v) -> ConfigManager.highlightsInvisibugEnabled = (Boolean) v);
+        registerField("  HighlightsPest", Boolean.class,
+            c -> ConfigManager.highlightsPestEnabled,
+            (c, v) -> ConfigManager.highlightsPestEnabled = (Boolean) v);
+        registerField("  HighlightsPestDrawLine", Boolean.class,
+            c -> ConfigManager.highlightsPestDrawLineEnabled,
+            (c, v) -> ConfigManager.highlightsPestDrawLineEnabled = (Boolean) v);
+        registerField("  HighlightsPestDrawLineOnlyContestCropPests", Boolean.class,
+            c -> ConfigManager.highlightsPestDrawLineOnlyContestCropPests,
+            (c, v) -> ConfigManager.highlightsPestDrawLineOnlyContestCropPests = (Boolean) v);
+        registerField("  HighlightsPestGroupExpanded", Boolean.class,
+            c -> ConfigManager.highlightsPestGroupExpanded,
+            (c, v) -> ConfigManager.highlightsPestGroupExpanded = (Boolean) v);
         registerField("FancyCreeperVeil", Boolean.class,
             c -> ConfigManager.fancyCreeperVeilEnabled,
             (c, v) -> ConfigManager.fancyCreeperVeilEnabled = (Boolean) v);
@@ -484,7 +513,7 @@ public class ConfigManager {
             
             java.nio.file.Files.writeString(configPath, config.toString(), java.nio.charset.StandardCharsets.UTF_8);
         } catch (java.io.IOException e) {
-            System.err.println("Failed to save Baity config: " + e.getMessage());
+            LOGGER.error("Failed to save Baity config: {}", e.toString());
         }
     }
 
@@ -516,13 +545,13 @@ public class ConfigManager {
             java.nio.file.Path newConfigPath = baityDir.resolve(CONFIG_FILE_NAME);
             if (java.nio.file.Files.exists(oldConfigPath) && !java.nio.file.Files.exists(newConfigPath)) {
                 java.nio.file.Files.move(oldConfigPath, newConfigPath);
-                System.out.println("[Baity] Migrated config to new location: " + newConfigPath);
+                LOGGER.debug("Migrated config to new location: {}", newConfigPath);
             }
             
             java.nio.file.Path oldBaityConfigPath = java.nio.file.Paths.get("baity/config.txt");
             if (java.nio.file.Files.exists(oldBaityConfigPath) && !java.nio.file.Files.exists(newConfigPath)) {
                 java.nio.file.Files.move(oldBaityConfigPath, newConfigPath);
-                System.out.println("[Baity] Migrated config from old baity directory: " + newConfigPath);
+                LOGGER.debug("Migrated config from old baity directory: {}", newConfigPath);
             }
             
             java.util.HashSet<String> seenKeys = new java.util.HashSet<>();
@@ -602,7 +631,7 @@ public class ConfigManager {
                 saveConfig();
             }
         } catch (java.io.IOException e) {
-            System.err.println("Failed to load Baity config: " + e.getMessage());
+            LOGGER.error("Failed to load Baity config: {}", e.toString());
         }
     }
 
@@ -666,6 +695,13 @@ public class ConfigManager {
         } else if (type == Float.class) {
             if (raw.isEmpty()) return 0.0f;
             return Float.parseFloat(raw);
+        } else if (type == Long.class) {
+            if (raw.isEmpty()) return 0L;
+            try {
+                return Long.parseLong(raw);
+            } catch (NumberFormatException ignored) {
+                return 0L;
+            }
         } else if (type == String.class) {
             return valueStr == null ? "" : valueStr;
         }

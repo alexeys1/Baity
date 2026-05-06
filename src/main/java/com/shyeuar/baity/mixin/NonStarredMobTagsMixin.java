@@ -3,6 +3,7 @@ package com.shyeuar.baity.mixin;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
+import com.shyeuar.baity.utils.LocateUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -66,9 +67,9 @@ public class NonStarredMobTagsMixin {
         Module module = ModuleManager.getModuleByName("Culling");
         if (module == null || !module.isEnabled()) return;
         if (!ConfigManager.cullingHideNonStarredNametag) return;
-        if (!isInDungeon()) return;
 
         Minecraft mc = Minecraft.getInstance();
+        if (!LocateUtils.isInDungeonRun(mc)) return;
         ClientLevel level = mc.level;
         if (level == null) return;
 
@@ -97,19 +98,5 @@ public class NonStarredMobTagsMixin {
         armorStand.remove(Entity.RemovalReason.DISCARDED);
     }
 
-    @Unique
-    private static boolean isInDungeon() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.getConnection() == null) return false;
-        for (var entry : mc.getConnection().getOnlinePlayers()) {
-            if (entry.getTabListDisplayName() != null) {
-                String text = entry.getTabListDisplayName().getString().trim();
-                if (text.startsWith("Dungeon:") || (text.startsWith("Area:") && text.contains("Catacombs"))) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 }
 

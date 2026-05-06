@@ -54,7 +54,8 @@ public final class BaityPresenceSync {
     private static final String DEFAULT_SYNC_ACCESS_TOKEN = "baity_sync_read_v1_f4c9e7a2d1b84e73";
     private static final long SOFT_STALE_AFTER_MS = 3L * 24L * 60L * 60L * 1000L;
     private static final long HARD_EXPIRE_AFTER_MS = 3L * 24L * 60L * 60L * 1000L;
-    private static final Path CACHE_FILE_PATH = BaityConfigDir.getBaityConfigDir().resolve("presence-cache.json");
+    private static final Path CACHE_FILE_PATH = BaityConfigDir.getBaityConfigDir().resolve("remote-users-cache.json");
+    private static final Path LEGACY_CACHE_FILE_PATH = BaityConfigDir.getBaityConfigDir().resolve("presence-cache.json");
 
     private static final AtomicBoolean FETCHING = new AtomicBoolean(false);
     private static final AtomicBoolean REPORTING = new AtomicBoolean(false);
@@ -1174,10 +1175,17 @@ public final class BaityPresenceSync {
 
     private static void loadCacheFromDisk() {
         try {
-            if (!Files.exists(CACHE_FILE_PATH)) return;
-            String json = Files.readString(CACHE_FILE_PATH, StandardCharsets.UTF_8);
+            Path path = CACHE_FILE_PATH;
+            if (!Files.exists(path) && Files.exists(LEGACY_CACHE_FILE_PATH)) {
+                path = LEGACY_CACHE_FILE_PATH;
+            }
+            if (!Files.exists(path)) return;
+            String json = Files.readString(path, StandardCharsets.UTF_8);
             if (json == null || json.isBlank()) return;
             applyPayload(json, false);
+            if (path.equals(LEGACY_CACHE_FILE_PATH)) {
+                saveCacheToDisk(json);
+            }
         } catch (Exception ignored) {
         }
     }

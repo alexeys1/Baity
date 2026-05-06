@@ -3,6 +3,7 @@ package com.shyeuar.baity.managers;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
+import com.shyeuar.baity.gui.value.GroupValue;
 import com.shyeuar.baity.gui.value.Value;
 import java.util.Set;
 
@@ -19,7 +20,7 @@ public class ModuleInitializer {
     );
     private static final Set<String> REMINDER_OPTIONS = Set.of("cookie buff reminder", "god potion reminder");
     private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of("genshin elemental reaction", "compact damage number");
-    private static final Set<String> HIGHLIGHTS_OPTIONS = Set.of("shulker", "invisible bug");
+    private static final Set<String> HIGHLIGHTS_OPTIONS = Set.of("shulker", "invisibug", "pest");
     private static final Set<String> NODEBUFF_OPTIONS = Set.of("remove nausea", "remove blindness");
     
     public static void initializeModules() {
@@ -147,7 +148,21 @@ public class ModuleInitializer {
                 if (HIGHLIGHTS_OPTIONS.contains(v.getName())) {
                     switch (v.getName()) {
                         case "shulker" -> v.setValue(ConfigManager.highlightsShulkerEnabled);
-                        case "invisible bug" -> v.setValue(ConfigManager.highlightsInvisibleBugEnabled);
+                        case "invisibug" -> v.setValue(ConfigManager.highlightsInvisibugEnabled);
+                        case "pest" -> {
+                            if (v instanceof GroupValue group) {
+                                group.setExpanded(ConfigManager.highlightsPestGroupExpanded);
+                                for (Value child : group.getChildren()) {
+                                    switch (child.getName()) {
+                                        case "enabled" -> child.setValue(ConfigManager.highlightsPestEnabled);
+                                        case "draw line" -> child.setValue(ConfigManager.highlightsPestDrawLineEnabled);
+                                        case "only_draw_line_contest_crop_pests" -> child.setValue(ConfigManager.highlightsPestDrawLineOnlyContestCropPests);
+                                        default -> {
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

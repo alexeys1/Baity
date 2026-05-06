@@ -1,7 +1,6 @@
 {
   "required": false,
   "package": "com.shyeuar.baity.mixin",
-  "refmap": "baity.refmap.json",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "SmolPeopleMixin$SmolNameTagMixin",
@@ -33,6 +32,7 @@
     "NoSwimPoseMixin$PlayerNameTagMixin",
     "NoSwimPoseMixin$EntityEyeHeightMixin",
     "NonStarredMobTagsMixin",
+    "PestEntityDataMixin",
     "FancyDmgSplashMixin",
     "CullingMixin$RemoveWaterFogMixin",
     "CullingMixin$RemoveRainSnowVisualMixin",
@@ -52,8 +52,8 @@
     "NametagOffsetMixin",
     "NametagOffsetMixin$LayoutCompatMixin",
     "ImmuneReactionMixin$PlayerTickMixin",
-    "InvisibleBugHighlightsMixin$ParticlePacketMixin",
-    "InvisibleBugHighlightsMixin$EntityRemovalMixin",
+    "InvisibugHighlightsMixin$ParticlePacketMixin",
+    "InvisibugHighlightsMixin$EntityRemovalMixin",
     "FancyCreeperVeilMixin",
     "TagBackgroundMixin",
     "NoTextShadowMixin",

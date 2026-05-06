@@ -228,17 +228,31 @@ public class ModuleManager {
         );
         
         ModuleRegistry.registerModuleWithValues(
-            "Muffler", "Muffler", ModuleCategory.QOL,
-            () -> ConfigManager.mufflerEnabled,
-            val -> ConfigManager.mufflerEnabled = val,
-            new Option[]{
-                new Option("mute enderman scream", "mute enderman scream", true, ModuleCategory.QOL),
-                new Option("mute phantom", "mute phantom", true, ModuleCategory.QOL),
-                new Option("mute portal", "mute portal", true, ModuleCategory.QOL),
-                new Option("mute vampire", "mute vampire", true, ModuleCategory.QOL),
-                new Option("mute drake", "mute drake", true, ModuleCategory.QOL)
+            "Sounds", "Sounds", ModuleCategory.QOL,
+            () -> ConfigManager.soundsEnabled,
+            val -> ConfigManager.soundsEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new Option("restore soulcry sound of atomsplit katana", "restore soulcry sound of atomsplit katana", false, ModuleCategory.QOL),
+                new GroupValue("muffler", "muffler", ModuleCategory.QOL)
+                    .setSubModuleSwitchChildName("muffler enabled")
+                    .addChild(new Option("muffler enabled", "enabled", false, ModuleCategory.QOL))
+                    .addChild(new Option("mute enderman scream", "mute enderman scream", true, ModuleCategory.QOL))
+                    .addChild(new Option("mute phantom", "mute phantom", true, ModuleCategory.QOL))
+                    .addChild(new Option("mute portal", "mute portal", true, ModuleCategory.QOL))
+                    .addChild(new Option("mute vampire", "mute vampire", true, ModuleCategory.QOL))
+                    .addChild(new Option("mute drake", "mute drake", true, ModuleCategory.QOL))
             },
             new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "restore soulcry sound of atomsplit katana",
+                    () -> ConfigManager.soundsRestoreSoulcrySoundOfAtomsplitKatana,
+                    val -> ConfigManager.soundsRestoreSoulcrySoundOfAtomsplitKatana = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "muffler enabled",
+                    () -> ConfigManager.mufflerEnabled,
+                    val -> ConfigManager.mufflerEnabled = (Boolean) val
+                ),
                 new ModuleRegistry.ValueConfigInfo(
                     "mute enderman scream",
                     () -> ConfigManager.mufflerMuteEndermanScream,
@@ -266,7 +280,7 @@ public class ModuleManager {
                 )
             }
         );
-        
+
         ModuleRegistry.registerModuleWithValues(
             "RadialMenu", "RadialMenu", ModuleCategory.QOL,
             () -> ConfigManager.radialMenuEnabled,
@@ -313,7 +327,8 @@ public class ModuleManager {
 
         GroupValue nickTweaksChromaGroup = new GroupValue("chroma settings", "chroma settings", ModuleCategory.RENDER)
             .setExpanded(ConfigManager.nickTweaksChromaGroupExpanded)
-            .addChild(new Option("chroma", "chroma", ConfigManager.nickTweaksChromaEnabled, ModuleCategory.RENDER))
+            .setSubModuleSwitchChildName("chroma settings enabled")
+            .addChild(new Option("chroma settings enabled", "enabled", ConfigManager.nickTweaksChromaEnabled, ModuleCategory.RENDER))
             .addChild(new com.shyeuar.baity.gui.value.SliderValue(
                 "chroma lightness", "chroma lightness", 0.8, 0.2, 1.0, 0.05, ModuleCategory.RENDER
             ))
@@ -363,7 +378,7 @@ public class ModuleManager {
                     val -> ConfigManager.nickTweaksChromaGroupExpanded = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
-                    "chroma",
+                    "chroma settings enabled",
                     () -> ConfigManager.nickTweaksChromaEnabled,
                     val -> ConfigManager.nickTweaksChromaEnabled = (Boolean) val
                 ),
@@ -568,13 +583,26 @@ public class ModuleManager {
             }
         );
 
+        GroupValue highlightsPestGroup = new GroupValue("pest", "pest", ModuleCategory.RENDER)
+            .setExpanded(ConfigManager.highlightsPestGroupExpanded)
+            .setSubModuleSwitchChildName("enabled")
+            .addChild(new Option("enabled", "enabled", ConfigManager.highlightsPestEnabled, ModuleCategory.RENDER))
+            .addChild(new Option("draw line", "draw line", ConfigManager.highlightsPestDrawLineEnabled, ModuleCategory.RENDER))
+            .addChild(new Option(
+                "only_draw_line_contest_crop_pests",
+                "only draw lines in pests dropping farming contests crops",
+                ConfigManager.highlightsPestDrawLineOnlyContestCropPests,
+                ModuleCategory.RENDER
+            ));
+
         ModuleRegistry.registerModuleWithValues(
             "Highlights", "Highlights", ModuleCategory.RENDER,
             () -> ConfigManager.highlightsEnabled,
             val -> ConfigManager.highlightsEnabled = val,
-            new Option[]{
+            new com.shyeuar.baity.gui.value.Value[]{
                 new Option("shulker", "shulker", false, ModuleCategory.RENDER),
-                new Option("invisible bug", "invisible bug", false, ModuleCategory.RENDER)
+                new Option("invisibug", "Invisibug", false, ModuleCategory.RENDER),
+                highlightsPestGroup
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
@@ -583,9 +611,29 @@ public class ModuleManager {
                     val -> ConfigManager.highlightsShulkerEnabled = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
-                    "invisible bug",
-                    () -> ConfigManager.highlightsInvisibleBugEnabled,
-                    val -> ConfigManager.highlightsInvisibleBugEnabled = (Boolean) val
+                    "invisibug",
+                    () -> ConfigManager.highlightsInvisibugEnabled,
+                    val -> ConfigManager.highlightsInvisibugEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "pest",
+                    () -> ConfigManager.highlightsPestGroupExpanded,
+                    val -> ConfigManager.highlightsPestGroupExpanded = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "enabled",
+                    () -> ConfigManager.highlightsPestEnabled,
+                    val -> ConfigManager.highlightsPestEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "draw line",
+                    () -> ConfigManager.highlightsPestDrawLineEnabled,
+                    val -> ConfigManager.highlightsPestDrawLineEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "only_draw_line_contest_crop_pests",
+                    () -> ConfigManager.highlightsPestDrawLineOnlyContestCropPests,
+                    val -> ConfigManager.highlightsPestDrawLineOnlyContestCropPests = (Boolean) val
                 )
             }
         );
@@ -632,7 +680,6 @@ public class ModuleManager {
             MessageUtils.createColoredText("Tip: You can DIY the timer UI by resources. Check ", 0xFFFF00)
                 .append(MessageUtils.createColoredText("config\\baity\\FishHookTimer_DIY_UI_Setup_Guide.txt", 0xADFF2F))
                 .append(MessageUtils.createColoredText(".", 0xFFFF00)));
-        TooltipManager.registerTooltip("Muffler", "Disable some annoying sounds.", 0xFFFFFF);
         TooltipManager.registerTooltip("NickTweaks", "DIY your own name display.", 0xFFFFFF);
         TooltipManager.registerTooltip(
             "nick changer",
@@ -640,8 +687,6 @@ public class ModuleManager {
             0xFFFF00
         );
         TooltipManager.registerTooltip("chroma settings", "Expandable chroma options container.", 0xFFFFFF);
-        TooltipManager.registerTooltip("gradient editor", "Edit two endpoint colors for NickTweaks gradient.", 0xFFFFFF);
-        TooltipManager.registerTooltip("chroma", "Enable dynamic chroma color rendering.", 0xFFFFFF);
         TooltipManager.registerTooltip("chroma lightness", "How light each chroma color should be.", 0xFFFFFF);
         TooltipManager.registerTooltip("chroma chroma", "Similar to saturation.", 0xFFFFFF);
         TooltipManager.registerTooltip("chroma size", "Width of each chroma color band.", 0xFFFFFF);

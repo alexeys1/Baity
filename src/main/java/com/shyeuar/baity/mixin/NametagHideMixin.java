@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -77,6 +78,22 @@ public class NametagHideMixin {
         }
 
         cir.setReturnValue(false);
+    }
+
+    @Redirect(
+        method = "shouldShowName",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/Avatar;isInvisibleTo(Lnet/minecraft/world/entity/player/Player;)Z"
+        ),
+        require = 0
+    )
+    private boolean baity$ignoreInvisibilityForDefaultNametag(Avatar avatar, Player viewer) {
+        Module m = ModuleManager.getModuleByName("Nametag");
+        if (m == null || !m.isEnabled()) return avatar.isInvisibleTo(viewer);
+        boolean defaultNametag = ModuleUtils.getOptionBoolean(m, "default nametag", false);
+        if (!defaultNametag) return avatar.isInvisibleTo(viewer);
+        return false;
     }
 
 }

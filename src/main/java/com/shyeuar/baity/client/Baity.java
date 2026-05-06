@@ -11,16 +11,22 @@ import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.items.CustomTotemItem;
 import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
+import com.shyeuar.baity.features.highlights.PestEntityRegistry;
+import com.shyeuar.baity.features.highlights.PestHighlights;
+import com.shyeuar.baity.features.sounds.SoundsHooks;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.Minecraft;
 import com.shyeuar.baity.features.radialmenu.RadialMenu;
 import com.shyeuar.baity.utils.SoundUtils;
+
+import java.util.Objects;
 
 @Environment(EnvType.CLIENT)
 public class Baity implements ClientModInitializer {
@@ -33,7 +39,7 @@ public class Baity implements ClientModInitializer {
     @SuppressWarnings("deprecation")
     public void onInitializeClient() {
         com.shyeuar.baity.config.BaityConfigDir.init();
-        CustomTotemItem.register();
+        Objects.requireNonNull(CustomTotemItem.CUSTOM_TOTEM);
         
         ConfigManager.loadConfig();
         SmolFriendManager.reloadFromConfig();
@@ -44,6 +50,8 @@ public class Baity implements ClientModInitializer {
         
         ModuleInitializer.initializeModules();
         BaityPresenceSync.init();
+
+        ClientEntityEvents.ENTITY_LOAD.register((entity, world) -> PestEntityRegistry.onClientEntityLoad(entity));
         
         com.shyeuar.baity.features.fishing.FishHookTimer.init();
         com.shyeuar.baity.features.chat.ChatChannelSwitcher.init();
@@ -80,6 +88,9 @@ public class Baity implements ClientModInitializer {
             
             RadialMenu.tick(client);
             BaityPresenceSync.tick();
+            PestHighlights.tickPestCaches();
+            SoundsHooks.prewarm(client);
+            SoundsHooks.tick(client);
             
             com.shyeuar.baity.features.fishing.FishHookTimer.getInstance().tick();
         });
@@ -91,7 +102,8 @@ public class Baity implements ClientModInitializer {
         WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.NametagRenderer());
         WorldRenderEvents.AFTER_ENTITIES.register(new FancyDmgSplash());
         WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.highlights.ShulkerHighlights());
-        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.highlights.InvisibleBugHighlights());
+        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.highlights.PestHighlights());
+        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.highlights.InvisibugHighlights());
         
         WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.FancyCreeperVeil());
         

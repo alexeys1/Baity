@@ -176,10 +176,7 @@ public final class PestEntityRegistry {
         }
         String textureValue = headTexturePropertyValue(head);
         if (textureValue != null && KNOWN_PEST_HEAD_VALUES.contains(textureValue)) {
-            String previous = trackedHeadTextureByEntityId.put(stand.getId(), textureValue);
-            if (previous == null) {
-                TabJacobContestCrop.requestImmediateRescan();
-            }
+            trackedHeadTextureByEntityId.put(stand.getId(), textureValue);
         } else {
             trackedHeadTextureByEntityId.remove(entityId);
         }

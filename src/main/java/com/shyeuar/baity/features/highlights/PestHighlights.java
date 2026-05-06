@@ -31,14 +31,9 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Collection;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 @Environment(EnvType.CLIENT)
 public final class PestHighlights implements WorldRenderEvents.AfterEntities {
@@ -94,9 +89,9 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
 
     private record NonWormPiece(AABB box, String texture) {}
 
-    private record LineEndpoint(Vec3 target, String textureForContestFilter) {}
+    private record LineEndpoint(Vec3 target) {}
 
-    private record TaggedHull(AABB box, String textureForContestFilter) {}
+    private record TaggedHull(AABB box) {}
 
     private record PestHighlightLayout(List<TaggedHull> drawHulls, List<LineEndpoint> lineEndpoints) {}
 
@@ -104,7 +99,6 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
         if (MC.level == null || MC.player == null) {
             return;
         }
-        TabJacobContestCrop.tick(MC);
         if (!pestHighlightEnabled()) {
             return;
         }
@@ -182,11 +176,6 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
             return;
         }
 
-        boolean contestLineOnly = ConfigManager.highlightsPestDrawLineOnlyContestCropPests;
-        Set<String> parsedContestCrops = TabJacobContestCrop.getParsedContestCrops();
-        boolean jacobTabBlockFound = TabJacobContestCrop.isJacobContestTabBlockFound();
-        boolean contestActive = TabJacobContestCrop.isContestCurrentlyActive();
-
         float[] rgba = pestColorRgba();
         PoseStack.Pose pose = matrices.last();
         boolean canBatchFillThenLines = buffers instanceof MultiBufferSource.BufferSource;
@@ -214,9 +203,6 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
                 double sy = rayStart.y - cameraPos.y;
                 double sz = rayStart.z - cameraPos.z;
                 for (LineEndpoint le : layout.lineEndpoints()) {
-                    if (!passesJacobContestTracerLineFilter(contestLineOnly, jacobTabBlockFound, contestActive, parsedContestCrops, le.textureForContestFilter())) {
-                        continue;
-                    }
                     Vec3 target = le.target();
                     double tx = target.x - cameraPos.x;
                     double ty = target.y - cameraPos.y;
@@ -227,22 +213,6 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
                 }
             }
         }
-    }
-
-    private static boolean passesJacobContestTracerLineFilter(
-            boolean contestLineOnly,
-            boolean jacobTabBlockFound,
-            boolean contestActive,
-            Set<String> parsedContestCrops,
-            String textureForContestFilter
-    ) {
-        if (!contestLineOnly) {
-            return true;
-        }
-        if (!jacobTabBlockFound || !contestActive || parsedContestCrops.isEmpty()) {
-            return true;
-        }
-        return PestJacobCropHeads.textureMatchesAnyJacobContestCrop(textureForContestFilter, parsedContestCrops);
     }
 
     private static PestHighlightLayout buildHighlightLayout(Map<Integer, String> pests, float partialTick) {
@@ -271,8 +241,8 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
         for (NonWormPiece p : nonWorm) {
             AABB hull = cubeMaxEdgeYOffset(p.box(), BOX_VERTICAL_OFFSET_BLOCKS);
             hull = shiftBoxDownByOwnHeight(hull);
-            display.add(new TaggedHull(hull, p.texture()));
-            lineCandidates.add(new LineEndpoint(hull.getCenter(), p.texture()));
+            display.add(new TaggedHull(hull));
+            lineCandidates.add(new LineEndpoint(hull.getCenter()));
         }
 
         List<List<WormPiece>> wormClusters = clusterWormPieces(wormPieces);
@@ -288,8 +258,8 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
                 AABB hull = shiftBoxDownByOwnHeight(cubeAroundCenterHalf(c, maxHalf));
                 hull = hull.move(0.0, -hull.getYsize(), 0.0);
                 hull = shrinkAabbFromCenter(hull, EARTHWORM_HULL_SHRINK);
-                display.add(new TaggedHull(hull, PestEntityRegistry.EARTHWORM_SEGMENT_TEXTURE));
-                lineCandidates.add(new LineEndpoint(hull.getCenter(), PestEntityRegistry.EARTHWORM_SEGMENT_TEXTURE));
+                display.add(new TaggedHull(hull));
+                lineCandidates.add(new LineEndpoint(hull.getCenter()));
             }
         }
 
@@ -378,7 +348,7 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
                 }
             }
             LineEndpoint pick = endpoints.get(bestIdx);
-            out.add(new LineEndpoint(pick.target(), pick.textureForContestFilter()));
+            out.add(new LineEndpoint(pick.target()));
         }
         return out;
     }
@@ -555,101 +525,5 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
         vc.addVertex(pose.pose(), bx, by, bz).setColor(r, g, b, a).setNormal(pose, nx, ny, nz);
         vc.addVertex(pose.pose(), cx, cy, cz).setColor(r, g, b, a).setNormal(pose, nx, ny, nz);
         vc.addVertex(pose.pose(), dx, dy, dz).setColor(r, g, b, a).setNormal(pose, nx, ny, nz);
-    }
-
-    private static final class PestJacobCropHeads {
-
-        private static final Set<String> TEXTURES_MATCHING_ANY_PARSED_CONTEST_CROP = Set.of(
-                PestEntityRegistry.TEXTURE_FIELD_MOUSE
-        );
-
-        private static final Map<String, Set<String>> TEXTURES_BY_CONTEST_CROP;
-
-        static {
-            Map<String, Set<String>> m = new HashMap<>();
-            put(m, "Wheat", PestEntityRegistry.TEXTURE_FLY);
-            put(m, "Sugar Cane", PestEntityRegistry.TEXTURE_MOSQUITO);
-            put(m, "Carrot", PestEntityRegistry.TEXTURE_CRICKET);
-            put(m, "Potato", PestEntityRegistry.TEXTURE_LOCUST);
-            put(m, "Melon Slice", PestEntityRegistry.TEXTURE_EARTHWORM);
-            put(m, "Melon Slice", PestEntityRegistry.TEXTURE_EARTHWORM_TAIL);
-            put(m, "Pumpkin", PestEntityRegistry.TEXTURE_RAT);
-            put(m, "Cocoa Beans", PestEntityRegistry.TEXTURE_MOTH);
-            put(m, "Nether Wart", PestEntityRegistry.TEXTURE_BEETLE);
-            put(m, "Cactus", PestEntityRegistry.TEXTURE_MITE);
-            put(m, "Mushroom", PestEntityRegistry.TEXTURE_SLUG);
-            put(m, "Moonflower", PestEntityRegistry.TEXTURE_FIREFLY);
-            put(m, "Moonflower", PestEntityRegistry.TEXTURE_FIREFLY_FLASH);
-            put(m, "Moonflower", PestEntityRegistry.TEXTURE_LUNAR_MOTH);
-            put(m, "Sunflower", PestEntityRegistry.TEXTURE_DRAGONFLY);
-            put(m, "Sunflower", PestEntityRegistry.TEXTURE_LUNAR_MOTH);
-            put(m, "Wild Rose", PestEntityRegistry.TEXTURE_PRAYING_MANTIS);
-            put(m, "Wild Rose", PestEntityRegistry.TEXTURE_LUNAR_MOTH);
-            TEXTURES_BY_CONTEST_CROP = Collections.unmodifiableMap(m);
-        }
-
-        private PestJacobCropHeads() {}
-
-        private static void put(Map<String, Set<String>> map, String crop, String texture) {
-            map.computeIfAbsent(crop, k -> new HashSet<>()).add(texture);
-        }
-
-        static boolean textureMatchesAnyJacobContestCrop(String texture, Collection<String> contestCrops) {
-            if (texture == null || contestCrops == null || contestCrops.isEmpty()) {
-                return false;
-            }
-            if (TEXTURES_MATCHING_ANY_PARSED_CONTEST_CROP.contains(texture)) {
-                return true;
-            }
-            for (String c : contestCrops) {
-                if (textureMatchesJacobContestCrop(texture, c)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        static boolean textureMatchesJacobContestCrop(String texture, String contestCrop) {
-            if (texture == null || contestCrop == null || contestCrop.isEmpty()) {
-                return false;
-            }
-            String canonical = canonicalContestCropLabel(contestCrop);
-            Set<String> set = TEXTURES_BY_CONTEST_CROP.get(canonical);
-            if (set != null && set.contains(texture)) {
-                return true;
-            }
-            String key = canonical.trim();
-            for (Map.Entry<String, Set<String>> e : TEXTURES_BY_CONTEST_CROP.entrySet()) {
-                if (e.getKey().equalsIgnoreCase(key) && e.getValue().contains(texture)) {
-                    return true;
-                }
-            }
-            String raw = contestCrop.trim();
-            if (!raw.equals(key)) {
-                set = TEXTURES_BY_CONTEST_CROP.get(raw);
-                if (set != null && set.contains(texture)) {
-                    return true;
-                }
-                for (Map.Entry<String, Set<String>> e : TEXTURES_BY_CONTEST_CROP.entrySet()) {
-                    if (e.getKey().equalsIgnoreCase(raw) && e.getValue().contains(texture)) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        private static String canonicalContestCropLabel(String contestCrop) {
-            String t = contestCrop.trim();
-            String low = t.toLowerCase(Locale.ROOT);
-            return switch (low) {
-                case "melon", "melons" -> "Melon Slice";
-                case "cocoa", "cocoa bean" -> "Cocoa Beans";
-                case "wart", "warts", "nether wart", "nether warts" -> "Nether Wart";
-                case "mushrooms", "mushroom" -> "Mushroom";
-                case "cane" -> "Sugar Cane";
-                default -> t;
-            };
-        }
     }
 }

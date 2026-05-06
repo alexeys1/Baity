@@ -587,13 +587,7 @@ public class ModuleManager {
             .setExpanded(ConfigManager.highlightsPestGroupExpanded)
             .setSubModuleSwitchChildName("enabled")
             .addChild(new Option("enabled", "enabled", ConfigManager.highlightsPestEnabled, ModuleCategory.RENDER))
-            .addChild(new Option("draw line", "draw line", ConfigManager.highlightsPestDrawLineEnabled, ModuleCategory.RENDER))
-            .addChild(new Option(
-                "only_draw_line_contest_crop_pests",
-                "only draw lines in pests dropping farming contests crops",
-                ConfigManager.highlightsPestDrawLineOnlyContestCropPests,
-                ModuleCategory.RENDER
-            ));
+            .addChild(new Option("draw line", "draw line", ConfigManager.highlightsPestDrawLineEnabled, ModuleCategory.RENDER));
 
         ModuleRegistry.registerModuleWithValues(
             "Highlights", "Highlights", ModuleCategory.RENDER,
@@ -629,11 +623,6 @@ public class ModuleManager {
                     "draw line",
                     () -> ConfigManager.highlightsPestDrawLineEnabled,
                     val -> ConfigManager.highlightsPestDrawLineEnabled = (Boolean) val
-                ),
-                new ModuleRegistry.ValueConfigInfo(
-                    "only_draw_line_contest_crop_pests",
-                    () -> ConfigManager.highlightsPestDrawLineOnlyContestCropPests,
-                    val -> ConfigManager.highlightsPestDrawLineOnlyContestCropPests = (Boolean) val
                 )
             }
         );

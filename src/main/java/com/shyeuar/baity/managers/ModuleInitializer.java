@@ -156,7 +156,6 @@ public class ModuleInitializer {
                                     switch (child.getName()) {
                                         case "enabled" -> child.setValue(ConfigManager.highlightsPestEnabled);
                                         case "draw line" -> child.setValue(ConfigManager.highlightsPestDrawLineEnabled);
-                                        case "only_draw_line_contest_crop_pests" -> child.setValue(ConfigManager.highlightsPestDrawLineOnlyContestCropPests);
                                         default -> {
                                         }
                                     }

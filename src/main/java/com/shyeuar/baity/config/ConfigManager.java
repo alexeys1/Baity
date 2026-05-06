@@ -103,7 +103,6 @@ public class ConfigManager {
     public static boolean highlightsInvisibugEnabled = true;
     public static boolean highlightsPestEnabled = true;
     public static boolean highlightsPestDrawLineEnabled = true;
-    public static boolean highlightsPestDrawLineOnlyContestCropPests = false;
     public static boolean highlightsPestGroupExpanded = false;
     
     public static boolean fancyCreeperVeilEnabled = false;
@@ -392,9 +391,6 @@ public class ConfigManager {
         registerField("  HighlightsPestDrawLine", Boolean.class,
             c -> ConfigManager.highlightsPestDrawLineEnabled,
             (c, v) -> ConfigManager.highlightsPestDrawLineEnabled = (Boolean) v);
-        registerField("  HighlightsPestDrawLineOnlyContestCropPests", Boolean.class,
-            c -> ConfigManager.highlightsPestDrawLineOnlyContestCropPests,
-            (c, v) -> ConfigManager.highlightsPestDrawLineOnlyContestCropPests = (Boolean) v);
         registerField("  HighlightsPestGroupExpanded", Boolean.class,
             c -> ConfigManager.highlightsPestGroupExpanded,
             (c, v) -> ConfigManager.highlightsPestGroupExpanded = (Boolean) v);

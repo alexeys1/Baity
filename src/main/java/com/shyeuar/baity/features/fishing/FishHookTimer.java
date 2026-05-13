@@ -3,25 +3,33 @@ package com.shyeuar.baity.features.fishing;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.hud.HudElement;
 import com.shyeuar.baity.gui.hud.HudManager;
+import com.shyeuar.baity.utils.ComponentTextUtils;
+import com.shyeuar.baity.utils.LocateUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.projectile.FishingHook;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Environment(EnvType.CLIENT)
 public class FishHookTimer implements HudElement {
 
-    private static final Pattern NUMERIC_PATTERN = Pattern.compile("(\\d+(\\.\\d+)?)");
-    private static final String BITE_MARKER = "!!!";
+    private static final Pattern FISHING_TIMER_ARMOR_STAND_NAME_PATTERN = Pattern.compile("\u00A7e\u00A7l(\\d+(\\.\\d+)?)");
+    private static final String BITE_MARKER_PLAIN = "!!!";
     private static final String ASSET_NAMESPACE = "fishtimer";
     private static final String BAR_TEXTURE_PATH = "textures/skyblock/fishing_timer_bar.png";
     private static final int FRAME_W = 128;
@@ -32,15 +40,20 @@ public class FishHookTimer implements HudElement {
 
     private static FishHookTimer instance;
     private static final net.minecraft.sounds.SoundEvent[] FRAME_SOUNDS = new net.minecraft.sounds.SoundEvent[12];
+    private static boolean clientHooksRegistered;
 
     private boolean selected;
     private boolean clicked;
     private int currentTick = -1;
     private boolean biteMode;
     private int lastSoundFrame = -1;
-    
-    private FishHookTimer() {}
-    
+
+    private final List<ArmorStand> potentialTimerArmorStands = new ArrayList<>();
+    private ArmorStand resolvedTimerArmorStand;
+
+    private FishHookTimer() {
+    }
+
     public static FishHookTimer getInstance() {
         if (instance == null) {
             instance = new FishHookTimer();
@@ -48,13 +61,19 @@ public class FishHookTimer implements HudElement {
         }
         return instance;
     }
-    
+
     public static void init() {
         getInstance();
+        HypixelFishingRodCatalog.init();
         ensureGuideExists();
         registerSounds();
+        if (!clientHooksRegistered) {
+            clientHooksRegistered = true;
+            ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> getInstance().resetFishingHookTimerTracking());
+            ClientEntityEvents.ENTITY_LOAD.register((entity, world) -> getInstance().onClientEntityLoadForFishingTimer(entity));
+        }
     }
-    
+
     private static void registerSounds() {
         for (int i = 0; i < 12; i++) {
             var id = net.minecraft.resources.Identifier.fromNamespaceAndPath(ASSET_NAMESPACE, "fishing_timer_" + i);
@@ -65,7 +84,7 @@ public class FishHookTimer implements HudElement {
             );
         }
     }
-    
+
     private static void ensureGuideExists() {
         try {
             java.nio.file.Path baityDir = com.shyeuar.baity.config.BaityConfigDir.getBaityConfigDir();
@@ -74,9 +93,10 @@ public class FishHookTimer implements HudElement {
                 java.nio.file.Files.createDirectories(baityDir);
                 java.nio.file.Files.writeString(guidePath, GUIDE_CONTENT, java.nio.charset.StandardCharsets.UTF_8);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
-    
+
     private static final String GUIDE_CONTENT = """
         ============================================================
         FishHookTimer DIY UI Setup Guide / 钓鱼计时器自定义UI配置指南
@@ -231,67 +251,153 @@ public class FishHookTimer implements HudElement {
         
         ============================================================
         """;
-    
+
+    private void resetFishingHookTimerTracking() {
+        potentialTimerArmorStands.clear();
+        resolvedTimerArmorStand = null;
+        clearTimerState();
+    }
+
+    private void onClientEntityLoadForFishingTimer(Entity entity) {
+        if (!ConfigManager.fishHookTimerEnabled) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) {
+            return;
+        }
+        if (!LocateUtils.inSkyBlock(mc)) {
+            return;
+        }
+        if (entity instanceof ArmorStand) {
+            if (!HypixelFishingRodCatalog.mainHandHoldsHypixelFishingRod()) {
+                return;
+            }
+            potentialTimerArmorStands.add((ArmorStand) entity);
+            return;
+        }
+        if (entity instanceof FishingHook hook && hook.getOwner() == mc.player) {
+            resetTimerTrackingForNewBobber();
+        }
+    }
+
+    private void resetTimerTrackingForNewBobber() {
+        if (!HypixelFishingRodCatalog.mainHandHoldsHypixelFishingRod()) {
+            return;
+        }
+        resetFishingHookTimerTracking();
+    }
+
+    public static boolean shouldSuppressBoundTimerStandBody(LivingEntityRenderState state) {
+        if (!ConfigManager.fishHookTimerEnabled || !ConfigManager.fishHookTimerHideDefaultTimer) {
+            return false;
+        }
+        if (state.entityType != EntityType.ARMOR_STAND) {
+            return false;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        FishHookTimer timer = getInstance();
+        if (!timer.canRenderFishHookTimerHud(mc)) {
+            return false;
+        }
+        ArmorStand bound = timer.resolvedTimerArmorStand;
+        if (bound == null || !bound.isAlive()) {
+            return false;
+        }
+        double dx = state.x - bound.getX();
+        double dy = state.y - bound.getY();
+        double dz = state.z - bound.getZ();
+        double distSq = dx * dx + dy * dy + dz * dz;
+        return distSq < 0.25;
+    }
+
+    private boolean canRenderFishHookTimerHud(Minecraft mc) {
+        if (mc.player == null || mc.level == null) {
+            return false;
+        }
+        if (!LocateUtils.inSkyBlock(mc)) {
+            return false;
+        }
+        if (!HypixelFishingRodCatalog.mainHandHoldsHypixelFishingRod()) {
+            return false;
+        }
+        ArmorStand stand = resolvedTimerArmorStand;
+        if (stand == null || !stand.isAlive()) {
+            return false;
+        }
+        if (!stand.hasCustomName() || !stand.isCustomNameVisible()) {
+            return false;
+        }
+        return isFishHookTimerStandName(stand.getName());
+    }
+
     public void tick() {
         if (!ConfigManager.fishHookTimerEnabled) {
+            resetFishingHookTimerTracking();
             clearTimerState();
             return;
         }
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) {
+            resetFishingHookTimerTracking();
             clearTimerState();
             return;
         }
-        ItemStack main = mc.player.getMainHandItem();
-        ItemStack off = mc.player.getOffhandItem();
-        if (!main.is(Items.FISHING_ROD) && !off.is(Items.FISHING_ROD)) {
-            clearTimerState();
+        if (!LocateUtils.inSkyBlock(mc)) {
             return;
         }
-        FishingHook hook = findOwnHook(mc);
-        if (hook == null) {
-            clearTimerState();
+        if (!HypixelFishingRodCatalog.mainHandHoldsHypixelFishingRod()) {
             return;
         }
-        List<ArmorStand> stands = mc.level.getEntitiesOfClass(
-            ArmorStand.class,
-            hook.getBoundingBox().inflate(5.0),
-            s -> s.isCustomNameVisible() && s.hasCustomName()
-        );
-        boolean found = false;
-        for (ArmorStand s : stands) {
-            String nameStr = s.getName().getString();
-            if (nameStr == null || nameStr.isEmpty()) nameStr = s.getDisplayName().getString();
-            if (BITE_MARKER.equals(nameStr)) {
-                currentTick = 0;
-                biteMode = true;
-                found = true;
-                break;
+
+        if (resolvedTimerArmorStand == null) {
+            List<ArmorStand> filter = new ArrayList<>();
+            for (ArmorStand s : potentialTimerArmorStands) {
+                if (s.hasCustomName() && isFishHookTimerStandName(s.getName())) {
+                    filter.add(s);
+                }
             }
-            var m = NUMERIC_PATTERN.matcher(nameStr);
-            if (m.find()) {
-                try {
-                    double v = Double.parseDouble(m.group(1));
-                    int t = (int)(v * 10.0);
-                    if (t >= 1 && t <= 40) {
-                        currentTick = t;
-                        biteMode = false;
-                        found = true;
-                        break;
-                    }
-                } catch (NumberFormatException ignored) {}
+            if (filter.size() == 1) {
+                resolvedTimerArmorStand = filter.get(0);
             }
         }
-        if (!found) clearTimerState();
+
+        if (resolvedTimerArmorStand != null && resolvedTimerArmorStand.isAlive()) {
+            syncUiStateFromResolvedStand(resolvedTimerArmorStand);
+        } else {
+            clearTimerState();
+        }
     }
 
-    private FishingHook findOwnHook(Minecraft mc) {
-        if (mc.level == null || mc.player == null) return null;
-        return mc.level.getEntitiesOfClass(
-            FishingHook.class,
-            mc.player.getBoundingBox().inflate(50.0),
-            h -> h.getOwner() == mc.player
-        ).stream().findFirst().orElse(null);
+    public static boolean isFishHookTimerStandName(Component nameComponent) {
+        if (nameComponent == null) {
+            return false;
+        }
+        if (BITE_MARKER_PLAIN.equals(nameComponent.getString())) {
+            return true;
+        }
+        return FISHING_TIMER_ARMOR_STAND_NAME_PATTERN.matcher(ComponentTextUtils.formattedLessResets(nameComponent)).matches();
+    }
+
+    private void syncUiStateFromResolvedStand(ArmorStand stand) {
+        Component name = stand.getName();
+        if (BITE_MARKER_PLAIN.equals(name.getString())) {
+            currentTick = 0;
+            biteMode = true;
+            return;
+        }
+        Matcher m = FISHING_TIMER_ARMOR_STAND_NAME_PATTERN.matcher(ComponentTextUtils.formattedLessResets(name));
+        if (!m.matches()) {
+            clearTimerState();
+            return;
+        }
+        try {
+            double v = Double.parseDouble(m.group(1));
+            currentTick = (int) (v * 10.0);
+            biteMode = false;
+        } catch (NumberFormatException e) {
+            clearTimerState();
+        }
     }
 
     private void clearTimerState() {
@@ -301,13 +407,19 @@ public class FishHookTimer implements HudElement {
     }
 
     private void tryPlayFrameSound(int frameIndex) {
-        if (frameIndex < 0 || frameIndex > 11) return;
-        
+        if (frameIndex < 0 || frameIndex > 11) {
+            return;
+        }
+
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.level == null || mc.player == null) return;
-        
-        if (FRAME_SOUNDS[frameIndex] == null) return;
-        
+        if (mc == null || mc.level == null || mc.player == null) {
+            return;
+        }
+
+        if (FRAME_SOUNDS[frameIndex] == null) {
+            return;
+        }
+
         mc.level.playSound(
             mc.player,
             mc.player.getX(), mc.player.getY(), mc.player.getZ(),
@@ -317,76 +429,62 @@ public class FishHookTimer implements HudElement {
             1.0f
         );
     }
-    
-    public static boolean isFishingTimerArmorStand(String nameStr) {
-        if (nameStr == null || nameStr.isEmpty()) return false;
-        if (BITE_MARKER.equals(nameStr)) return true;
-        var m = NUMERIC_PATTERN.matcher(nameStr);
-        if (!m.find()) return false;
-        try {
-            double v = Double.parseDouble(m.group(1));
-            int t = (int)(v * 10.0);
-            return t >= 1 && t <= 40;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
-    
+
     @Override
     public String getId() {
         return "fishHookTimer";
     }
-    
+
     @Override
     public String getDisplayName() {
         return "FishHookTimer";
     }
-    
+
     @Override
     public double getX() {
         return ConfigManager.fishHookTimerX;
     }
-    
+
     @Override
     public void setX(double x) {
         ConfigManager.fishHookTimerX = x;
     }
-    
+
     @Override
     public double getY() {
         return ConfigManager.fishHookTimerY;
     }
-    
+
     @Override
     public void setY(double y) {
         ConfigManager.fishHookTimerY = y;
     }
-    
+
     @Override
     public float getScale() {
         return ConfigManager.fishHookTimerScale;
     }
-    
+
     @Override
     public void setScale(float scale) {
         ConfigManager.fishHookTimerScale = Math.max(0.1f, Math.min(10.0f, scale));
     }
-    
+
     @Override
     public double getDefaultX() {
         return FishHookTimerConfig.DEFAULT_X;
     }
-    
+
     @Override
     public double getDefaultY() {
         return FishHookTimerConfig.DEFAULT_Y;
     }
-    
+
     @Override
     public float getDefaultScale() {
         return FishHookTimerConfig.DEFAULT_SCALE;
     }
-    
+
     @Override
     public boolean isSelected() {
         return selected;
@@ -396,17 +494,17 @@ public class FishHookTimer implements HudElement {
     public void setSelected(boolean selected) {
         this.selected = selected;
     }
-    
+
     @Override
     public boolean isClicked() {
         return clicked;
     }
-    
+
     @Override
     public void setClicked(boolean clicked) {
         this.clicked = clicked;
     }
-    
+
     @Override
     public int getWidth() {
         return FRAME_W;
@@ -419,41 +517,42 @@ public class FishHookTimer implements HudElement {
 
     @Override
     public boolean shouldRender() {
-        if (!ConfigManager.fishHookTimerEnabled || currentTick < 0) return false;
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) return false;
-        ItemStack main = mc.player.getMainHandItem();
-        ItemStack off = mc.player.getOffhandItem();
-        if (!main.is(Items.FISHING_ROD) && !off.is(Items.FISHING_ROD)) return false;
-        FishingHook hook = findOwnHook(mc);
-        if (hook == null) return false;
-        List<ArmorStand> stands = mc.level.getEntitiesOfClass(
-            ArmorStand.class,
-            hook.getBoundingBox().inflate(5.0),
-            s -> s.isCustomNameVisible() && s.hasCustomName()
-        );
-        for (ArmorStand s : stands) {
-            String nameStr = s.getName().getString();
-            if (nameStr == null || nameStr.isEmpty()) nameStr = s.getDisplayName().getString();
-            if (isFishingTimerArmorStand(nameStr)) return true;
+        if (!ConfigManager.fishHookTimerEnabled) {
+            return false;
         }
-        return false;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) {
+            return false;
+        }
+        ArmorStand stand = resolvedTimerArmorStand;
+        if (stand != null && !stand.isAlive()) {
+            resetFishingHookTimerTracking();
+            return false;
+        }
+        return canRenderFishHookTimerHud(mc);
     }
-    
+
     @Override
     public void render(GuiGraphics guiGraphics, float partialTicks) {
-        if (!ConfigManager.fishHookTimerEnabled || currentTick < 0) return;
+        if (!ConfigManager.fishHookTimerEnabled || currentTick < 0) {
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null) return;
-        int w = (int)(FRAME_W * getScale());
-        int h = (int)(FRAME_H * getScale());
+        if (mc == null) {
+            return;
+        }
+        int w = (int) (FRAME_W * getScale());
+        int h = (int) (FRAME_H * getScale());
         int px = getAbsX(w);
         int py = getAbsY(h);
         boolean useTexture = false;
         try {
             var texId = Identifier.fromNamespaceAndPath(ASSET_NAMESPACE, BAR_TEXTURE_PATH);
-            if (mc.getResourceManager().getResource(texId).isPresent()) useTexture = true;
-        } catch (Exception ignored) {}
+            if (mc.getResourceManager().getResource(texId).isPresent()) {
+                useTexture = true;
+            }
+        } catch (Exception ignored) {
+        }
         if (useTexture) {
             int frame = biteMode ? 0 : Math.min(currentTick, 11);
             if (frame != lastSoundFrame) {
@@ -462,7 +561,7 @@ public class FishHookTimer implements HudElement {
             }
             var matrices = guiGraphics.pose();
             matrices.pushMatrix();
-            matrices.translate((float)px, (float)py);
+            matrices.translate((float) px, (float) py);
             matrices.scale(getScale(), getScale());
             guiGraphics.blit(
                 net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
@@ -473,10 +572,10 @@ public class FishHookTimer implements HudElement {
             matrices.popMatrix();
         } else {
             String txt = biteMode ? "§c§l!!!" : String.format("§e§l%.1f", currentTick / 10.0);
-            float scale = (float)w / (float)mc.font.width(txt) * 0.27f;
+            float scale = (float) w / (float) mc.font.width(txt) * 0.27f;
             var matrices = guiGraphics.pose();
             matrices.pushMatrix();
-            matrices.translate((float)(px + w / 2.0), (float)(py + h / 2.0));
+            matrices.translate((float) (px + w / 2.0), (float) (py + h / 2.0));
             matrices.scale(scale, scale);
             int tw = mc.font.width(txt);
             guiGraphics.drawString(mc.font, txt, -tw / 2, -mc.font.lineHeight / 2, 0xFFFFFFFF, false);

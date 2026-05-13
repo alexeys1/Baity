@@ -639,10 +639,20 @@ public class ModuleManager {
             val -> ConfigManager.oldSneakingEnabled = val
         );
 
-        ModuleRegistry.registerSimpleModule(
+        ModuleRegistry.registerModuleWithValues(
             "FishHookTimer", "FishHookTimer", ModuleCategory.QOL,
             () -> ConfigManager.fishHookTimerEnabled,
-            val -> ConfigManager.fishHookTimerEnabled = val
+            val -> ConfigManager.fishHookTimerEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new Option("hide default timer", "hide default timer", true, ModuleCategory.QOL)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "hide default timer",
+                    () -> ConfigManager.fishHookTimerHideDefaultTimer,
+                    val -> ConfigManager.fishHookTimerHideDefaultTimer = (Boolean) val
+                )
+            }
         );
     }
     

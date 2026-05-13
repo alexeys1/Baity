@@ -32,6 +32,7 @@
     "NoSwimPoseMixin$PlayerNameTagMixin",
     "NoSwimPoseMixin$EntityEyeHeightMixin",
     "NonStarredMobTagsMixin",
+    "FishHookTimerHideDefaultTimerMixin",
     "PestEntityDataMixin",
     "FancyDmgSplashMixin",
     "CullingMixin$RemoveWaterFogMixin",

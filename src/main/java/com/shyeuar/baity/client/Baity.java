@@ -10,6 +10,7 @@ import com.shyeuar.baity.sync.BaityPresenceSync;
 import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.items.CustomTotemItem;
 import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
+import com.shyeuar.baity.features.fishing.HypixelFishingRodCatalog;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.features.highlights.PestEntityRegistry;
 import com.shyeuar.baity.features.highlights.PestHighlights;
@@ -61,6 +62,7 @@ public class Baity implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             long windowHandle = client.getWindow().handle();
             ConfigManager.flushPendingSave();
+            HypixelFishingRodCatalog.clientTickRefreshMainHandIfSkyblock(client);
             
             if (openGuiNextTick) {
                 openGuiNextTick = false;

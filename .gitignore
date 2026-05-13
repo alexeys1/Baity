@@ -47,3 +47,6 @@ replay_*.log
 
 # local temp sources / caches
 .tmp/
+
+# third-party reference trees (never commit; avoid accidental git add -A)
+SkyHanni-beta/

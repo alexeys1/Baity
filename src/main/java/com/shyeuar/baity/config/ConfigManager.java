@@ -112,6 +112,7 @@ public class ConfigManager {
     public static boolean oldSneakingEnabled = false;
     
     public static boolean fishHookTimerEnabled = false;
+    public static boolean fishHookTimerHideDefaultTimer = true;
     public static double fishHookTimerX = 0.5;
     public static double fishHookTimerY = 0.6;
     public static float fishHookTimerScale = 1.5f;
@@ -415,6 +416,9 @@ public class ConfigManager {
         registerField("FishHookTimerScale", Float.class,
             c -> ConfigManager.fishHookTimerScale,
             (c, v) -> ConfigManager.fishHookTimerScale = (Float) v);
+        registerField("FishHookTimerHideDefaultTimer", Boolean.class,
+            c -> ConfigManager.fishHookTimerHideDefaultTimer,
+            (c, v) -> ConfigManager.fishHookTimerHideDefaultTimer = (Boolean) v);
         registerField("NickTweaks", Boolean.class,
             c -> ConfigManager.nickTweaksEnabled,
             (c, v) -> ConfigManager.nickTweaksEnabled = (Boolean) v);
@@ -569,6 +573,8 @@ public class ConfigManager {
                 legacyKeyAliases.put("ChromaOwnNameChromaSpeed", "NickTweaksChromaSpeed");
                 legacyKeyAliases.put("Crosshair", "ThirdPersonBackCrosshair");
                 legacyKeyAliases.put("ThirdPersonCrosshair", "ThirdPersonBackCrosshair");
+                
+                legacyKeyAliases.put("FishHookTimerHideArmorStand", "FishHookTimerHideDefaultTimer");
                 
                 for (String line : lines) {
                     if (line.trim().isEmpty()) continue;

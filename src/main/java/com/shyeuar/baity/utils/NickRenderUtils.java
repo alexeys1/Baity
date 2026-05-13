@@ -18,10 +18,12 @@ import net.minecraft.util.Mth;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Environment(EnvType.CLIENT)
 public final class NickRenderUtils {
@@ -86,7 +88,6 @@ public final class NickRenderUtils {
         }
         return true;
     }
-
     public static String handleString(String text) {
         if (text == null || text.isEmpty()) return text;
         if (shouldSkipNickTweakSubstitution()) return text;
@@ -444,19 +445,27 @@ public final class NickRenderUtils {
             targets.add(Target.local(selfName));
         }
 
-        final int[] visitedPlayers = {0};
-        final int[] chromaProfileTargets = {0};
+        Set<String> seenRemoteLower = new HashSet<>();
         if (client.level != null) {
             client.level.players().forEach(player -> {
                 String name = player.getName().getString();
                 if (name == null || name.isBlank()) return;
                 BaityPresenceSync.ChromaProfile profile = BaityPresenceSync.getChromaProfileByName(name);
                 if (profile == null) return;
+                seenRemoteLower.add(name.toLowerCase(Locale.ROOT));
                 targets.add(Target.remote(name, profile));
-                visitedPlayers[0]++;
-                chromaProfileTargets[0]++;
             });
         }
+
+        String selfLower = selfName == null ? "" : selfName.toLowerCase(Locale.ROOT);
+        BaityPresenceSync.forEachChromaProfileByCachedName((name, profile) -> {
+            if (name == null || name.isBlank()) return;
+            String lk = name.toLowerCase(Locale.ROOT);
+            if (seenRemoteLower.contains(lk)) return;
+            if (!selfLower.isEmpty() && lk.equals(selfLower)) return;
+            seenRemoteLower.add(lk);
+            targets.add(Target.remote(name, profile));
+        });
 
         targets.removeIf(t -> t.name().isBlank());
         targets.sort(Comparator.comparingInt((Target t) -> t.codePoints().length).reversed());

@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -83,6 +84,7 @@ public final class BaityPresenceSync {
 
     private static final Map<UUID, RemoteUserState> USERS_BY_UUID = new ConcurrentHashMap<>();
     private static final Map<String, ChromaProfile> CHROMA_BY_NAME = new ConcurrentHashMap<>();
+    private static final Map<String, String> CHROMA_DISPLAY_NAME_BY_LOWER = new ConcurrentHashMap<>();
 
     private BaityPresenceSync() {
     }
@@ -554,6 +556,14 @@ public final class BaityPresenceSync {
     public static ChromaProfile getChromaProfileByName(String name) {
         if (name == null || name.isBlank()) return null;
         return CHROMA_BY_NAME.get(name.toLowerCase(Locale.ROOT));
+    }
+
+    public static void forEachChromaProfileByCachedName(BiConsumer<String, ChromaProfile> consumer) {
+        CHROMA_BY_NAME.forEach((lower, profile) -> {
+            if (profile == null || lower == null || lower.isBlank()) return;
+            String display = CHROMA_DISPLAY_NAME_BY_LOWER.getOrDefault(lower, lower);
+            consumer.accept(display, profile);
+        });
     }
 
     private static boolean fetchAndReplace(String url, boolean forceRemoteSync) {
@@ -1032,6 +1042,7 @@ public final class BaityPresenceSync {
 
         Map<UUID, RemoteUserState> newUsers = new ConcurrentHashMap<>();
         Map<String, ChromaProfile> newChromaByName = new ConcurrentHashMap<>();
+        Map<String, String> newChromaDisplayByLower = new ConcurrentHashMap<>();
 
         for (Map.Entry<String, JsonElement> entry : users.entrySet()) {
             UUID uuid;
@@ -1124,10 +1135,12 @@ public final class BaityPresenceSync {
             );
             newUsers.put(uuid, state);
             if (nickTweaksEnabled) {
+                String nameLower = name.toLowerCase(Locale.ROOT);
                 newChromaByName.put(
-                    name.toLowerCase(Locale.ROOT),
+                    nameLower,
                     new ChromaProfile(chromaEnabled, palette, speed, chromaSize, chromaAmount, chromaLightness, gradientStart, gradientEnd, boldSelf, customNickColorEnabled, nickChanger)
                 );
+                newChromaDisplayByLower.put(nameLower, name);
             }
         }
 
@@ -1135,6 +1148,8 @@ public final class BaityPresenceSync {
         USERS_BY_UUID.putAll(newUsers);
         CHROMA_BY_NAME.clear();
         CHROMA_BY_NAME.putAll(newChromaByName);
+        CHROMA_DISPLAY_NAME_BY_LOWER.clear();
+        CHROMA_DISPLAY_NAME_BY_LOWER.putAll(newChromaDisplayByLower);
 
         if (overrideOwnState) {
             tryPushLocalIfRemoteDiffers(forceRemoteSync);

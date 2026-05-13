@@ -7,6 +7,9 @@ import com.shyeuar.baity.sync.BaityPresenceSync;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
@@ -60,17 +63,33 @@ public final class NickRenderUtils {
         return targetsCacheAt;
     }
 
-    private static boolean isBaityClickGuiScreen() {
+    private static boolean shouldSkipNickTweakSubstitution() {
         if (Boolean.TRUE.equals(PREVIEW_OVERRIDE.get())) {
             return false;
         }
-        return Boolean.TRUE.equals(CLICK_GUI_RENDER_SCOPE.get());
+        if (Boolean.TRUE.equals(CLICK_GUI_RENDER_SCOPE.get())) {
+            return true;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null) {
+            return false;
+        }
+        Screen screen = mc.screen;
+        if (screen == null) {
+            return false;
+        }
+        if (screen instanceof AbstractContainerScreen<?>) {
+            return false;
+        }
+        if (screen instanceof ChatScreen) {
+            return false;
+        }
+        return true;
     }
-    
 
     public static String handleString(String text) {
         if (text == null || text.isEmpty()) return text;
-        if (isBaityClickGuiScreen()) return text;
+        if (shouldSkipNickTweakSubstitution()) return text;
         List<Target> targets = collectTargets();
         if (targets.isEmpty()) return text;
 
@@ -137,7 +156,7 @@ public final class NickRenderUtils {
 
     public static FormattedText handleFormattedText(FormattedText text) {
         if (text == null) return null;
-        if (isBaityClickGuiScreen()) return text;
+        if (shouldSkipNickTweakSubstitution()) return text;
         List<Target> targets = collectTargets();
         if (targets.isEmpty()) return text;
         StringBuilder sbPlain = new StringBuilder();
@@ -225,7 +244,7 @@ public final class NickRenderUtils {
 
     public static FormattedCharSequence handleCharSequence(FormattedCharSequence original) {
         if (original == null) return null;
-        if (isBaityClickGuiScreen()) return original;
+        if (shouldSkipNickTweakSubstitution()) return original;
         List<Target> targets = collectTargets();
         if (targets.isEmpty()) return original;
 

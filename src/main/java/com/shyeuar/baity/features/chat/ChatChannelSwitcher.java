@@ -4,10 +4,11 @@ import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.hud.HudElement;
 import com.shyeuar.baity.gui.hud.HudManager;
 import com.shyeuar.baity.gui.render.GuiRenderUtil;
+import com.shyeuar.baity.utils.LocateUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -16,7 +17,6 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.multiplayer.ServerData;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -62,7 +62,7 @@ public final class ChatChannelSwitcher implements HudElement {
     private static final long CHANNEL_SWITCH_DEBOUNCE_MS = 60L;
     private static final long CHANNEL_SWITCH_CONFIRM_TIMEOUT_MS = 1500L;
     private static final long HYPIXEL_RESET_PROCESS_COOLDOWN_MS = 5L * 60L * 1000L;
-    private static boolean sessionHypixelResetDone = false;
+    private static boolean sessionSkyblockChatResetDone = false;
 
     private boolean selected;
     private boolean clicked;
@@ -87,8 +87,8 @@ public final class ChatChannelSwitcher implements HudElement {
             ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
                 INSTANCE.handleChannelFeedback(message.getString());
             });
-            ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-                INSTANCE.handleServerJoin(client);
+            ClientTickEvents.END_CLIENT_TICK.register(client -> {
+                INSTANCE.maybeSendSkyblockChatAllReset(client);
             });
             ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
                 ConfigManager.chatChannelSwitcherLastProcessExitAtMs = System.currentTimeMillis();
@@ -354,13 +354,14 @@ public final class ChatChannelSwitcher implements HudElement {
         client.setScreen(new ChatScreen(restoredText, false));
     }
 
-    private void handleServerJoin(Minecraft client) {
-        if (client == null || client.player == null) return;
+    private void maybeSendSkyblockChatAllReset(Minecraft client) {
+        if (sessionSkyblockChatResetDone) return;
+        if (client == null || client.player == null || client.level == null) return;
         if (!ConfigManager.chatChannelSwitcherEnabled) return;
-        if (!isHypixelServer(client)) return;
-        if (sessionHypixelResetDone) return;
+        if (!LocateUtils.onHypixel(client)) return;
+        if (!LocateUtils.inSkyBlock(client)) return;
 
-        sessionHypixelResetDone = true;
+        sessionSkyblockChatResetDone = true;
 
         long lastExit = ConfigManager.chatChannelSwitcherLastProcessExitAtMs;
         long now = System.currentTimeMillis();
@@ -370,14 +371,6 @@ public final class ChatChannelSwitcher implements HudElement {
 
         setLastSelectedChannel("all");
         client.player.connection.sendCommand("chat all");
-    }
-
-    private boolean isHypixelServer(Minecraft client) {
-        if (client == null || client.isLocalServer()) return false;
-        ServerData server = client.getCurrentServer();
-        if (server == null || server.ip == null) return false;
-        String ip = server.ip.toLowerCase(Locale.ROOT);
-        return ip.contains("hypixel.net");
     }
 
     private String computeRestoredChatTextAfterPermanentSwitch(String existingText, String clickedChannel, String beforeActiveChannel) {
@@ -501,17 +494,11 @@ public final class ChatChannelSwitcher implements HudElement {
     }
 
     private void handleChannelFeedback(String messageText) {
-        String normalizedMessage = messageText == null ? "" : messageText.trim().toLowerCase(Locale.ROOT);
-        if (normalizedMessage.isEmpty()) {
+        if (pendingChannel.isEmpty()) {
             return;
         }
-
-        String currentChannel = parseCurrentChannel(normalizedMessage);
-        if (!currentChannel.isEmpty()) {
-            setLastSelectedChannel(currentChannel);
-        }
-
-        if (pendingChannel.isEmpty()) {
+        String normalizedMessage = messageText == null ? "" : messageText.trim().toLowerCase(Locale.ROOT);
+        if (normalizedMessage.isEmpty()) {
             return;
         }
 
@@ -530,16 +517,6 @@ public final class ChatChannelSwitcher implements HudElement {
             pendingChannelRollback = "";
             pendingChannelSinceAt = 0L;
             setLastSelectedChannel(alreadyInChannel);
-            return;
-        }
-
-        if (normalizedMessage.contains("you must be in skyblock to join this channel")) {
-            if (!pendingChannelRollback.isEmpty()) {
-                setLastSelectedChannel(pendingChannelRollback);
-            }
-            pendingChannel = "";
-            pendingChannelRollback = "";
-            pendingChannelSinceAt = 0L;
             return;
         }
 
@@ -570,22 +547,6 @@ public final class ChatChannelSwitcher implements HudElement {
         }
         if (normalizedMessage.contains(" skyblock co-op channel") || normalizedMessage.contains(" co-op channel") || normalizedMessage.contains(" coop channel")) {
             return "coop";
-        }
-        return "";
-    }
-
-    private String parseCurrentChannel(String normalizedMessage) {
-        if (normalizedMessage == null || normalizedMessage.isEmpty()) return "";
-
-        if (normalizedMessage.startsWith("you are now in the ") && normalizedMessage.contains(" channel")) {
-            return parseChannelNameFromMessage(normalizedMessage);
-        }
-        if (normalizedMessage.contains("were moved to the all channel")
-                || normalizedMessage.contains("moved back to the all channel")) {
-            return "all";
-        }
-        if (normalizedMessage.contains("currently in the") && normalizedMessage.contains("channel")) {
-            return parseChannelNameFromMessage(normalizedMessage);
         }
         return "";
     }

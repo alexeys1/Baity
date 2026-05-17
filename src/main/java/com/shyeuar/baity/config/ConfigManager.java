@@ -89,7 +89,6 @@ public class ConfigManager {
     public static boolean nodebuffRemoveBlindness = true;
     
     public static boolean soundsEnabled = true;
-    public static boolean soundsRestoreSoulcrySoundOfAtomsplitKatana = false;
     
     public static boolean mufflerEnabled = false;
     public static boolean mufflerMuteEndermanScream = true;
@@ -356,9 +355,6 @@ public class ConfigManager {
         registerField("Sounds", Boolean.class,
             c -> ConfigManager.soundsEnabled,
             (c, v) -> ConfigManager.soundsEnabled = (Boolean) v);
-        registerField("SoundsRestoreSoulcrySoundOfAtomsplitKatana", Boolean.class,
-            c -> ConfigManager.soundsRestoreSoulcrySoundOfAtomsplitKatana,
-            (c, v) -> ConfigManager.soundsRestoreSoulcrySoundOfAtomsplitKatana = (Boolean) v);
         registerField("Muffler", Boolean.class,
             c -> ConfigManager.mufflerEnabled,
             (c, v) -> ConfigManager.mufflerEnabled = (Boolean) v);

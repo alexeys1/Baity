@@ -14,6 +14,7 @@ import com.shyeuar.baity.features.fishing.HypixelFishingRodCatalog;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.features.highlights.PestEntityRegistry;
 import com.shyeuar.baity.features.highlights.PestHighlights;
+import com.shyeuar.baity.features.sounds.SoulcrySoundManager;
 import com.shyeuar.baity.features.sounds.SoundsHooks;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
@@ -48,6 +49,7 @@ public class Baity implements ClientModInitializer {
         if (ModuleManager.getModules().isEmpty()) {
             ModuleManager.init();
         }
+        SoulcrySoundManager.init();
         
         ModuleInitializer.initializeModules();
         BaityPresenceSync.init();
@@ -91,7 +93,6 @@ public class Baity implements ClientModInitializer {
             RadialMenu.tick(client);
             BaityPresenceSync.tick();
             PestHighlights.tickPestCaches();
-            SoundsHooks.prewarm(client);
             SoundsHooks.tick(client);
             
             com.shyeuar.baity.features.fishing.FishHookTimer.getInstance().tick();

@@ -232,7 +232,12 @@ public class ModuleManager {
             () -> ConfigManager.soundsEnabled,
             val -> ConfigManager.soundsEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new Option("restore soulcry sound of atomsplit katana", "restore soulcry sound of atomsplit katana", false, ModuleCategory.QOL),
+                new ButtonValue(
+                        "custom soulcry sound", "custom soulcry sound",
+                        "Manage",
+                        ModuleCategory.QOL,
+                        ButtonValue.ButtonValueType.TRIGGER,
+                        false),
                 new GroupValue("muffler", "muffler", ModuleCategory.QOL)
                     .setSubModuleSwitchChildName("muffler enabled")
                     .addChild(new Option("muffler enabled", "enabled", false, ModuleCategory.QOL))
@@ -243,11 +248,6 @@ public class ModuleManager {
                     .addChild(new Option("mute drake", "mute drake", true, ModuleCategory.QOL))
             },
             new ModuleRegistry.ValueConfigInfo[]{
-                new ModuleRegistry.ValueConfigInfo(
-                    "restore soulcry sound of atomsplit katana",
-                    () -> ConfigManager.soundsRestoreSoulcrySoundOfAtomsplitKatana,
-                    val -> ConfigManager.soundsRestoreSoulcrySoundOfAtomsplitKatana = (Boolean) val
-                ),
                 new ModuleRegistry.ValueConfigInfo(
                     "muffler enabled",
                     () -> ConfigManager.mufflerEnabled,
@@ -644,6 +644,12 @@ public class ModuleManager {
             () -> ConfigManager.fishHookTimerEnabled,
             val -> ConfigManager.fishHookTimerEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
+                new ButtonValue(
+                        "custom timer template", "custom timer template",
+                        "Manage",
+                        ModuleCategory.QOL,
+                        ButtonValue.ButtonValueType.TRIGGER,
+                        false),
                 new Option("hide default timer", "hide default timer", true, ModuleCategory.QOL)
             },
             new ModuleRegistry.ValueConfigInfo[]{
@@ -676,9 +682,9 @@ public class ModuleManager {
                 .append(MessageUtils.createColoredText(" Click the channel button with the middle button to get the usage method.", 0xFFFF00))
         );
         TooltipManager.registerTooltip("FishHookTimer",
-            MessageUtils.createColoredText("Tip: You can DIY the timer UI by resources. Check ", 0xFFFF00)
-                .append(MessageUtils.createColoredText("config\\baity\\FishHookTimer_DIY_UI_Setup_Guide.txt", 0xADFF2F))
-                .append(MessageUtils.createColoredText(".", 0xFFFF00)));
+            MessageUtils.createColoredText("Custom timer HUD via resource pack. Use ", 0xFFFF00)
+                .append(MessageUtils.createColoredText("custom timer template", 0xADFF2F))
+                .append(MessageUtils.createColoredText(" → Manage for the guide.", 0xFFFF00)));
         TooltipManager.registerTooltip("NickTweaks", "DIY your own name display.", 0xFFFFFF);
         TooltipManager.registerTooltip(
             "nick changer",

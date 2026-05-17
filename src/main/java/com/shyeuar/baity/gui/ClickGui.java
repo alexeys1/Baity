@@ -350,6 +350,18 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             if (mc != null) {
                 mc.setScreen(new SmolFriendsScreen(this));
             }
+            return;
+        }
+
+        if ("Sounds".equals(module.getName()) && "custom soulcry sound".equals(buttonValue.getName())) {
+            net.minecraft.util.Util.getPlatform().openUri(
+                    java.net.URI.create(com.shyeuar.baity.features.sounds.SoulcrySoundManager.DOCS_URL));
+            return;
+        }
+
+        if ("FishHookTimer".equals(module.getName()) && "custom timer template".equals(buttonValue.getName())) {
+            net.minecraft.util.Util.getPlatform().openUri(
+                    java.net.URI.create(com.shyeuar.baity.features.fishing.FishHookTimerTemplateManager.DOCS_URL));
         }
     }
     

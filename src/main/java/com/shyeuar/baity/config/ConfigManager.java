@@ -106,7 +106,29 @@ public class ConfigManager {
     
     public static boolean fancyCreeperVeilEnabled = false;
     
+    public static boolean droppedItemEnabled = false;
+
     public static boolean twoDdroppedItemEnabled = false;
+
+    public static boolean droppedItemRarityScaleGroupExpanded = false;
+
+    public static boolean droppedItemRarityScaleEnabled = true;
+
+    public static final double[] DROPPED_ITEM_RARITY_SCALE_DEFAULTS = {
+            1.0, 1.25, 1.65, 1.95, 2.45, 2.80, 3.10, 2.20, 2.20, 3.50, 3.50
+    };
+
+    public static double droppedItemRarityCommon = DROPPED_ITEM_RARITY_SCALE_DEFAULTS[0];
+    public static double droppedItemRarityUncommon = DROPPED_ITEM_RARITY_SCALE_DEFAULTS[1];
+    public static double droppedItemRarityRare = DROPPED_ITEM_RARITY_SCALE_DEFAULTS[2];
+    public static double droppedItemRarityEpic = DROPPED_ITEM_RARITY_SCALE_DEFAULTS[3];
+    public static double droppedItemRarityLegendary = DROPPED_ITEM_RARITY_SCALE_DEFAULTS[4];
+    public static double droppedItemRarityMythic = DROPPED_ITEM_RARITY_SCALE_DEFAULTS[5];
+    public static double droppedItemRarityDivine = DROPPED_ITEM_RARITY_SCALE_DEFAULTS[6];
+    public static double droppedItemRaritySpecial = DROPPED_ITEM_RARITY_SCALE_DEFAULTS[7];
+    public static double droppedItemRarityVerySpecial = DROPPED_ITEM_RARITY_SCALE_DEFAULTS[8];
+    public static double droppedItemRarityUltimate = DROPPED_ITEM_RARITY_SCALE_DEFAULTS[9];
+    public static double droppedItemRarityAdmin = DROPPED_ITEM_RARITY_SCALE_DEFAULTS[10];
     
     public static boolean oldSneakingEnabled = false;
     
@@ -394,9 +416,19 @@ public class ConfigManager {
         registerField("FancyCreeperVeil", Boolean.class,
             c -> ConfigManager.fancyCreeperVeilEnabled,
             (c, v) -> ConfigManager.fancyCreeperVeilEnabled = (Boolean) v);
+        registerField("DroppedItem", Boolean.class,
+            c -> ConfigManager.droppedItemEnabled,
+            (c, v) -> ConfigManager.droppedItemEnabled = (Boolean) v);
         registerField("2DdroppedItem", Boolean.class,
             c -> ConfigManager.twoDdroppedItemEnabled,
             (c, v) -> ConfigManager.twoDdroppedItemEnabled = (Boolean) v);
+        registerField("DroppedItemRarityScale", Boolean.class,
+            c -> ConfigManager.droppedItemRarityScaleGroupExpanded,
+            (c, v) -> ConfigManager.droppedItemRarityScaleGroupExpanded = (Boolean) v);
+        registerField("DroppedItemRarityScaleEnabled", Boolean.class,
+            c -> ConfigManager.droppedItemRarityScaleEnabled,
+            (c, v) -> ConfigManager.droppedItemRarityScaleEnabled = (Boolean) v);
+        registerDroppedItemRarityScaleFields();
         registerField("OldSneaking", Boolean.class,
             c -> ConfigManager.oldSneakingEnabled,
             (c, v) -> ConfigManager.oldSneakingEnabled = (Boolean) v);
@@ -487,6 +519,83 @@ public class ConfigManager {
         CONFIG_FIELDS.put(key, new SettingField(key, getter, setter, type));
     }
 
+    private static void registerDroppedItemRarityScaleFields() {
+        registerField("DroppedItemRarityCommon", Double.class,
+            c -> ConfigManager.droppedItemRarityCommon,
+            (c, v) -> ConfigManager.droppedItemRarityCommon = (Double) v);
+        registerField("DroppedItemRarityUncommon", Double.class,
+            c -> ConfigManager.droppedItemRarityUncommon,
+            (c, v) -> ConfigManager.droppedItemRarityUncommon = (Double) v);
+        registerField("DroppedItemRarityRare", Double.class,
+            c -> ConfigManager.droppedItemRarityRare,
+            (c, v) -> ConfigManager.droppedItemRarityRare = (Double) v);
+        registerField("DroppedItemRarityEpic", Double.class,
+            c -> ConfigManager.droppedItemRarityEpic,
+            (c, v) -> ConfigManager.droppedItemRarityEpic = (Double) v);
+        registerField("DroppedItemRarityLegendary", Double.class,
+            c -> ConfigManager.droppedItemRarityLegendary,
+            (c, v) -> ConfigManager.droppedItemRarityLegendary = (Double) v);
+        registerField("DroppedItemRarityMythic", Double.class,
+            c -> ConfigManager.droppedItemRarityMythic,
+            (c, v) -> ConfigManager.droppedItemRarityMythic = (Double) v);
+        registerField("DroppedItemRarityDivine", Double.class,
+            c -> ConfigManager.droppedItemRarityDivine,
+            (c, v) -> ConfigManager.droppedItemRarityDivine = (Double) v);
+        registerField("DroppedItemRaritySpecial", Double.class,
+            c -> ConfigManager.droppedItemRaritySpecial,
+            (c, v) -> ConfigManager.droppedItemRaritySpecial = (Double) v);
+        registerField("DroppedItemRarityVerySpecial", Double.class,
+            c -> ConfigManager.droppedItemRarityVerySpecial,
+            (c, v) -> ConfigManager.droppedItemRarityVerySpecial = (Double) v);
+        registerField("DroppedItemRarityUltimate", Double.class,
+            c -> ConfigManager.droppedItemRarityUltimate,
+            (c, v) -> ConfigManager.droppedItemRarityUltimate = (Double) v);
+        registerField("DroppedItemRarityAdmin", Double.class,
+            c -> ConfigManager.droppedItemRarityAdmin,
+            (c, v) -> ConfigManager.droppedItemRarityAdmin = (Double) v);
+    }
+
+    public static double getDroppedItemRarityScale(com.shyeuar.baity.features.droppeditem.SkyblockItemRarity rarity) {
+        if (rarity == null || !rarity.hasScaleSlider()) {
+            return 1.0;
+        }
+        return switch (rarity) {
+            case COMMON -> droppedItemRarityCommon;
+            case UNCOMMON -> droppedItemRarityUncommon;
+            case RARE -> droppedItemRarityRare;
+            case EPIC -> droppedItemRarityEpic;
+            case LEGENDARY -> droppedItemRarityLegendary;
+            case MYTHIC -> droppedItemRarityMythic;
+            case DIVINE -> droppedItemRarityDivine;
+            case SPECIAL -> droppedItemRaritySpecial;
+            case VERY_SPECIAL -> droppedItemRarityVerySpecial;
+            case ULTIMATE -> droppedItemRarityUltimate;
+            case ADMIN -> droppedItemRarityAdmin;
+            default -> 1.0;
+        };
+    }
+
+    public static void setDroppedItemRarityScale(com.shyeuar.baity.features.droppeditem.SkyblockItemRarity rarity, double value) {
+        if (rarity == null || !rarity.hasScaleSlider()) {
+            return;
+        }
+        switch (rarity) {
+            case COMMON -> droppedItemRarityCommon = value;
+            case UNCOMMON -> droppedItemRarityUncommon = value;
+            case RARE -> droppedItemRarityRare = value;
+            case EPIC -> droppedItemRarityEpic = value;
+            case LEGENDARY -> droppedItemRarityLegendary = value;
+            case MYTHIC -> droppedItemRarityMythic = value;
+            case DIVINE -> droppedItemRarityDivine = value;
+            case SPECIAL -> droppedItemRaritySpecial = value;
+            case VERY_SPECIAL -> droppedItemRarityVerySpecial = value;
+            case ULTIMATE -> droppedItemRarityUltimate = value;
+            case ADMIN -> droppedItemRarityAdmin = value;
+            default -> {
+            }
+        }
+    }
+
     public static void saveConfig() {
         pendingSave = false;
         pendingSaveAt = 0L;
@@ -571,6 +680,8 @@ public class ConfigManager {
                 legacyKeyAliases.put("ThirdPersonCrosshair", "ThirdPersonBackCrosshair");
                 
                 legacyKeyAliases.put("FishHookTimerHideArmorStand", "FishHookTimerHideDefaultTimer");
+
+                boolean legacy2dDroppedItemPresent = false;
                 
                 for (String line : lines) {
                     if (line.trim().isEmpty()) continue;
@@ -580,6 +691,10 @@ public class ConfigManager {
                     
                     String key = line.substring(0, colonIdx);
                     String valueStr = line.substring(colonIdx + 1);
+
+                    if ("2DdroppedItem".equals(key)) {
+                        legacy2dDroppedItemPresent = true;
+                    }
                     
                     if (!CONFIG_FIELDS.containsKey(key) && legacyKeyAliases.containsKey(key)) {
                         key = legacyKeyAliases.get(key);
@@ -592,6 +707,13 @@ public class ConfigManager {
                     ConfigManager instance = null;
                             Object value = parseValue(valueStr, field.getType());
                             field.setValue(instance, value);
+                }
+
+                if (legacy2dDroppedItemPresent && !seenKeys.contains("DroppedItem") && ConfigManager.twoDdroppedItemEnabled) {
+                    ConfigManager.droppedItemEnabled = true;
+                }
+                if (ConfigManager.droppedItemEnabled && !seenKeys.contains("DroppedItemRarityScaleEnabled")) {
+                    ConfigManager.droppedItemRarityScaleEnabled = true;
                 }
             }
             boolean needSave = false;

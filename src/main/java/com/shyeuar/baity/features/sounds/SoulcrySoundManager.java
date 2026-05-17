@@ -11,7 +11,6 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundSource;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -64,10 +63,7 @@ public final class SoulcrySoundManager {
         if (soundManager == null) return;
         Identifier id = Identifier.fromNamespaceAndPath(MOD_ID, soundName);
         SoundEvent event = SoundEvent.createVariableRangeEvent(id);
-        float volume = client.options.getSoundSourceVolume(SoundSource.MASTER);
-        if (volume < 0f) volume = 0f;
-        if (volume > 1f) volume = 1f;
-        soundManager.play(SimpleSoundInstance.forUI(event, 1f, volume));
+        soundManager.play(SimpleSoundInstance.forUI(event, 1f, 1f));
     }
 
     private static File configBaityDir() {

@@ -59,6 +59,7 @@
     "TagBackgroundMixin",
     "NoTextShadowMixin",
     "DroppedItem2DMixin",
+    "ItemEntityRenderStateMixin",
     "OldSneakingMixin$OldSneakingCameraMixin",
     "OldSneakingMixin$OldSneakingHumanoidModelMixin",
     "OldSneakingMixin$OldSneakingLivingEntityRendererMixin",

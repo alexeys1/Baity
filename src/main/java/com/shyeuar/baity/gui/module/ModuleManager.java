@@ -6,6 +6,7 @@ import com.shyeuar.baity.gui.value.ButtonValue;
 import com.shyeuar.baity.gui.value.GroupValue;
 import com.shyeuar.baity.gui.value.GradientEditorValue;
 import com.shyeuar.baity.gui.value.TextLineInputValue;
+import com.shyeuar.baity.features.droppeditem.SkyblockItemRarity;
 import com.shyeuar.baity.gui.sync.ConfigSynchronizer;
 import com.shyeuar.baity.gui.tooltip.TooltipManager;
 import com.shyeuar.baity.config.ConfigManager;
@@ -627,10 +628,51 @@ public class ModuleManager {
             }
         );
         
-        ModuleRegistry.registerSimpleModule(
-            "2DdroppedItem", "2DdroppedItem", ModuleCategory.RENDER,
+        GroupValue droppedItemRarityScaleGroup = new GroupValue("rarity scale", "rarity scale", ModuleCategory.RENDER)
+            .setExpanded(ConfigManager.droppedItemRarityScaleGroupExpanded)
+            .setSubModuleSwitchChildName("enabled")
+            .addChild(new Option("enabled", "enabled", ConfigManager.droppedItemRarityScaleEnabled, ModuleCategory.RENDER));
+        java.util.ArrayList<ModuleRegistry.ValueConfigInfo> droppedItemValueConfigs = new java.util.ArrayList<>();
+        droppedItemValueConfigs.add(new ModuleRegistry.ValueConfigInfo(
+            "2D dropped item",
             () -> ConfigManager.twoDdroppedItemEnabled,
-            val -> ConfigManager.twoDdroppedItemEnabled = val
+            val -> ConfigManager.twoDdroppedItemEnabled = (Boolean) val
+        ));
+        droppedItemValueConfigs.add(new ModuleRegistry.ValueConfigInfo(
+            "rarity scale",
+            () -> ConfigManager.droppedItemRarityScaleGroupExpanded,
+            val -> ConfigManager.droppedItemRarityScaleGroupExpanded = (Boolean) val
+        ));
+        droppedItemValueConfigs.add(new ModuleRegistry.ValueConfigInfo(
+            "enabled",
+            () -> ConfigManager.droppedItemRarityScaleEnabled,
+            val -> ConfigManager.droppedItemRarityScaleEnabled = (Boolean) val
+        ));
+        for (SkyblockItemRarity rarity : SkyblockItemRarity.values()) {
+            if (!rarity.hasScaleSlider()) {
+                continue;
+            }
+            String sliderName = rarity.sliderName();
+            double defaultScale = ConfigManager.getDroppedItemRarityScale(rarity);
+            droppedItemRarityScaleGroup.addChild(new com.shyeuar.baity.gui.value.SliderValue(
+                sliderName, sliderName, defaultScale, 1.0, 3.5, 0.05, ModuleCategory.RENDER));
+            SkyblockItemRarity captured = rarity;
+            droppedItemValueConfigs.add(new ModuleRegistry.ValueConfigInfo(
+                sliderName,
+                () -> ConfigManager.getDroppedItemRarityScale(captured),
+                val -> ConfigManager.setDroppedItemRarityScale(captured, ((Number) val).doubleValue())
+            ));
+        }
+
+        ModuleRegistry.registerModuleWithValues(
+            "DroppedItem", "DroppedItem", ModuleCategory.RENDER,
+            () -> ConfigManager.droppedItemEnabled,
+            val -> ConfigManager.droppedItemEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new Option("2D dropped item", "2D dropped item", ConfigManager.twoDdroppedItemEnabled, ModuleCategory.RENDER),
+                droppedItemRarityScaleGroup
+            },
+            droppedItemValueConfigs.toArray(ModuleRegistry.ValueConfigInfo[]::new)
         );
         
         ModuleRegistry.registerSimpleModule(
@@ -703,7 +745,9 @@ public class ModuleManager {
         TooltipManager.registerTooltip("FancyCreeperVeil", "Replace the wither cloak ability creeper model to a fancy one.", 0xFFFFFF);
         TooltipManager.registerTooltip("NoSwimPose", "Only disables the swimming pose and eye height change on your client.", 0xFFFFFF);
         TooltipManager.registerTooltip("NoSwapAnimation", "Disable the animation of hotbar change.", 0xFFFFFF);
-        TooltipManager.registerTooltip("2DdroppedItem", "Render dropped items as 2D sprites.", 0xFFFFFF);
+        TooltipManager.registerTooltip("DroppedItem", "Client-side dropped item rendering tweaks.", 0xFFFFFF);
+        TooltipManager.registerTooltip("2D dropped item", "Render dropped items as 2D sprites.", 0xFFFFFF);
+        TooltipManager.registerTooltip("rarity scale", "Scale ground drops by Skyblock rarity.", 0xFFFFFF);
         TooltipManager.registerTooltip("OldSneaking",
             MessageUtils.createColoredText("Restore the sneaking animation of version 1.7.", 0xFFFFFF)
                 .append(MessageUtils.createColoredText(" Fake sneaking eye height!", 0xFFFF00)));

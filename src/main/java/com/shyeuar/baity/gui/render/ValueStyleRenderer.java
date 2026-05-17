@@ -176,7 +176,8 @@ public class ValueStyleRenderer {
                               mouseX, mouseY, localAlpha,
                               getDisplayTextFormatter, listeningButtonValueName);
       } else if (style == ValueStyle.GROUP && value instanceof GroupValue) {
-          renderGroupValue(context, client, (GroupValue) value, theme, x1, y, x2, subOptionHeight, localAlpha);
+          renderGroupValue(context, client, (GroupValue) value, theme, x1, y, x2, subOptionHeight,
+                  mouseX, mouseY, localAlpha, getTooltipText, getTooltipTextWithColors, hoveredTooltipInfo);
        } else if (style == ValueStyle.SLIDER && value instanceof SliderValue) {
            renderSliderValue(context, client, module, (SliderValue) value, theme,
                             x1, y, x2, subOptionHeight,
@@ -291,10 +292,25 @@ public class ValueStyleRenderer {
 
    public static void renderGroupValue(GuiGraphics context, Minecraft client, GroupValue groupValue, Theme theme,
                                        float x1, float y, float x2, float subOptionHeight,
-                                       int localAlpha) {
-      int baseValueColor = new java.awt.Color(40, 40, 40, 50).getRGB();
+                                       float mouseX, float mouseY, int localAlpha,
+                                       java.util.function.Function<String, String> getTooltipText,
+                                       java.util.function.Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
+                                       ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
+      boolean subHovered = GuiRenderUtil.isHovered(x1, y, x2, y + subOptionHeight, mouseX, mouseY);
+      int baseValueColor = subHovered ? new java.awt.Color(60, 60, 60, 80).getRGB()
+              : new java.awt.Color(40, 40, 40, 50).getRGB();
       int valueColor = (baseValueColor & 0x00FFFFFF) | (localAlpha << 24);
       GuiRenderUtil.draw3DRect(context, x1, y, x2, y + subOptionHeight, valueColor, 6f);
+
+      if (subHovered && hoveredTooltipInfo != null) {
+          String tooltip = getTooltipText.apply(groupValue.getName());
+          if (tooltip != null) {
+              hoveredTooltipInfo.tooltip = tooltip;
+              hoveredTooltipInfo.tooltipText = getTooltipTextWithColors.apply(groupValue.getName());
+              hoveredTooltipInfo.x = (int) (mouseX + 5);
+              hoveredTooltipInfo.y = (int) (mouseY + 5);
+          }
+      }
 
       int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
       context.drawString(client.font, groupValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);

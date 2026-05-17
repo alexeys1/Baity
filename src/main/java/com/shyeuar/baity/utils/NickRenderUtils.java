@@ -86,7 +86,18 @@ public final class NickRenderUtils {
         if (screen instanceof ChatScreen) {
             return false;
         }
-        return true;
+        if (screen.isPauseScreen()) {
+            return true;
+        }
+        String cn = screen.getClass().getName();
+        if (cn.startsWith("com.shyeuar.baity.gui.")) {
+            return true;
+        }
+        return cn.startsWith("com.terraformersmc.modmenu")
+            || cn.startsWith("me.shedaniel.clothconfig")
+            || cn.startsWith("me.shedaniel.autoconfig")
+            || cn.startsWith("dev.isxander.yacl")
+            || cn.startsWith("io.wispforest.owo.config");
     }
     public static String handleString(String text) {
         if (text == null || text.isEmpty()) return text;
@@ -152,8 +163,6 @@ public final class NickRenderUtils {
     public static void endClickGuiRenderScope() {
         CLICK_GUI_RENDER_SCOPE.set(Boolean.FALSE);
     }
-
-    
 
     public static FormattedText handleFormattedText(FormattedText text) {
         if (text == null) return null;

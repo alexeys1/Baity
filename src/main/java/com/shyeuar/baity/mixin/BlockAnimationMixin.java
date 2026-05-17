@@ -277,11 +277,10 @@ public abstract class BlockAnimationMixin {
             if (BlockAnimationUtils.isUsingConsumableAnimation(mc.player)) return;
             if (!BlockAnimationUtils.isPlayerBlockingWithSword(mc.player)) return;
 
-            InteractionHand blockingHand = BlockAnimationUtils.getBlockingHand(mc.player);
-            if (blockingHand == null) return;
-            
-            InteractionHand interactionHand =
-                    renderState.mainArm == HumanoidArm.RIGHT ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+            if (BlockAnimationUtils.getBlockingHand(mc.player) == null) return;
+
+            HumanoidArm swordArm = avatarState.mainArm;
+            ModelPart arm = swordArm == HumanoidArm.RIGHT ? this.rightArm : this.leftArm;
 
             float raiseFactor = 1f;
             float rotorWobble = 0f;
@@ -292,11 +291,7 @@ public abstract class BlockAnimationMixin {
                         .getRotorThirdPersonWobbleArmRadians();
             }
 
-            if (blockingHand == interactionHand) {
-                this.rightArm.xRot = this.rightArm.xRot - (Mth.PI * 2.0F / 10.0F) * raiseFactor + rotorWobble;
-            } else {
-                this.leftArm.xRot = this.leftArm.xRot - (Mth.PI * 2.0F / 10.0F) * raiseFactor + rotorWobble;
-            }
+            arm.xRot = arm.xRot - (Mth.PI * 2.0F / 10.0F) * raiseFactor + rotorWobble;
         }
     }
     

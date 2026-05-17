@@ -31,6 +31,8 @@ public final class BlockAnimationRenderer {
     private static final float ROTOR_THIRD_PERSON_TIP_PITCH_DEGREES = 22f;
     private static final float ROTOR_THIRD_PERSON_EXTRA_LIFT_LOCAL_Y = 0.080f;
 
+    private static final float FIRST_PERSON_CIRCLE_AXIS_SIDE_OFFSET = 0.15f;
+
     private BlockAnimationRenderer() {}
 
     public enum RenderResult {
@@ -52,6 +54,7 @@ public final class BlockAnimationRenderer {
             float equipProgress) {
 
         if (!BlockAnimationUtils.isFeatureActive()) return RenderResult.PASS;
+        if (interactionHand != InteractionHand.MAIN_HAND) return RenderResult.PASS;
         if (BlockAnimationUtils.isUsingConsumableAnimation(player)
                 && interactionHand == player.getUsedItemHand()) {
             return RenderResult.PASS;
@@ -78,18 +81,18 @@ public final class BlockAnimationRenderer {
         HumanoidArm handSide = mainHand ? player.getMainArm() : player.getMainArm().getOpposite();
         boolean isHandSideRight = handSide == HumanoidArm.RIGHT;
 
+        com.shyeuar.baity.gui.module.Module chModule =
+                com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("CustomHandHolding");
+        com.shyeuar.baity.features.CustomHandHoldingManager ch =
+                com.shyeuar.baity.features.CustomHandHoldingManager.getInstance();
+        boolean customHand = chModule != null && chModule.isEnabled();
+        if (customHand) {
+            ch.applyPosition(poseStack, handSide);
+        }
+
         ItemInHandRendererAccessor accessor =
                 (ItemInHandRendererAccessor) itemInHandRenderer;
         accessor.baity$callApplyItemArmTransform(poseStack, handSide, equipProgress);
-
-        com.shyeuar.baity.gui.module.Module chModule =
-                com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("CustomHandHolding");
-        if (chModule != null && chModule.isEnabled()) {
-            com.shyeuar.baity.features.CustomHandHoldingManager.getInstance()
-                    .applyPosition(poseStack, handSide);
-            com.shyeuar.baity.features.CustomHandHoldingManager.getInstance()
-                    .applyRotation(poseStack, handSide);
-        }
 
         if (BlockAnimationUtils.isInteractAnimationsEnabled() && !BlockAnimationUtils.isSpinAnimaMode()) {
             accessor.baity$callApplyItemArmAttackTransform(poseStack, handSide, swingProgress);
@@ -100,9 +103,9 @@ public final class BlockAnimationRenderer {
         }
         applySpinModeItemRotationFirstPerson(poseStack, handSide, partialTick, player, blockingNow);
 
-        if (chModule != null && chModule.isEnabled()) {
-            com.shyeuar.baity.features.CustomHandHoldingManager.getInstance()
-                    .applyScale(poseStack);
+        if (customHand) {
+            ch.applyRotation(poseStack, handSide);
+            ch.applyScale(poseStack);
         }
 
         itemInHandRenderer.renderItem(player,
@@ -146,7 +149,19 @@ public final class BlockAnimationRenderer {
             if (Math.abs(angle) < 1e-5f) return;
             Vec3 look = player.getViewVector(partialTick);
             Vector3f view = new Vector3f((float) look.x, (float) look.y, (float) look.z);
-            applyCircleSpinAboutWorldDirection(poseStack, dir, -angle, view);
+            Vector3f side = view.cross(new Vector3f(0f, 1f, 0f), new Vector3f());
+            if (side.lengthSquared() < 1e-8f) {
+                side = view.cross(new Vector3f(1f, 0f, 0f), new Vector3f());
+            }
+            side.normalize();
+            float sideSign = handSide == HumanoidArm.RIGHT ? 1f : -1f;
+            Vector3f axis = new Vector3f(view).fma(sideSign * FIRST_PERSON_CIRCLE_AXIS_SIDE_OFFSET, side);
+            if (axis.lengthSquared() < 1e-12f) {
+                axis = view;
+            } else {
+                axis.normalize();
+            }
+            applyCircleSpinAboutWorldDirection(poseStack, dir, -angle, axis);
         }
     }
 

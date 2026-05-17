@@ -68,14 +68,12 @@ public final class BlockAnimationUtils {
     public static boolean canSwordBlock(Player player) {
         if (!isFeatureActive()) return false;
         if (player == null) return false;
-        Item mainHandItem = player.getMainHandItem().getItem();
-        Item offHandItem = player.getOffhandItem().getItem();
-        return isSword(mainHandItem) || isSword(offHandItem);
+        return isSword(player.getMainHandItem().getItem());
     }
-    
+
     public static InteractionHand getBlockingHand(Player player) {
         if (!canSwordBlock(player)) return null;
-        return isSword(player.getMainHandItem().getItem()) ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+        return InteractionHand.MAIN_HAND;
     }
 
     public static boolean isSword(Item item) {

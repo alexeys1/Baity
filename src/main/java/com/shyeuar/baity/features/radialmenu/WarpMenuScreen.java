@@ -76,6 +76,7 @@ public class WarpMenuScreen extends Screen {
             new WarpDestination("Dungeon Hub", "warp dh", "dungeon_hub"),
             new WarpDestination("Wizard Tower (Rift)", "warp rift", "wizard_tower_rift"),
             new WarpDestination("Jerry's Workshop", "warp jerry", "jerrys_workshop"),
+            new WarpDestination("Lotus Atoll", "warp lotus", "lotus_atoll"),
             new WarpDestination("Backwater Bayou", "warp bayou", "backwater_bayou"),
             new WarpDestination("Garden", "warp garden", "garden")
         ));

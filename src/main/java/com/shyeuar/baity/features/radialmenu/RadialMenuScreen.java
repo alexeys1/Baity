@@ -1,8 +1,10 @@
 package com.shyeuar.baity.features.radialmenu;
 
+import com.shyeuar.baity.gui.internal.ClickGuiState;
 import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.gui.owo.RadialMenuComponent;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
+import net.minecraft.client.gui.GuiGraphics;
 import io.wispforest.owo.ui.container.UIContainers;
 import io.wispforest.owo.ui.container.StackLayout;
 import io.wispforest.owo.ui.core.OwoUIAdapter;
@@ -59,6 +61,36 @@ public class RadialMenuScreen extends BaseOwoScreen<StackLayout> {
     @Override
     protected void build(StackLayout rootComponent) {
         rootComponent.child(this.wheel);
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        Minecraft client = Minecraft.getInstance();
+        float ratio = ClickGuiState.fixedScaleRatio(client);
+        int centerX = this.width / 2;
+        int centerY = this.height / 2;
+        mouseX = Math.round(ClickGuiState.fixedCoord(mouseX, centerX, ratio));
+        mouseY = Math.round(ClickGuiState.fixedCoord(mouseY, centerY, ratio));
+        try {
+            wheel.setGuiGraphics(graphics);
+            super.render(graphics, mouseX, mouseY, delta);
+            var pose = graphics.pose();
+            pose.pushMatrix();
+            pose.translate(centerX, centerY);
+            pose.scale(ratio, ratio);
+            pose.translate(-centerX, -centerY);
+            try {
+                RadialMenuComponent.drawCenterPlayerHead(graphics, centerX, centerY);
+            } finally {
+                pose.popMatrix();
+            }
+        } finally {
+            wheel.setGuiGraphics(null);
+        }
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.shyeuar.baity.gui.internal;
 
 import com.shyeuar.baity.gui.value.ModuleCategory;
+import net.minecraft.client.Minecraft;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -313,6 +314,17 @@ public class ClickGuiState {
             appearSpeed = 0f;
             exitSpeed = 0f;
         }
+    }
+
+    public static float fixedScaleRatio(Minecraft client) {
+        if (client == null || client.options == null) return 1f;
+        int guiScaleOption = client.options.guiScale().get();
+        float actual = (guiScaleOption <= 0) ? (float) client.getWindow().getGuiScale() : guiScaleOption;
+        return BASE_GUI_SCALE / actual;
+    }
+
+    public static float fixedCoord(float screenCoord, float pivot, float ratio) {
+        return pivot + (screenCoord - pivot) / ratio;
     }
 }
 

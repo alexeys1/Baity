@@ -24,8 +24,8 @@ public class RadialMenu {
 
     static {
         sections.add(new RadialSection("warpmenu", "\u2690", "WarpMenu"));
-        sections.add(new RadialSection("ah", "\u2692", "AH"));
-        sections.add(new RadialSection("bz", "\u2696", "BZ"));
+        sections.add(new RadialSection("ah", "\u2692", "Auction"));
+        sections.add(new RadialSection("bz", "\u2696", "Bazaar"));
     }
 
     public static class RadialSection {
@@ -83,7 +83,6 @@ public class RadialMenu {
         if (isOpen) return;
         isOpen = true;
         long windowHandle = client.getWindow().handle();
-        GLFW.glfwSetInputMode(windowHandle, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
         double centerX = client.getWindow().getScreenWidth() / 2.0;
         double centerY = client.getWindow().getScreenHeight() / 2.0;
         GLFW.glfwSetCursorPos(windowHandle, centerX, centerY);
@@ -93,7 +92,6 @@ public class RadialMenu {
     public static void forceClose(Minecraft client) {
         if (!isOpen) return;
         isOpen = false;
-        GLFW.glfwSetInputMode(client.getWindow().handle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
     }
 
     public static void activate(Minecraft client, int index) {

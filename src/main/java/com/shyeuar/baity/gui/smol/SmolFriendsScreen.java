@@ -38,16 +38,6 @@ public class SmolFriendsScreen extends Screen {
         this.parentScreen = parentScreen;
     }
 
-    private static float actualGuiScale(Minecraft mc) {
-        if (mc == null || mc.options == null) return 3f;
-        int guiScaleOption = mc.options.guiScale().get();
-        return (guiScaleOption <= 0) ? (float) mc.getWindow().getGuiScale() : guiScaleOption;
-    }
-
-    private static float scaleRatio(Minecraft mc) {
-        return ClickGuiState.BASE_GUI_SCALE / actualGuiScale(mc);
-    }
-
     @Override
     protected void init() {
         super.init();
@@ -63,7 +53,7 @@ public class SmolFriendsScreen extends Screen {
         this.renderMenuBackground(guiGraphics);
 
         Minecraft mc = Minecraft.getInstance();
-        float sr = scaleRatio(mc);
+        float sr = ClickGuiState.fixedScaleRatio(mc);
         float dispW = PANEL_WIDTH * sr;
         float dispH = PANEL_HEIGHT * sr;
         float originX = (this.width - dispW) / 2f;
@@ -151,7 +141,7 @@ public class SmolFriendsScreen extends Screen {
         }
 
         Minecraft mc = Minecraft.getInstance();
-        float sr = scaleRatio(mc);
+        float sr = ClickGuiState.fixedScaleRatio(mc);
         float dispW = PANEL_WIDTH * sr;
         float dispH = PANEL_HEIGHT * sr;
         float originX = (this.width - dispW) / 2f;
@@ -246,7 +236,7 @@ public class SmolFriendsScreen extends Screen {
         }
 
         Minecraft mc = Minecraft.getInstance();
-        float sr = scaleRatio(mc);
+        float sr = ClickGuiState.fixedScaleRatio(mc);
         float dispW = PANEL_WIDTH * sr;
         float dispH = PANEL_HEIGHT * sr;
         float originX = (this.width - dispW) / 2f;

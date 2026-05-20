@@ -355,12 +355,12 @@ public class RadialMenuComponent extends BaseUIComponent {
 
     public static void drawRadialLabel(GuiGraphics graphics, Font font, String text, float x, float y) {
         if (text == null || text.isEmpty()) return;
-        graphics.drawString(font, text, Math.round(x), Math.round(y), LABEL_TEXT_COLOR, false);
+        graphics.drawString(font, text, Math.round(x), Math.round(y), LABEL_TEXT_COLOR, true);
     }
 
     public static void drawLabel(GuiGraphics graphics, Font font, String text, float x, float y, int color) {
         if (text == null || text.isEmpty()) return;
-        graphics.drawString(font, text, Math.round(x), Math.round(y), color, false);
+        graphics.drawString(font, text, Math.round(x), Math.round(y), color, true);
     }
 
     private static double sectorIconRadius(int innerRadius, int outerRadius) {

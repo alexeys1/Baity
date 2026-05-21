@@ -150,6 +150,13 @@ public class ConfigManager {
     public static boolean nickTweaksChromaGroupExpanded = false;
     public static int nickTweaksGradientStartColor = 0xFFFFFF;
     public static int nickTweaksGradientEndColor = 0xFFFFFF;
+
+    public static boolean enchantLoreEnabled = false;
+    public static boolean enchantLoreMaxRainbowGroupExpanded = false;
+    public static double enchantLoreRainbowSpeed = 1.0;
+    public static double enchantLoreRainbowSaturation = 0.8;
+    public static int enchantLoreRainbowGradient = 100;
+    public static int enchantLoreRainbowAngle = 45;
     public static boolean nametagDefaultNametag = false;
     public static String baityPresenceSyncUrl = "https://baity-presence-sync.1427637445.workers.dev/users.json";
     public static boolean baityPresenceSyncEnabled = true;
@@ -483,6 +490,24 @@ public class ConfigManager {
         registerField("NickTweaksGradientEndColor", Integer.class,
             c -> ConfigManager.nickTweaksGradientEndColor,
             (c, v) -> ConfigManager.nickTweaksGradientEndColor = (Integer) v);
+        registerField("EnchantLore", Boolean.class,
+            c -> ConfigManager.enchantLoreEnabled,
+            (c, v) -> ConfigManager.enchantLoreEnabled = (Boolean) v);
+        registerField("EnchantLoreMaxRainbowGroupExpanded", Boolean.class,
+            c -> ConfigManager.enchantLoreMaxRainbowGroupExpanded,
+            (c, v) -> ConfigManager.enchantLoreMaxRainbowGroupExpanded = (Boolean) v);
+        registerField("EnchantLoreRainbowSpeed", Double.class,
+            c -> ConfigManager.enchantLoreRainbowSpeed,
+            (c, v) -> ConfigManager.enchantLoreRainbowSpeed = (Double) v);
+        registerField("EnchantLoreRainbowSaturation", Double.class,
+            c -> ConfigManager.enchantLoreRainbowSaturation,
+            (c, v) -> ConfigManager.enchantLoreRainbowSaturation = (Double) v);
+        registerField("EnchantLoreRainbowGradient", Integer.class,
+            c -> ConfigManager.enchantLoreRainbowGradient,
+            (c, v) -> ConfigManager.enchantLoreRainbowGradient = (Integer) v);
+        registerField("EnchantLoreRainbowAngle", Integer.class,
+            c -> ConfigManager.enchantLoreRainbowAngle,
+            (c, v) -> ConfigManager.enchantLoreRainbowAngle = (Integer) v);
         registerField("BaityPresenceSyncUrl", String.class,
             c -> ConfigManager.baityPresenceSyncUrl,
             (c, v) -> ConfigManager.baityPresenceSyncUrl = (String) v);

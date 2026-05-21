@@ -58,6 +58,7 @@ public class Baity implements ClientModInitializer {
         
         com.shyeuar.baity.features.fishing.FishHookTimer.init();
         com.shyeuar.baity.features.chat.ChatChannelSwitcher.init();
+        com.shyeuar.baity.features.enchantlore.EnchantLore.init();
         
         registerCustomSounds();
         

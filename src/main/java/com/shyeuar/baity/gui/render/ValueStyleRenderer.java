@@ -6,7 +6,9 @@ import com.shyeuar.baity.gui.value.Value;
 import com.shyeuar.baity.gui.value.ValueStyle;
 import com.shyeuar.baity.gui.value.ButtonValue;
 import com.shyeuar.baity.gui.value.CrosshairPainterValue;
+import com.shyeuar.baity.gui.value.EnchantLoreColorEditorValue;
 import com.shyeuar.baity.gui.value.GradientEditorValue;
+import com.shyeuar.baity.features.enchantlore.EnchantLore;
 import com.shyeuar.baity.gui.value.GroupValue;
 import com.shyeuar.baity.gui.value.SliderValue;
 import com.shyeuar.baity.gui.value.TextLineInputValue;
@@ -117,6 +119,139 @@ public class ValueStyleRenderer {
            resetText
        );
    }
+
+   public static class GradientEditorBottomLayout {
+       public final float mapX1, mapY1, mapX2, mapY2;
+       public final float syncX1, syncY1, syncX2, syncY2;
+       public final float resetX1, resetY1, resetX2, resetY2;
+       public final float inputX1, inputY, inputX2;
+       public final boolean hasReset;
+
+       public GradientEditorBottomLayout(float mapX1, float mapY1, float mapX2, float mapY2,
+                                         float syncX1, float syncY1, float syncX2, float syncY2,
+                                         float resetX1, float resetY1, float resetX2, float resetY2,
+                                         float inputX1, float inputY, float inputX2,
+                                         boolean hasReset) {
+           this.mapX1 = mapX1;
+           this.mapY1 = mapY1;
+           this.mapX2 = mapX2;
+           this.mapY2 = mapY2;
+           this.syncX1 = syncX1;
+           this.syncY1 = syncY1;
+           this.syncX2 = syncX2;
+           this.syncY2 = syncY2;
+           this.resetX1 = resetX1;
+           this.resetY1 = resetY1;
+           this.resetX2 = resetX2;
+           this.resetY2 = resetY2;
+           this.inputX1 = inputX1;
+           this.inputY = inputY;
+           this.inputX2 = inputX2;
+           this.hasReset = hasReset;
+       }
+   }
+
+   public static GradientEditorBottomLayout computeGradientEditorBottomLayout(
+           Minecraft client, float x1, float y, float x2, float blockHeight,
+           String hexDisplay, boolean withReset) {
+       float syncX2 = x2 - 8f;
+       float syncY2 = y + blockHeight - 8f;
+       float syncX1 = syncX2 - 48f;
+       float syncY1 = syncY2 - 14f;
+       float rowRight = syncX1 - 8f;
+       float resetX1 = 0f;
+       float resetY1 = syncY1;
+       float resetX2 = 0f;
+       float resetY2 = syncY2;
+       if (withReset) {
+           float resetW = 40f;
+           resetX2 = rowRight;
+           resetX1 = resetX2 - resetW;
+           rowRight = resetX1 - 8f;
+       }
+       int hexW = client.font.width(hexDisplay);
+       float inputX2 = rowRight;
+       float inputX1 = inputX2 - hexW;
+       float inputY = syncY2 - 3f;
+       float mapX1 = x1 + 8f;
+       float mapY1 = y + 22f;
+       float mapX2 = Math.max(mapX1 + 40f, (x2 - 48f) - 8f);
+       float mapY2 = y + blockHeight - 40f;
+       return new GradientEditorBottomLayout(
+               mapX1, mapY1, mapX2, mapY2,
+               syncX1, syncY1, syncX2, syncY2,
+               resetX1, resetY1, resetX2, resetY2,
+               inputX1, inputY, inputX2,
+               withReset);
+   }
+
+   private static void drawCenteredButtonLabel(GuiGraphics context, net.minecraft.client.gui.Font font,
+                                               String text, float x1, float y1, float x2, float y2, int color) {
+       int w = font.width(text);
+       int h = font.lineHeight;
+       int x = (int) (x1 + (x2 - x1 - w) * 0.5f);
+       int y = (int) (y1 + (y2 - y1 - h) * 0.5f);
+       context.drawString(font, text, x, y, color, false);
+   }
+
+   private static void drawThickLine(GuiGraphics context, float x0, float y0, float x1, float y1, int thickness, int color) {
+       int steps = Math.max(1, (int) (Math.hypot(x1 - x0, y1 - y0) * 2f));
+       for (int i = 0; i <= steps; i++) {
+           float t = i / (float) steps;
+           float px = x0 + (x1 - x0) * t;
+           float py = y0 + (y1 - y0) * t;
+           int half = thickness / 2;
+           context.fill((int) px - half, (int) py - half, (int) px + half + 1, (int) py + half + 1, color);
+       }
+   }
+
+   private static void drawToggleCheckmark(GuiGraphics context, float x1, float y1, float x2, float y2, int color) {
+       float xL = x1 + 4f;
+       float yL = y1 + (y2 - y1) * 0.58f;
+       float xM = x1 + (x2 - x1) * 0.36f;
+       float yM = y2 - 4f;
+       float xR = x2 - 4f;
+       float yR = y1 + 4f;
+       drawThickLine(context, xL, yL, xM, yM, 2, color);
+       drawThickLine(context, xM, yM, xR, yR, 2, color);
+   }
+
+   private static void renderGradientEditorBottomControls(GuiGraphics context, Minecraft client, Theme theme,
+                                                          GradientEditorBottomLayout bottom, String selectedHex,
+                                                          boolean editingHex, int localAlpha,
+                                                          ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo,
+                                                          float mouseX, float mouseY,
+                                                          String syncTooltip) {
+       int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       boolean inputHovered = GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, mouseX, mouseY);
+       int hoverYellow = (new java.awt.Color(255, 255, 0, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       int inputTextColor = editingHex ? hoverYellow : (inputHovered ? hoverYellow : textColor);
+       context.drawString(client.font, selectedHex, (int) bottom.inputX1, (int) (bottom.inputY - 9), inputTextColor, false);
+       int lineColor = inputHovered || editingHex
+               ? hoverYellow
+               : ((new java.awt.Color(120, 120, 120, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
+       GuiRenderUtil.drawRoundedRect(context, bottom.inputX1, bottom.inputY, bottom.inputX2, bottom.inputY + 1, 0, lineColor);
+       if (bottom.hasReset) {
+           boolean resetHovered = GuiRenderUtil.isHovered(bottom.resetX1, bottom.resetY1, bottom.resetX2, bottom.resetY2, mouseX, mouseY);
+           int resetBg = resetHovered
+                   ? ((new java.awt.Color(60, 60, 60, 80).getRGB() & 0x00FFFFFF) | (localAlpha << 24))
+                   : ((new java.awt.Color(40, 40, 40, 50).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
+           GuiRenderUtil.draw3DRect(context, bottom.resetX1, bottom.resetY1, bottom.resetX2, bottom.resetY2, resetBg, 0f);
+           drawCenteredButtonLabel(context, client.font, "Reset", bottom.resetX1, bottom.resetY1, bottom.resetX2, bottom.resetY2, textColor);
+       }
+       boolean syncHovered = GuiRenderUtil.isHovered(bottom.syncX1, bottom.syncY1, bottom.syncX2, bottom.syncY2, mouseX, mouseY);
+       int syncBg = syncHovered
+               ? ((new java.awt.Color(60, 60, 60, 80).getRGB() & 0x00FFFFFF) | (localAlpha << 24))
+               : ((new java.awt.Color(40, 40, 40, 50).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
+       GuiRenderUtil.draw3DRect(context, bottom.syncX1, bottom.syncY1, bottom.syncX2, bottom.syncY2, syncBg, 0f);
+       drawCenteredButtonLabel(context, client.font, "Sync", bottom.syncX1, bottom.syncY1, bottom.syncX2, bottom.syncY2, textColor);
+       if (syncHovered && hoveredTooltipInfo != null && syncTooltip != null) {
+           hoveredTooltipInfo.tooltip = syncTooltip;
+           hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal(syncTooltip);
+           hoveredTooltipInfo.x = (int) (mouseX + 5);
+           hoveredTooltipInfo.y = (int) (mouseY + 5);
+       }
+   }
    
    public static void renderValue(GuiGraphics context, Minecraft client, Module module, Value value, Theme theme,
                                  float x1, float y, float x2, float subOptionHeight,
@@ -188,6 +323,8 @@ public class ValueStyleRenderer {
                                    mouseX, mouseY, localAlpha);
       } else if (style == ValueStyle.GRADIENT_EDITOR && value instanceof GradientEditorValue) {
           renderGradientEditorValue(context, client, (GradientEditorValue) value, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingGradient, gradientInputText, hoveredTooltipInfo);
+      } else if (style == ValueStyle.ENCHANT_LORE_COLOR_EDITOR && value instanceof EnchantLoreColorEditorValue) {
+          renderEnchantLoreColorEditorValue(context, client, (EnchantLoreColorEditorValue) value, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingGradient, gradientInputText, hoveredTooltipInfo);
       } else if (style == ValueStyle.CROSSHAIR_PAINTER && value instanceof CrosshairPainterValue) {
           renderCrosshairPainterValue(context, client, (CrosshairPainterValue) value, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, hoveredTooltipInfo);
       } else if (style == ValueStyle.TEXT_LINE_INPUT && value instanceof TextLineInputValue) {
@@ -741,10 +878,15 @@ public class ValueStyleRenderer {
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        context.drawString(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
 
-       float mapX1 = x1 + 8;
-       float mapY1 = y + 22;
-       float mapX2 = x2 - 60;
-       float mapY2 = y + blockHeight - 40;
+       String selectedHex = value.getSelectedHex();
+       if (editingGradient != null && "gradient editor".equals(editingGradient.valueName)) {
+           selectedHex = "#" + gradientInputText.toUpperCase(java.util.Locale.ROOT);
+       }
+       GradientEditorBottomLayout bottom = computeGradientEditorBottomLayout(client, x1, y, x2, blockHeight, selectedHex, false);
+       float mapX1 = bottom.mapX1;
+       float mapY1 = bottom.mapY1;
+       float mapX2 = bottom.mapX2;
+       float mapY2 = bottom.mapY2;
        drawHueSatMap(context, mapX1, mapY1, mapX2, mapY2, localAlpha);
 
       float p1x = mapX1 + value.getSelectedHue() * (mapX2 - mapX1);
@@ -792,38 +934,9 @@ public class ValueStyleRenderer {
       drawScaledLabel(context, client, "L", box1X1 + 6, box1Y2 + 2, textColor, 0.85f);
       drawScaledLabel(context, client, "R", box1X1 + 6, box2Y1 - 8, textColor, 0.85f);
 
-       String selectedHex = value.getSelectedHex();
-       if (editingGradient != null && "gradient editor".equals(editingGradient.valueName)) {
-           selectedHex = "#" + gradientInputText.toUpperCase(java.util.Locale.ROOT);
-       }
-      int inputWidth = client.font.width("#FFFFFF");
-       float inputX2 = mapX2;
-       float inputX1 = inputX2 - inputWidth;
-      float syncX2 = x2 - 8;
-      float syncY2 = y + blockHeight - 8;
-      float syncX1 = syncX2 - 48;
-      float syncY1 = syncY2 - 14;
-      float inputY = syncY2 - 3;
-      boolean inputHovered = GuiRenderUtil.isHovered(inputX1, inputY - 12, inputX2, inputY + 6, mouseX, mouseY);
-      int hoverYellow = (new java.awt.Color(255, 255, 0, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-      int inputTextColor = (editingGradient != null) ? hoverYellow : (inputHovered ? hoverYellow : textColor);
-       context.drawString(client.font, selectedHex, (int) inputX1, (int) (inputY - 9), inputTextColor, false);
-      int lineColor = inputHovered || editingGradient != null
-          ? hoverYellow
-          : ((new java.awt.Color(120, 120, 120, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
-      GuiRenderUtil.drawRoundedRect(context, inputX1, inputY, inputX2, inputY + 1, 0, lineColor);
-      boolean syncHovered = GuiRenderUtil.isHovered(syncX1, syncY1, syncX2, syncY2, mouseX, mouseY);
-      int syncBg = syncHovered
-          ? ((new java.awt.Color(60, 60, 60, 80).getRGB() & 0x00FFFFFF) | (localAlpha << 24))
-          : ((new java.awt.Color(40, 40, 40, 50).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
-      GuiRenderUtil.draw3DRect(context, syncX1, syncY1, syncX2, syncY2, syncBg, 0f);
-       context.drawString(client.font, "Sync", (int) (syncX1 + 12), (int) (syncY1 + 3), textColor, false);
-      if (syncHovered && hoveredTooltipInfo != null) {
-          hoveredTooltipInfo.tooltip = "Set the selected color to the unselected color.";
-          hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal("Set the selected color to the unselected color.");
-          hoveredTooltipInfo.x = (int) (mouseX + 5);
-          hoveredTooltipInfo.y = (int) (mouseY + 5);
-      }
+       boolean editingHex = editingGradient != null && "gradient editor".equals(editingGradient.valueName);
+       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex, localAlpha,
+               hoveredTooltipInfo, mouseX, mouseY, "Set the selected color to the unselected color.");
 
       String raw = com.shyeuar.baity.config.ConfigManager.nickTweaksNickChanger;
       if (raw == null || raw.isBlank()) {
@@ -842,6 +955,145 @@ public class ValueStyleRenderer {
       context.drawString(client.font, seq, (int) (x1 + 10), (int) (y + blockHeight - 18), 0xFFFFFFFF, false);
    }
 
+   public static void renderEnchantLoreColorEditorValue(GuiGraphics context, Minecraft client, EnchantLoreColorEditorValue value, Theme theme,
+                                                        float x1, float y, float x2, float subOptionHeight, float mouseX, float mouseY, int localAlpha,
+                                                        com.shyeuar.baity.gui.internal.ClickGuiState.GradientInputInfo editingGradient,
+                                                        String gradientInputText,
+                                                        ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
+       GradientEditorValue gradient = value.gradient();
+       float blockHeight = getGradientEditorHeight(subOptionHeight);
+       int bg = (new java.awt.Color(35, 35, 35, 180).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + blockHeight, 6, bg);
+
+       int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       int purple = (theme.BG_3.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       context.drawString(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
+
+       String selectedHex = gradient.getSelectedHex();
+       if (editingGradient != null && value.getName().equals(editingGradient.valueName)) {
+           selectedHex = "#" + gradientInputText.toUpperCase(java.util.Locale.ROOT);
+       }
+       GradientEditorBottomLayout bottom = computeGradientEditorBottomLayout(client, x1, y, x2, blockHeight, selectedHex, true);
+       float mapX1 = bottom.mapX1;
+       float mapY1 = bottom.mapY1;
+       float mapX2 = bottom.mapX2;
+       float mapY2 = bottom.mapY2;
+       drawHueSatMap(context, mapX1, mapY1, mapX2, mapY2, localAlpha);
+
+       float p1x = mapX1 + gradient.getSelectedHue() * (mapX2 - mapX1);
+       float p1y = mapY1 + (1f - gradient.getSelectedSat()) * (mapY2 - mapY1);
+       int pointFill = java.awt.Color.HSBtoRGB(gradient.getSelectedHue(), gradient.getSelectedSat(), GradientEditorValue.MAP_FIXED_VALUE) & 0xFFFFFF;
+       int selectorColor = (pointFill & 0x00FFFFFF) | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRect(context, p1x - 2, p1y - 2, p1x + 3, p1y + 3, 0, selectorColor);
+       float mapMidY = (mapY1 + mapY2) * 0.5f;
+       int pointBorderBase = p1y >= mapMidY ? 0x000000 : 0xFFFFFF;
+       int pointBorder = (pointBorderBase & 0x00FFFFFF) | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRectOutline(context, p1x - 3, p1y - 3, p1x + 4, p1y + 4, 0, pointBorder);
+
+       float sliderX1 = x2 - 48;
+       float sliderX2 = x2 - 36;
+       drawValueSlider(context, sliderX1, mapY1, sliderX2, mapY2, gradient.getSelectedHue(), gradient.getSelectedSat(), localAlpha);
+       float knobY = mapY2 - gradient.getSelectedVal() * (mapY2 - mapY1);
+       int knobColor = (new java.awt.Color(0, 0, 0, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       int knobBorder = (new java.awt.Color(255, 255, 255, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRect(context, sliderX1 - 2, knobY - 2, sliderX2 + 2, knobY + 2, 1, knobColor);
+       GuiRenderUtil.drawRoundedRectOutline(context, sliderX1 - 3, knobY - 3, sliderX2 + 3, knobY + 3, 1, knobBorder);
+
+       float box1X1 = x2 - 30;
+       float box1X2 = x2 - 12;
+       float box1Y1 = y + 24;
+       float box1Y2 = y + 42;
+       float box2Y2 = mapY2;
+       float box2Y1 = box2Y2 - 18;
+       int color1 = (0xFF000000 | gradient.getStartColor() & 0xFFFFFF);
+       int color2 = (0xFF000000 | gradient.getEndColor() & 0xFFFFFF);
+       GuiRenderUtil.drawRoundedRect(context, box1X1 + 1, box1Y1 + 1, box1X2 - 1, box1Y2 - 1, 2, color1);
+       GuiRenderUtil.drawRoundedRect(context, box1X1 + 1, box2Y1 + 1, box1X2 - 1, box2Y2 - 1, 2, color2);
+       int themeDarkBorder = new java.awt.Color(50, 50, 50, 255).getRGB();
+       boolean hoverL = GuiRenderUtil.isHovered(box1X1, box1Y1, box1X2, box1Y2, mouseX, mouseY);
+       boolean hoverR = GuiRenderUtil.isHovered(box1X1, box2Y1, box1X2, box2Y2, mouseX, mouseY);
+       int borderL = (gradient.getSelectedPoint() == 0 || hoverL ? theme.BG_3.getRGB() : themeDarkBorder) & 0x00FFFFFF | (localAlpha << 24);
+       int borderR = (gradient.getSelectedPoint() == 1 || hoverR ? theme.BG_3.getRGB() : themeDarkBorder) & 0x00FFFFFF | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRectOutline(context, box1X1, box1Y1, box1X2, box1Y2, 2, borderL);
+       GuiRenderUtil.drawRoundedRectOutline(context, box1X1, box2Y1, box1X2, box2Y2, 2, borderR);
+       if (gradient.getSelectedPoint() == 0) {
+           GuiRenderUtil.drawRoundedRectOutline(context, box1X1 - 1, box1Y1 - 1, box1X2 + 1, box1Y2 + 1, 3, borderL);
+       } else {
+           GuiRenderUtil.drawRoundedRectOutline(context, box1X1 - 1, box2Y1 - 1, box1X2 + 1, box2Y2 + 1, 3, borderR);
+       }
+       drawScaledLabel(context, client, "L", box1X1 + 6, box1Y2 + 2, textColor, 0.85f);
+       drawScaledLabel(context, client, "R", box1X1 + 6, box2Y1 - 8, textColor, 0.85f);
+
+       boolean editingHex = editingGradient != null && value.getName().equals(editingGradient.valueName);
+       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex, localAlpha,
+               hoveredTooltipInfo, mouseX, mouseY, "Set the selected color to the unselected color.");
+
+       float tierBtnX1 = x1 + 10;
+       float tierBtnY1 = y + blockHeight - 22;
+       float tierBtnX2 = tierBtnX1 + EnchantLore.tierButtonWidth(client.font);
+       float tierBtnY2 = tierBtnY1 + EnchantLore.tierButtonHeight(client.font);
+       boolean tierHovered = GuiRenderUtil.isHovered(tierBtnX1, tierBtnY1, tierBtnX2, tierBtnY2, mouseX, mouseY);
+       int tierBg = tierHovered
+           ? ((new java.awt.Color(60, 60, 60, 120).getRGB() & 0x00FFFFFF) | (localAlpha << 24))
+           : ((new java.awt.Color(40, 40, 40, 90).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
+       GuiRenderUtil.draw3DRect(context, tierBtnX1, tierBtnY1, tierBtnX2, tierBtnY2, tierBg, 0f);
+       int tierBorder = tierHovered ? purple : ((new java.awt.Color(90, 90, 90, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
+       GuiRenderUtil.drawRoundedRectOutline(context, tierBtnX1, tierBtnY1, tierBtnX2, tierBtnY2, 3, tierBorder);
+       EnchantLore.Tier previewTier = EnchantLore.Tier.values()[value.getEditingTier()];
+       net.minecraft.util.FormattedCharSequence tierPreview = EnchantLore.tierPreview(previewTier).getVisualOrderText();
+       int previewWidth = client.font.width(tierPreview);
+       int previewX = (int) (tierBtnX1 + (tierBtnX2 - tierBtnX1 - previewWidth) * 0.5f);
+       int previewY = (int) (tierBtnY1 + (tierBtnY2 - tierBtnY1 - client.font.lineHeight) * 0.5f);
+       context.drawString(client.font, tierPreview, previewX, previewY, 0xFFFFFFFF, false);
+       if (tierHovered && hoveredTooltipInfo != null) {
+           hoveredTooltipInfo.tooltip = "click to change the editing rarity";
+           hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal(hoveredTooltipInfo.tooltip);
+           hoveredTooltipInfo.x = (int) (mouseX + 5);
+           hoveredTooltipInfo.y = (int) (mouseY + 5);
+       }
+
+       float toggleSize = 18;
+       float boldX1 = tierBtnX2 + 6;
+       float boldY1 = tierBtnY1 - 1;
+       float boldX2 = boldX1 + toggleSize;
+       float boldY2 = boldY1 + toggleSize;
+       drawEnchantToggle(context, client, boldX1, boldY1, boldX2, boldY2, value.isBold(), mouseX, mouseY, localAlpha, purple, textColor);
+       if (GuiRenderUtil.isHovered(boldX1, boldY1, boldX2, boldY2, mouseX, mouseY) && hoveredTooltipInfo != null) {
+           hoveredTooltipInfo.tooltip = "bold";
+           hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal("bold");
+           hoveredTooltipInfo.x = (int) (mouseX + 5);
+           hoveredTooltipInfo.y = (int) (mouseY + 5);
+       }
+
+       float rainbowX1 = boldX2 + 6;
+       float rainbowY1 = boldY1;
+       float rainbowX2 = rainbowX1 + toggleSize;
+       float rainbowY2 = boldY2;
+       drawEnchantToggle(context, client, rainbowX1, rainbowY1, rainbowX2, rainbowY2, value.isRainbow(), mouseX, mouseY, localAlpha, purple, textColor);
+       if (GuiRenderUtil.isHovered(rainbowX1, rainbowY1, rainbowX2, rainbowY2, mouseX, mouseY) && hoveredTooltipInfo != null) {
+           hoveredTooltipInfo.tooltip = "rainbow";
+           hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal("rainbow");
+           hoveredTooltipInfo.x = (int) (mouseX + 5);
+           hoveredTooltipInfo.y = (int) (mouseY + 5);
+       }
+   }
+
+   private static void drawEnchantToggle(GuiGraphics context, Minecraft client, float x1, float y1, float x2, float y2,
+                                         boolean checked, float mouseX, float mouseY, int localAlpha, int purple, int textColor) {
+       boolean hovered = GuiRenderUtil.isHovered(x1, y1, x2, y2, mouseX, mouseY);
+       int border = hovered || checked ? purple : ((new java.awt.Color(220, 220, 220, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
+       int innerBg = ((new java.awt.Color(30, 30, 30, 80).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
+       if (checked) {
+           GuiRenderUtil.drawRoundedRect(context, x1, y1, x2, y2, 2, purple);
+       } else {
+           GuiRenderUtil.drawRoundedRect(context, x1, y1, x2, y2, 2, innerBg);
+       }
+       GuiRenderUtil.drawRoundedRectOutline(context, x1, y1, x2, y2, 2, border);
+       if (checked) {
+           drawToggleCheckmark(context, x1, y1, x2, y2, textColor);
+       }
+   }
+
    private static void drawHueSatMap(GuiGraphics context, float x1, float y1, float x2, float y2, int alpha) {
        int width = Math.max(1, (int) (x2 - x1));
        int height = Math.max(1, (int) (y2 - y1));
@@ -856,8 +1108,6 @@ public class ValueStyleRenderer {
        }
    }
 
-
-
    private static void drawValueSlider(GuiGraphics context, float x1, float y1, float x2, float y2, float hue, float sat, int alpha) {
        int height = Math.max(1, (int) (y2 - y1));
        for (int py = 0; py < height; py += 4) {
@@ -867,7 +1117,6 @@ public class ValueStyleRenderer {
            context.fill((int) x1, (int) y1 + py, (int) x2, (int) y1 + py + 4, color);
        }
    }
-
 
    private static void drawScaledLabel(GuiGraphics context, Minecraft client, String text, float x, float y, int color, float scale) {
       var pose = context.pose();

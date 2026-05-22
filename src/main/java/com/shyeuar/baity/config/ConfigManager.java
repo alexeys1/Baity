@@ -152,7 +152,12 @@ public class ConfigManager {
     public static int nickTweaksGradientEndColor = 0xFFFFFF;
 
     public static boolean enchantLoreEnabled = false;
-    public static boolean enchantLoreMaxRainbowGroupExpanded = false;
+    public static String enchantLoreColorData = "";
+    public static int[] enchantLoreTierStartColor;
+    public static int[] enchantLoreTierEndColor;
+    public static boolean[] enchantLoreTierBold;
+    public static boolean[] enchantLoreTierRainbow;
+    public static boolean enchantLoreRainbowGroupExpanded = false;
     public static double enchantLoreRainbowSpeed = 1.0;
     public static double enchantLoreRainbowSaturation = 0.8;
     public static int enchantLoreRainbowGradient = 100;
@@ -493,9 +498,15 @@ public class ConfigManager {
         registerField("EnchantLore", Boolean.class,
             c -> ConfigManager.enchantLoreEnabled,
             (c, v) -> ConfigManager.enchantLoreEnabled = (Boolean) v);
-        registerField("EnchantLoreMaxRainbowGroupExpanded", Boolean.class,
-            c -> ConfigManager.enchantLoreMaxRainbowGroupExpanded,
-            (c, v) -> ConfigManager.enchantLoreMaxRainbowGroupExpanded = (Boolean) v);
+        registerField("EnchantLoreColorData", String.class,
+            c -> com.shyeuar.baity.features.enchantlore.EnchantLoreColorSettings.encode(),
+            (c, v) -> {
+                ConfigManager.enchantLoreColorData = (String) v;
+                com.shyeuar.baity.features.enchantlore.EnchantLoreColorSettings.decode(ConfigManager.enchantLoreColorData);
+            });
+        registerField("EnchantLoreRainbowGroupExpanded", Boolean.class,
+            c -> ConfigManager.enchantLoreRainbowGroupExpanded,
+            (c, v) -> ConfigManager.enchantLoreRainbowGroupExpanded = (Boolean) v);
         registerField("EnchantLoreRainbowSpeed", Double.class,
             c -> ConfigManager.enchantLoreRainbowSpeed,
             (c, v) -> ConfigManager.enchantLoreRainbowSpeed = (Double) v);

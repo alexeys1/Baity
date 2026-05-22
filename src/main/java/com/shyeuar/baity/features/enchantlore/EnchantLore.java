@@ -21,17 +21,30 @@ import java.util.TreeSet;
 public final class EnchantLore {
     private static final Identifier TOOLTIP_LAST_PHASE = Identifier.fromNamespaceAndPath("baity", "enchant_lore_last");
     private static final LoreCache LORE_CACHE = new LoreCache();
-    static final int ULTIMATE_RGB = packRgb(-43521);
-    static final int GREAT_RGB = packRgb(-22016);
-    static final int GOOD_RGB = packRgb(-11184641);
-    static final int POOR_RGB = packRgb(-5592406);
-    static final int MAX_LEVEL_SOLID_RGB = GREAT_RGB;
     private EnchantLore() {
     }
 
     public static void init() {
+        EnchantLoreColorSettings.initDefaults();
+        EnchantLoreColorSettings.decode(ConfigManager.enchantLoreColorData);
         ItemTooltipCallback.EVENT.addPhaseOrdering(Event.DEFAULT_PHASE, TOOLTIP_LAST_PHASE);
         ItemTooltipCallback.EVENT.register(TOOLTIP_LAST_PHASE, EnchantLore::onTooltip);
+    }
+
+    public static void invalidateCache() {
+        LORE_CACHE.invalidate();
+    }
+
+    public static Component tierPreview(Tier tier) {
+        return EnchantLoreRender.formatTierPreview(tier, System.currentTimeMillis());
+    }
+
+    public static int tierButtonWidth(net.minecraft.client.gui.Font font) {
+        return font.width(EnchantLoreRender.formatTierButtonSlotPreview(System.currentTimeMillis()).getVisualOrderText()) + 16;
+    }
+
+    public static int tierButtonHeight(net.minecraft.client.gui.Font font) {
+        return font.lineHeight + 8;
     }
 
     private static void onTooltip(
@@ -89,7 +102,9 @@ public final class EnchantLore {
             return false;
         }
         for (EnchantLoreParser.ParsedEnchant parsed : ordered) {
-            if (parsed.level >= parsed.def.maxLevel && !parsed.def.ultimate) {
+            if (parsed.level >= parsed.def.maxLevel
+                    && !parsed.def.ultimate
+                    && EnchantLoreColorSettings.isRainbow(EnchantLore.Tier.PERFECT)) {
                 return true;
             }
         }
@@ -114,10 +129,6 @@ public final class EnchantLore {
         return result < 0 ? result + mod : result;
     }
 
-    private static int packRgb(int color) {
-        return color & 0xFFFFFF;
-    }
-
     record Entry(EnchantLoreParser.EnchantDef def, int level, Tier tier, boolean rainbow)
             implements Comparable<Entry> {
         String name() {
@@ -132,7 +143,7 @@ public final class EnchantLore {
         }
     }
 
-    enum Tier {
+    public enum Tier {
         POOR,
         GOOD,
         GREAT,
@@ -176,6 +187,11 @@ public final class EnchantLore {
             this.cacheable = cacheable;
             cachedAfter = cacheable ? new ArrayList<>(lore) : List.of();
             itemStack = stack;
+        }
+
+        void invalidate() {
+            cacheable = false;
+            cachedAfter = List.of();
         }
     }
 }

@@ -16,6 +16,7 @@ import java.util.TreeSet;
 @Environment(EnvType.CLIENT)
 final class EnchantLoreRender {
     private static final String COMMA = ", ";
+
     private EnchantLoreRender() {
     }
 
@@ -41,14 +42,29 @@ final class EnchantLoreRender {
     static Component formatEnchant(EnchantLoreParser.ParsedEnchant parsed, long nowMs) {
         EnchantLore.Entry entry = parsed.toEntry();
         String levelText = EnchantLoreParser.integerToRoman(parsed.level);
-        int styleLevel = styleLevelFor(parsed);
-        Style nameStyle = styleForLevel(entry, styleLevel);
-        if (entry.rainbow()) {
-            return rainbowText(parsed.def.loreName + " " + levelText, nameStyle, nowMs, 0.0f);
+        return formatTierText(parsed.def.loreName + " " + levelText, entry, styleLevelFor(parsed), nowMs, 0.0f);
+    }
+
+    static Component formatTierPreview(EnchantLore.Tier tier, long nowMs) {
+        String text = EnchantLoreColorSettings.TIER_LABELS[tier.ordinal()];
+        Style base = Style.EMPTY;
+        if (EnchantLoreColorSettings.isBold(tier)) {
+            base = base.withBold(true);
         }
-        MutableComponent component = Component.literal(parsed.def.loreName).withStyle(nameStyle);
-        component.append(Component.literal(" " + levelText).withStyle(component.getStyle()));
-        return component;
+        if (EnchantLore.isEnabled() && EnchantLoreColorSettings.isRainbow(tier)) {
+            return rainbowText(text, base, nowMs, 0.0f);
+        }
+        return gradientText(text, tier, base, 0.0f);
+    }
+
+    static Component formatTierButtonSlotPreview(long nowMs) {
+        EnchantLore.Tier tier = EnchantLore.Tier.ULTIMATE;
+        String text = EnchantLoreColorSettings.TIER_LABELS[tier.ordinal()];
+        Style base = Style.EMPTY.withBold(true);
+        if (EnchantLore.isEnabled() && EnchantLoreColorSettings.isRainbow(tier)) {
+            return rainbowText(text, base, nowMs, 0.0f);
+        }
+        return gradientText(text, tier, base, 0.0f);
     }
 
     static String stripColor(String input) {
@@ -119,6 +135,38 @@ final class EnchantLoreRender {
         return Minecraft.getInstance().font.width(formatEnchant(parsed, nowMs));
     }
 
+    private static Component formatTierText(
+            String text,
+            EnchantLore.Entry entry,
+            int styleLevel,
+            long nowMs,
+            float xStart
+    ) {
+        if (entry.rainbow()) {
+            Style base = baseStyle(entry, styleLevel);
+            return rainbowText(text, base, nowMs, xStart);
+        }
+        return gradientText(text, entry.tier(), baseStyle(entry, styleLevel), xStart);
+    }
+
+    private static Component gradientText(String text, EnchantLore.Tier tier, Style base, float xStart) {
+        if (text.isEmpty()) {
+            return Component.empty();
+        }
+        Font font = Minecraft.getInstance().font;
+        int totalWidth = font.width(text);
+        MutableComponent root = Component.empty();
+        float x = xStart;
+        for (int i = 0; i < text.length(); i++) {
+            String glyph = String.valueOf(text.charAt(i));
+            float progress = totalWidth <= 0 ? 0f : (x - xStart) / totalWidth;
+            int rgb = EnchantLoreColorSettings.colorAt(tier, progress);
+            root.append(Component.literal(glyph).withStyle(base.withColor(rgb)));
+            x += font.width(glyph);
+        }
+        return root;
+    }
+
     private static int styleLevelFor(EnchantLoreParser.ParsedEnchant parsed) {
         if ("efficiency".equals(parsed.def.nbtName)) {
             if (!EnchantLoreParser.isMiningTool(parsed.stack)
@@ -131,17 +179,10 @@ final class EnchantLoreRender {
         return parsed.level;
     }
 
-    private static Style styleForLevel(EnchantLore.Entry entry, int styleLevel) {
-        EnchantLore.Tier tier = tierForStyle(entry.def(), styleLevel);
-        int rgb = switch (tier) {
-            case ULTIMATE -> EnchantLore.ULTIMATE_RGB;
-            case PERFECT -> EnchantLore.MAX_LEVEL_SOLID_RGB;
-            case GREAT -> EnchantLore.GREAT_RGB;
-            case GOOD -> EnchantLore.GOOD_RGB;
-            case POOR -> EnchantLore.POOR_RGB;
-        };
-        Style style = Style.EMPTY.withColor(rgb);
-        if (entry.ultimate()) {
+    private static Style baseStyle(EnchantLore.Entry entry, int styleLevel) {
+        EnchantLore.Tier styleTier = tierForStyle(entry.def(), styleLevel);
+        Style style = Style.EMPTY;
+        if (EnchantLoreColorSettings.isBold(styleTier)) {
             style = style.withBold(true);
         }
         return style;
@@ -186,12 +227,7 @@ final class EnchantLoreRender {
             long nowMs
     ) {
         EnchantLore.Entry entry = parsed.toEntry();
-        if (entry.rainbow()) {
-            Style base = styleForLevel(entry, styleLevelFor(parsed));
-            loreLine.append(rainbowText(COMMA, base, nowMs, commaRainbowX));
-            return;
-        }
-        loreLine.append(Component.literal(COMMA).withStyle(styleForLevel(entry, styleLevelFor(parsed))));
+        loreLine.append(formatTierText(COMMA, entry, styleLevelFor(parsed), nowMs, commaRainbowX));
     }
 
     private static void trimTrailingComma(MutableComponent line) {

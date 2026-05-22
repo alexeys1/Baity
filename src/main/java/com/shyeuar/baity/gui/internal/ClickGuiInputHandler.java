@@ -8,7 +8,9 @@ import com.shyeuar.baity.gui.value.Value;
 import com.shyeuar.baity.gui.value.ValueStyle;
 import com.shyeuar.baity.gui.value.ButtonValue;
 import com.shyeuar.baity.gui.value.GroupValue;
+import com.shyeuar.baity.gui.value.EnchantLoreColorEditorValue;
 import com.shyeuar.baity.gui.value.GradientEditorValue;
+import com.shyeuar.baity.features.enchantlore.EnchantLore;
 import com.shyeuar.baity.gui.value.SliderValue;
 import com.shyeuar.baity.gui.value.TextLineInputValue;
 import com.shyeuar.baity.gui.value.ValueTreeUtils;
@@ -52,6 +54,7 @@ public class ClickGuiInputHandler {
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
         
         if (button == 0 && state.isHudButtonHovered(coords.mouseX, coords.mouseY)) {
+            SoundUtils.playBubble();
             Minecraft.getInstance().setScreen(new com.shyeuar.baity.gui.hud.HudPositionEditor());
             return true;
         }
@@ -128,7 +131,8 @@ public class ClickGuiInputHandler {
                             float currentHeight = dims.subOptionHeight;
                             if (v.getStyle() == ValueStyle.COLOR_PALETTE) {
                                 currentHeight = dims.subOptionHeight * 2;
-                            } else if (v.getStyle() == ValueStyle.GRADIENT_EDITOR) {
+                            } else if (v.getStyle() == ValueStyle.GRADIENT_EDITOR
+                                    || v.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) {
                                 currentHeight = dims.subOptionHeight * 6;
                             }
                             subModY += currentHeight;
@@ -417,8 +421,14 @@ public class ClickGuiInputHandler {
                     for (Module module : ModuleManager.getModules()) {
                         if (!module.getName().equals(editInfo.moduleName)) continue;
                         Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
-                        if (found instanceof GradientEditorValue) {
-                            GradientEditorValue ge = (GradientEditorValue) found;
+                        if (found instanceof EnchantLoreColorEditorValue colorEditor) {
+                            colorEditor.gradient().applyHexToSelected("#" + hex);
+                            colorEditor.persistCurrentTier();
+                            EnchantLore.invalidateCache();
+                            if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                                ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), found.getValue());
+                            }
+                        } else if (found instanceof GradientEditorValue ge) {
                             ge.applyHexToSelected("#" + hex);
                             if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
                                 ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), ge.getValue());
@@ -563,7 +573,8 @@ public class ClickGuiInputHandler {
                 if (v.needsSeparatorBefore(previous)) subModY += 12;
                 float currentHeight = dims.subOptionHeight;
                 if (v.getStyle() == ValueStyle.COLOR_PALETTE) currentHeight = dims.subOptionHeight * 2;
-                else if (v.getStyle() == ValueStyle.GRADIENT_EDITOR) currentHeight = dims.subOptionHeight * 6;
+                else if (v.getStyle() == ValueStyle.GRADIENT_EDITOR
+                        || v.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) currentHeight = dims.subOptionHeight * 6;
                 else if (v.getStyle() == ValueStyle.CROSSHAIR_PAINTER) currentHeight = dims.subOptionHeight * 8;
                 if (v == found) {
                     int subX1 = (int)(containerX1 + 4 + depth * 12);
@@ -628,15 +639,27 @@ public class ClickGuiInputHandler {
         for (Module module : ModuleManager.getModules()) {
             if (!module.getName().equals(dragInfo.moduleName)) continue;
             Value found = ValueTreeUtils.findByName(module, dragInfo.valueName);
-            if (found instanceof GradientEditorValue gradientValue) {
+            GradientEditorValue gradientValue = null;
+            EnchantLoreColorEditorValue colorEditor = null;
+            if (found instanceof EnchantLoreColorEditorValue editor) {
+                colorEditor = editor;
+                gradientValue = editor.gradient();
+            } else if (found instanceof GradientEditorValue ge) {
+                gradientValue = ge;
+            }
+            if (gradientValue != null) {
                 if (dragInfo.dragValue) {
                     float valNorm = (float)(1f - (coords.mouseY - dragInfo.mapY1) / Math.max(1f, (dragInfo.mapY2 - dragInfo.mapY1)));
                     gradientValue.setSelectedValue(valNorm);
                 } else {
                     gradientValue.setSelectedFromHueSat(hue, sat);
                 }
+                if (colorEditor != null) {
+                    colorEditor.persistCurrentTier();
+                    EnchantLore.invalidateCache();
+                }
                 if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
-                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), gradientValue.getValue());
+                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), found.getValue());
                 }
                 return;
             }
@@ -1227,12 +1250,22 @@ public class ClickGuiInputHandler {
                     timer.reset();
                     return true;
                 }
+            } else if (button == 0 && style == ValueStyle.ENCHANT_LORE_COLOR_EDITOR && value instanceof EnchantLoreColorEditorValue colorEditor) {
+                if (handleEnchantLoreColorEditorClick(module, colorEditor, subX1, subX2, subModY, dims, coords)) {
+                    timer.reset();
+                    return true;
+                }
             } else if (button == 0 && style == ValueStyle.GRADIENT_EDITOR && value instanceof GradientEditorValue gradientValue) {
+                Minecraft client = Minecraft.getInstance();
                 float blockHeight = dims.subOptionHeight * 6;
-                float mapX1 = subX1 + 8;
-                float mapY1 = subModY + 22;
-                float mapX2 = subX2 - 60;
-                float mapY2 = subModY + blockHeight - 40;
+                String hex = gradientValue.getSelectedHex();
+                com.shyeuar.baity.gui.render.ValueStyleRenderer.GradientEditorBottomLayout bottom =
+                        com.shyeuar.baity.gui.render.ValueStyleRenderer.computeGradientEditorBottomLayout(
+                                client, subX1, subModY, subX2, blockHeight, hex, false);
+                float mapX1 = bottom.mapX1;
+                float mapY1 = bottom.mapY1;
+                float mapX2 = bottom.mapX2;
+                float mapY2 = bottom.mapY2;
 
                 if (GuiRenderUtil.isHovered(mapX1, mapY1, mapX2, mapY2, coords.mouseX, coords.mouseY)) {
                     float hue = (coords.mouseX - mapX1) / Math.max(1f, (mapX2 - mapX1));
@@ -1275,18 +1308,15 @@ public class ClickGuiInputHandler {
                     timer.reset();
                     return true;
                 }
-                int inputWidth = Minecraft.getInstance().font.width("#FFFFFF");
-                float inputX2 = mapX2;
-                float inputX1 = inputX2 - inputWidth;
-                float syncY2 = subModY + blockHeight - 8;
-                float inputY = syncY2 - 3;
-                if (GuiRenderUtil.isHovered(inputX1, inputY - 12, inputX2, inputY + 6, coords.mouseX, coords.mouseY)) {
+                if (GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, coords.mouseX, coords.mouseY)) {
+                    SoundUtils.playWoodenButton();
                     state.setEditingGradient(new ClickGuiState.GradientInputInfo(module.getName(), value.getName(), gradientValue.getSelectedPoint()));
                     state.setGradientInputText("");
                     timer.reset();
                     return true;
                 }
-                if (GuiRenderUtil.isHovered(subX2 - 56, subModY + blockHeight - 18, subX2 - 8, subModY + blockHeight - 4, coords.mouseX, coords.mouseY)) {
+                if (GuiRenderUtil.isHovered(bottom.syncX1, bottom.syncY1, bottom.syncX2, bottom.syncY2, coords.mouseX, coords.mouseY)) {
+                    SoundUtils.playBubble();
                     gradientValue.syncColors();
                     if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
                         ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), gradientValue.getValue());
@@ -1392,7 +1422,7 @@ public class ClickGuiInputHandler {
             float currentHeight = dims.subOptionHeight;
             if (style == ValueStyle.COLOR_PALETTE) {
                 currentHeight = dims.subOptionHeight * 2;
-            } else if (style == ValueStyle.GRADIENT_EDITOR) {
+            } else if (style == ValueStyle.GRADIENT_EDITOR || style == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) {
                 currentHeight = dims.subOptionHeight * 6;
             } else if (style == ValueStyle.CROSSHAIR_PAINTER) {
                 currentHeight = dims.subOptionHeight * 8;
@@ -1419,6 +1449,7 @@ public class ClickGuiInputHandler {
             float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
             ClickGuiLayout.ContainerDimensions dims = ClickGuiLayout.calculateSubOptionContainer(entries.size(), visibleHeight, extraHeight);
 
+            float containerX1 = ClickGuiState.SIDEBAR_WIDTH + 20;
             float containerX2 = ClickGuiState.SIDEBAR_WIDTH + ClickGuiState.CONTENT_WIDTH - 20;
             float subModY = modY + dims.padding;
             Value previousValue = null;
@@ -1426,22 +1457,29 @@ public class ClickGuiInputHandler {
                 Value value = entry.value();
                 int depth = entry.depth();
                 if (value.needsSeparatorBefore(previousValue)) subModY += 12;
-                if (value.getStyle() == ValueStyle.GRADIENT_EDITOR &&
-                    module.getName().equals(editInfo.moduleName) &&
-                    value.getName().equals(editInfo.valueName)) {
+                if ((value.getStyle() == ValueStyle.GRADIENT_EDITOR || value.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR)
+                    && module.getName().equals(editInfo.moduleName)
+                    && value.getName().equals(editInfo.valueName)) {
+                    int subX1 = (int) (containerX1 + 4 + depth * 12);
                     int subX2 = (int) (containerX2 - 4 - depth * 8);
                     float blockHeight = dims.subOptionHeight * 6;
-                    float mapX2 = subX2 - 60;
-                    float mapY2 = subModY + blockHeight - 40;
-                    int inputWidth = Minecraft.getInstance().font.width("#FFFFFF");
-                    float inputX2 = mapX2;
-                    float inputX1 = inputX2 - inputWidth;
-                    float inputY = mapY2 + 11;
-                    return GuiRenderUtil.isHovered(inputX1, inputY - 10, inputX2, inputY + 3, coords.mouseX, coords.mouseY);
+                    Minecraft client = Minecraft.getInstance();
+                    String hex = "#FFFFFF";
+                    boolean withReset = value.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR;
+                    if (value instanceof GradientEditorValue gv) {
+                        hex = gv.getSelectedHex();
+                    } else if (value instanceof EnchantLoreColorEditorValue el) {
+                        hex = el.gradient().getSelectedHex();
+                    }
+                    com.shyeuar.baity.gui.render.ValueStyleRenderer.GradientEditorBottomLayout bottom =
+                            com.shyeuar.baity.gui.render.ValueStyleRenderer.computeGradientEditorBottomLayout(
+                                    client, subX1, subModY, subX2, blockHeight, hex, withReset);
+                    return GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, coords.mouseX, coords.mouseY);
                 }
                 float currentHeight = dims.subOptionHeight;
                 if (value.getStyle() == ValueStyle.COLOR_PALETTE) currentHeight = dims.subOptionHeight * 2;
-                else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR) currentHeight = dims.subOptionHeight * 6;
+                else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR
+                        || value.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) currentHeight = dims.subOptionHeight * 6;
                 else if (value.getStyle() == ValueStyle.CROSSHAIR_PAINTER) currentHeight = dims.subOptionHeight * 8;
                 subModY += currentHeight;
                 previousValue = value;
@@ -1495,7 +1533,8 @@ public class ClickGuiInputHandler {
 
                 float currentHeight = dims.subOptionHeight;
                 if (value.getStyle() == ValueStyle.COLOR_PALETTE) currentHeight = dims.subOptionHeight * 2;
-                else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR) currentHeight = dims.subOptionHeight * 6;
+                else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR
+                        || value.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) currentHeight = dims.subOptionHeight * 6;
                 else if (value.getStyle() == ValueStyle.CROSSHAIR_PAINTER) currentHeight = dims.subOptionHeight * 8;
                 subModY += currentHeight;
                 previousValue = value;
@@ -1552,7 +1591,8 @@ public class ClickGuiInputHandler {
             float currentHeight = dims.subOptionHeight;
             if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
                 currentHeight = dims.subOptionHeight * 2;
-            } else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR) {
+            } else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR
+                    || value.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) {
                 currentHeight = dims.subOptionHeight * 6;
             } else if (value.getStyle() == ValueStyle.CROSSHAIR_PAINTER) {
                 currentHeight = dims.subOptionHeight * 8;
@@ -1638,6 +1678,136 @@ public class ClickGuiInputHandler {
         return true;
     }
     
+    private boolean handleEnchantLoreColorEditorClick(Module module, EnchantLoreColorEditorValue colorEditor,
+                                                      float subX1, float subX2, float subModY,
+                                                      ClickGuiLayout.ContainerDimensions dims,
+                                                      ClickGuiLayout.ScaledCoordinates coords) {
+        GradientEditorValue gradientValue = colorEditor.gradient();
+        Minecraft client = Minecraft.getInstance();
+        float blockHeight = dims.subOptionHeight * 6;
+        String hex = gradientValue.getSelectedHex();
+        com.shyeuar.baity.gui.render.ValueStyleRenderer.GradientEditorBottomLayout bottom =
+                com.shyeuar.baity.gui.render.ValueStyleRenderer.computeGradientEditorBottomLayout(
+                        client, subX1, subModY, subX2, blockHeight, hex, true);
+        float mapX1 = bottom.mapX1;
+        float mapY1 = bottom.mapY1;
+        float mapX2 = bottom.mapX2;
+        float mapY2 = bottom.mapY2;
+
+        float tierBtnX1 = subX1 + 10;
+        float tierBtnY1 = subModY + blockHeight - 22;
+        float tierBtnX2 = tierBtnX1 + EnchantLore.tierButtonWidth(Minecraft.getInstance().font);
+        float tierBtnY2 = tierBtnY1 + EnchantLore.tierButtonHeight(Minecraft.getInstance().font);
+        if (GuiRenderUtil.isHovered(tierBtnX1, tierBtnY1, tierBtnX2, tierBtnY2, coords.mouseX, coords.mouseY)) {
+            colorEditor.cycleEditingTier();
+            EnchantLore.invalidateCache();
+            SoundUtils.playBubble();
+            if (ConfigSynchronizer.hasValueConfig(module.getName(), colorEditor.getName())) {
+                ConfigSynchronizer.handleValueUpdate(module.getName(), colorEditor.getName(), colorEditor.getValue());
+            }
+            return true;
+        }
+
+        float toggleSize = 18;
+        float boldX1 = tierBtnX2 + 6;
+        float boldY1 = tierBtnY1 - 1;
+        float boldX2 = boldX1 + toggleSize;
+        float boldY2 = boldY1 + toggleSize;
+        if (GuiRenderUtil.isHovered(boldX1, boldY1, boldX2, boldY2, coords.mouseX, coords.mouseY)) {
+            colorEditor.toggleBold();
+            EnchantLore.invalidateCache();
+            SoundUtils.playBubble();
+            if (ConfigSynchronizer.hasValueConfig(module.getName(), colorEditor.getName())) {
+                ConfigSynchronizer.handleValueUpdate(module.getName(), colorEditor.getName(), colorEditor.getValue());
+            }
+            return true;
+        }
+
+        float rainbowX1 = boldX2 + 6;
+        float rainbowY1 = boldY1;
+        float rainbowX2 = rainbowX1 + toggleSize;
+        float rainbowY2 = boldY2;
+        if (GuiRenderUtil.isHovered(rainbowX1, rainbowY1, rainbowX2, rainbowY2, coords.mouseX, coords.mouseY)) {
+            colorEditor.toggleRainbow();
+            EnchantLore.invalidateCache();
+            SoundUtils.playBubble();
+            if (ConfigSynchronizer.hasValueConfig(module.getName(), colorEditor.getName())) {
+                ConfigSynchronizer.handleValueUpdate(module.getName(), colorEditor.getName(), colorEditor.getValue());
+            }
+            return true;
+        }
+
+        if (GuiRenderUtil.isHovered(mapX1, mapY1, mapX2, mapY2, coords.mouseX, coords.mouseY)) {
+            float hue = (coords.mouseX - mapX1) / Math.max(1f, (mapX2 - mapX1));
+            float sat = 1f - (coords.mouseY - mapY1) / Math.max(1f, (mapY2 - mapY1));
+            gradientValue.setSelectedFromHueSat(hue, sat);
+            state.setDraggingGradient(new ClickGuiState.GradientDragInfo(module.getName(), colorEditor.getName(), mapX1, mapY1, mapX2, mapY2));
+            colorEditor.persistCurrentTier();
+            EnchantLore.invalidateCache();
+            if (ConfigSynchronizer.hasValueConfig(module.getName(), colorEditor.getName())) {
+                ConfigSynchronizer.handleValueUpdate(module.getName(), colorEditor.getName(), colorEditor.getValue());
+            }
+            return true;
+        }
+
+        float sliderX1 = subX2 - 48;
+        float sliderX2 = subX2 - 36;
+        if (GuiRenderUtil.isHovered(sliderX1, mapY1, sliderX2, mapY2, coords.mouseX, coords.mouseY)) {
+            float valNorm = 1f - (coords.mouseY - mapY1) / Math.max(1f, (mapY2 - mapY1));
+            gradientValue.setSelectedValue(valNorm);
+            state.setDraggingGradient(new ClickGuiState.GradientDragInfo(module.getName(), colorEditor.getName(), mapX1, mapY1, mapX2, mapY2, true));
+            colorEditor.persistCurrentTier();
+            EnchantLore.invalidateCache();
+            if (ConfigSynchronizer.hasValueConfig(module.getName(), colorEditor.getName())) {
+                ConfigSynchronizer.handleValueUpdate(module.getName(), colorEditor.getName(), colorEditor.getValue());
+            }
+            return true;
+        }
+
+        float boxX1 = subX2 - 30;
+        float boxX2 = subX2 - 12;
+        if (GuiRenderUtil.isHovered(boxX1, subModY + 24, boxX2, subModY + 42, coords.mouseX, coords.mouseY)) {
+            gradientValue.selectPoint(0);
+            SoundUtils.playBubble();
+            return true;
+        }
+        float box2Y2 = mapY2;
+        float box2Y1 = box2Y2 - 18;
+        if (GuiRenderUtil.isHovered(boxX1, box2Y1, boxX2, box2Y2, coords.mouseX, coords.mouseY)) {
+            gradientValue.selectPoint(1);
+            SoundUtils.playBubble();
+            return true;
+        }
+
+        if (GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, coords.mouseX, coords.mouseY)) {
+            SoundUtils.playWoodenButton();
+            state.setEditingGradient(new ClickGuiState.GradientInputInfo(module.getName(), colorEditor.getName(), gradientValue.getSelectedPoint()));
+            state.setGradientInputText("");
+            return true;
+        }
+
+        if (bottom.hasReset && GuiRenderUtil.isHovered(bottom.resetX1, bottom.resetY1, bottom.resetX2, bottom.resetY2, coords.mouseX, coords.mouseY)) {
+            colorEditor.resetCurrentTier();
+            EnchantLore.invalidateCache();
+            SoundUtils.playBubble();
+            if (ConfigSynchronizer.hasValueConfig(module.getName(), colorEditor.getName())) {
+                ConfigSynchronizer.handleValueUpdate(module.getName(), colorEditor.getName(), colorEditor.getValue());
+            }
+            return true;
+        }
+        if (GuiRenderUtil.isHovered(bottom.syncX1, bottom.syncY1, bottom.syncX2, bottom.syncY2, coords.mouseX, coords.mouseY)) {
+            SoundUtils.playBubble();
+            gradientValue.syncColors();
+            colorEditor.persistCurrentTier();
+            EnchantLore.invalidateCache();
+            if (ConfigSynchronizer.hasValueConfig(module.getName(), colorEditor.getName())) {
+                ConfigSynchronizer.handleValueUpdate(module.getName(), colorEditor.getName(), colorEditor.getValue());
+            }
+            return true;
+        }
+        return false;
+    }
+
     private int getSubOptionContainerHeight(Module module) {
         java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
         int subOptionCount = entries.size();

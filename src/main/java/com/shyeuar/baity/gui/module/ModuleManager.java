@@ -4,7 +4,9 @@ import com.shyeuar.baity.gui.value.ModuleCategory;
 import com.shyeuar.baity.gui.value.Option;
 import com.shyeuar.baity.gui.value.ButtonValue;
 import com.shyeuar.baity.gui.value.GroupValue;
+import com.shyeuar.baity.gui.value.EnchantLoreColorEditorValue;
 import com.shyeuar.baity.gui.value.GradientEditorValue;
+import com.shyeuar.baity.features.enchantlore.EnchantLoreColorSettings;
 import com.shyeuar.baity.gui.value.TextLineInputValue;
 import com.shyeuar.baity.features.droppeditem.SkyblockItemRarity;
 import com.shyeuar.baity.gui.sync.ConfigSynchronizer;
@@ -420,49 +422,61 @@ public class ModuleManager {
             }
         );
 
-        GroupValue enchantLoreMaxRainbowGroup = new GroupValue("max enchant rainbow", "max enchant rainbow", ModuleCategory.RENDER)
-            .setExpanded(ConfigManager.enchantLoreMaxRainbowGroupExpanded)
+        GroupValue enchantLoreRainbowGroup = new GroupValue("rainbow", "rainbow", ModuleCategory.RENDER)
+            .setExpanded(ConfigManager.enchantLoreRainbowGroupExpanded)
             .addChild(new com.shyeuar.baity.gui.value.SliderValue(
-                "max enchant rainbow speed", "speed", 1.0, 0.1, 2.0, 0.1, ModuleCategory.RENDER
+                "rainbow speed", "speed", 1.0, 0.1, 2.0, 0.1, ModuleCategory.RENDER
             ))
             .addChild(new com.shyeuar.baity.gui.value.SliderValue(
-                "max enchant rainbow saturation", "saturation", 0.8, 0.0, 1.0, 0.05, ModuleCategory.RENDER
+                "rainbow saturation", "saturation", 0.8, 0.0, 1.0, 0.05, ModuleCategory.RENDER
             ))
             .addChild(new com.shyeuar.baity.gui.value.SliderValue(
-                "max enchant rainbow gradient", "gradient", 100.0, 25.0, 200.0, 1.0, ModuleCategory.RENDER
+                "rainbow gradient", "gradient", 100.0, 25.0, 200.0, 1.0, ModuleCategory.RENDER
             ))
             .addChild(new com.shyeuar.baity.gui.value.SliderValue(
-                "max enchant rainbow angle", "angle", 45.0, 1.0, 89.0, 1.0, ModuleCategory.RENDER
+                "rainbow angle", "angle", 45.0, 1.0, 89.0, 1.0, ModuleCategory.RENDER
             ));
+
+        EnchantLoreColorEditorValue enchantLoreColorEditor = new EnchantLoreColorEditorValue(
+                "color editer", "color editer", ModuleCategory.RENDER
+        );
 
         ModuleRegistry.registerModuleWithValues(
             "EnchantLore", "EnchantLore", ModuleCategory.RENDER,
             () -> ConfigManager.enchantLoreEnabled,
             val -> ConfigManager.enchantLoreEnabled = val,
-            new com.shyeuar.baity.gui.value.Value[]{enchantLoreMaxRainbowGroup},
+            new com.shyeuar.baity.gui.value.Value[]{enchantLoreColorEditor, enchantLoreRainbowGroup},
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
-                    "max enchant rainbow",
-                    () -> ConfigManager.enchantLoreMaxRainbowGroupExpanded,
-                    val -> ConfigManager.enchantLoreMaxRainbowGroupExpanded = (Boolean) val
+                    "color editer",
+                    () -> EnchantLoreColorSettings.encode(),
+                    val -> {
+                        EnchantLoreColorSettings.decode((String) val);
+                        com.shyeuar.baity.features.enchantlore.EnchantLore.invalidateCache();
+                    }
                 ),
                 new ModuleRegistry.ValueConfigInfo(
-                    "max enchant rainbow speed",
+                    "rainbow",
+                    () -> ConfigManager.enchantLoreRainbowGroupExpanded,
+                    val -> ConfigManager.enchantLoreRainbowGroupExpanded = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "rainbow speed",
                     () -> ConfigManager.enchantLoreRainbowSpeed,
                     val -> ConfigManager.enchantLoreRainbowSpeed = ((Number) val).doubleValue()
                 ),
                 new ModuleRegistry.ValueConfigInfo(
-                    "max enchant rainbow saturation",
+                    "rainbow saturation",
                     () -> ConfigManager.enchantLoreRainbowSaturation,
                     val -> ConfigManager.enchantLoreRainbowSaturation = ((Number) val).doubleValue()
                 ),
                 new ModuleRegistry.ValueConfigInfo(
-                    "max enchant rainbow gradient",
+                    "rainbow gradient",
                     () -> (double) ConfigManager.enchantLoreRainbowGradient,
                     val -> ConfigManager.enchantLoreRainbowGradient = ((Number) val).intValue()
                 ),
                 new ModuleRegistry.ValueConfigInfo(
-                    "max enchant rainbow angle",
+                    "rainbow angle",
                     () -> (double) ConfigManager.enchantLoreRainbowAngle,
                     val -> ConfigManager.enchantLoreRainbowAngle = ((Number) val).intValue()
                 )

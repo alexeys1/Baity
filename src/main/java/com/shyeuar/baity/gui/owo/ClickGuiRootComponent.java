@@ -548,7 +548,8 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 float currentHeight = dims.subOptionHeight;
                 if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.COLOR_PALETTE) {
                     currentHeight = dims.subOptionHeight * 2;
-                } else if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.GRADIENT_EDITOR) {
+                } else if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.GRADIENT_EDITOR
+                        || value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.ENCHANT_LORE_COLOR_EDITOR) {
                     currentHeight = dims.subOptionHeight * 6;
                 } else if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.CROSSHAIR_PAINTER) {
                     currentHeight = dims.subOptionHeight * 8;

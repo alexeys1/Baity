@@ -309,7 +309,10 @@ final class EnchantLoreParser {
         }
         EnchantLore.Entry toEntry() {
             EnchantLore.Tier tier = tierFor(def, level);
-            boolean rainbow = level >= def.maxLevel && !def.ultimate && EnchantLore.isEnabled();
+            boolean rainbow = EnchantLore.isEnabled()
+                    && !def.ultimate
+                    && level >= def.maxLevel
+                    && EnchantLoreColorSettings.isRainbow(tier);
             return new EnchantLore.Entry(def, level, tier, rainbow);
         }
         @Override

@@ -48,6 +48,7 @@
     "NodebuffMixin$GuiMixin",
     "accessor.FogRendererAccessor",
     "NoSwapAnimationMixin",
+    "NoArmSwayMixin",
     "ImmuneReactionMixin$ChatDetectorMixin",
     "NickTweaksMixin",
     "NametagOffsetMixin",

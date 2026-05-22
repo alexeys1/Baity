@@ -1,8 +1,7 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.gui.module.Module;
-import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.mixin.accessor.ItemInHandRendererAccessor;
+import com.shyeuar.baity.utils.HeldItemTweaksUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,7 +14,7 @@ public class NoSwapAnimationMixin {
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void baity$removeSwapAnimation(CallbackInfo ci) {
-        if (!isModuleEnabled()) return;
+        if (!HeldItemTweaksUtils.isNoItemswapAnimationActive()) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
@@ -27,10 +26,5 @@ public class NoSwapAnimationMixin {
         accessor.baity$setOffHandItem(mc.player.getOffhandItem());
         accessor.baity$setMainHandHeight(1.0f);
         accessor.baity$setOffHandHeight(1.0f);
-    }
-
-    private static boolean isModuleEnabled() {
-        Module module = ModuleManager.getModuleByName("NoSwapAnimation");
-        return module != null && module.isEnabled();
     }
 }

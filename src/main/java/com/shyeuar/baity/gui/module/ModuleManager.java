@@ -567,12 +567,28 @@ public class ModuleManager {
             val -> ConfigManager.noHurtCamEnabled = val
         );
         
-        ModuleRegistry.registerSimpleModule(
-            "NoSwapAnimation", "NoSwapAnimation", ModuleCategory.RENDER,
-            () -> ConfigManager.noSwapAnimationEnabled,
-            val -> ConfigManager.noSwapAnimationEnabled = val
+        ModuleRegistry.registerModuleWithValues(
+            "HeldItemTweaks", "HeldItemTweaks", ModuleCategory.RENDER,
+            () -> ConfigManager.heldItemTweaksEnabled,
+            val -> ConfigManager.heldItemTweaksEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new Option("no itemswap animation", "no itemswap animation", false, ModuleCategory.RENDER),
+                new Option("no arm sway", "no arm sway", false, ModuleCategory.RENDER)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "no itemswap animation",
+                    () -> ConfigManager.heldItemTweaksNoItemswapAnimationEnabled,
+                    val -> ConfigManager.heldItemTweaksNoItemswapAnimationEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "no arm sway",
+                    () -> ConfigManager.heldItemTweaksNoArmSwayEnabled,
+                    val -> ConfigManager.heldItemTweaksNoArmSwayEnabled = (Boolean) val
+                )
+            }
         );
-        
+
         ModuleRegistry.registerSimpleModule(
             "NoTextShadow", "NoTextShadow", ModuleCategory.RENDER,
             () -> ConfigManager.noTextShadowEnabled,
@@ -807,7 +823,21 @@ public class ModuleManager {
         );
         TooltipManager.registerTooltip("FancyCreeperVeil", "Replace the wither cloak ability creeper model to a fancy one.", 0xFFFFFF);
         TooltipManager.registerTooltip("NoSwimPose", "Only disables the swimming pose and eye height change on your client.", 0xFFFFFF);
-        TooltipManager.registerTooltip("NoSwapAnimation", "Disable the animation of hotbar change.", 0xFFFFFF);
+        TooltipManager.registerTooltip(
+            "HeldItemTweaks",
+            "Client-side tweaks for how first-person held items are rendered.",
+            0xFFFFFF
+        );
+        TooltipManager.registerTooltip(
+            "no itemswap animation",
+            "Remove the raise/lower animation when switching hotbar items.",
+            0xFFFFFF
+        );
+        TooltipManager.registerTooltip(
+            "no arm sway",
+            "Remove hand sway when turning your view.",
+            0xFFFFFF
+        );
         TooltipManager.registerTooltip("DroppedItem", "Client-side dropped item rendering tweaks.", 0xFFFFFF);
         TooltipManager.registerTooltip("2D dropped item", "Render dropped items as 2D sprites.", 0xFFFFFF);
         TooltipManager.registerTooltip("rarity scale", "Scale ground drops by Skyblock rarity.", 0xFFFFFF);

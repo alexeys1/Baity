@@ -80,7 +80,9 @@ public class ConfigManager {
     
     public static boolean noHurtCamEnabled = false;
     
-    public static boolean noSwapAnimationEnabled = false;
+    public static boolean heldItemTweaksEnabled = false;
+    public static boolean heldItemTweaksNoItemswapAnimationEnabled = false;
+    public static boolean heldItemTweaksNoArmSwayEnabled = false;
     
     public static boolean noTextShadowEnabled = false;
     
@@ -371,9 +373,15 @@ public class ConfigManager {
         registerField("NoHurtCam", Boolean.class,
             c -> ConfigManager.noHurtCamEnabled,
             (c, v) -> ConfigManager.noHurtCamEnabled = (Boolean) v);
-        registerField("NoSwapAnimation", Boolean.class,
-            c -> ConfigManager.noSwapAnimationEnabled,
-            (c, v) -> ConfigManager.noSwapAnimationEnabled = (Boolean) v);
+        registerField("HeldItemTweaks", Boolean.class,
+            c -> ConfigManager.heldItemTweaksEnabled,
+            (c, v) -> ConfigManager.heldItemTweaksEnabled = (Boolean) v);
+        registerField("no itemswap animation", Boolean.class,
+            c -> ConfigManager.heldItemTweaksNoItemswapAnimationEnabled,
+            (c, v) -> ConfigManager.heldItemTweaksNoItemswapAnimationEnabled = (Boolean) v);
+        registerField("no arm sway", Boolean.class,
+            c -> ConfigManager.heldItemTweaksNoArmSwayEnabled,
+            (c, v) -> ConfigManager.heldItemTweaksNoArmSwayEnabled = (Boolean) v);
         registerField("NoTextShadow", Boolean.class,
             c -> ConfigManager.noTextShadowEnabled,
             (c, v) -> ConfigManager.noTextShadowEnabled = (Boolean) v);
@@ -730,6 +738,33 @@ public class ConfigManager {
 
                     if ("2DdroppedItem".equals(key)) {
                         legacy2dDroppedItemPresent = true;
+                    }
+
+                    if ("NoSwapAnimation".equals(key)) {
+                        Object legacy = parseValue(valueStr, Boolean.class);
+                        if (legacy instanceof Boolean enabled && enabled) {
+                            ConfigManager.heldItemTweaksEnabled = true;
+                            ConfigManager.heldItemTweaksNoItemswapAnimationEnabled = true;
+                        }
+                        seenKeys.add(key);
+                        continue;
+                    }
+                    if ("HandView".equals(key) || "ArmView".equals(key)) {
+                        Object legacy = parseValue(valueStr, Boolean.class);
+                        if (legacy instanceof Boolean enabled && enabled) {
+                            ConfigManager.heldItemTweaksEnabled = true;
+                        }
+                        seenKeys.add(key);
+                        continue;
+                    }
+                    if ("InstantHandFollow".equals(key) || "InstantArmFollow".equals(key) || "instant arm follow".equals(key)) {
+                        Object legacy = parseValue(valueStr, Boolean.class);
+                        if (legacy instanceof Boolean enabled && enabled) {
+                            ConfigManager.heldItemTweaksEnabled = true;
+                            ConfigManager.heldItemTweaksNoArmSwayEnabled = true;
+                        }
+                        seenKeys.add(key);
+                        continue;
                     }
                     
                     if (!CONFIG_FIELDS.containsKey(key) && legacyKeyAliases.containsKey(key)) {

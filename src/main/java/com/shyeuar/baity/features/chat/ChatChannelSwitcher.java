@@ -429,9 +429,6 @@ public final class ChatChannelSwitcher implements HudElement {
         if (pendingChannelSinceAt <= 0L || now - pendingChannelSinceAt < CHANNEL_SWITCH_CONFIRM_TIMEOUT_MS) {
             return;
         }
-        if (!pendingChannelRollback.isEmpty()) {
-            setLastSelectedChannel(pendingChannelRollback);
-        }
         pendingChannel = "";
         pendingChannelRollback = "";
         pendingChannelSinceAt = 0L;
@@ -504,20 +501,18 @@ public final class ChatChannelSwitcher implements HudElement {
 
         String confirmedChannel = parseConfirmedChannel(normalizedMessage);
         if (!confirmedChannel.isEmpty()) {
-            pendingChannel = "";
-            pendingChannelRollback = "";
-            pendingChannelSinceAt = 0L;
+            clearPendingChannelSwitch();
             setLastSelectedChannel(confirmedChannel);
             return;
         }
 
-        String alreadyInChannel = parseAlreadyInChannel(normalizedMessage);
-        if (!alreadyInChannel.isEmpty() && alreadyInChannel.equals(pendingChannel)) {
-            pendingChannel = "";
-            pendingChannelRollback = "";
-            pendingChannelSinceAt = 0L;
-            setLastSelectedChannel(alreadyInChannel);
-            return;
+        if (isAlreadyInChannelMessage(normalizedMessage)) {
+            String resolved = resolveAlreadyInChannel(normalizedMessage);
+            if (!resolved.isEmpty()) {
+                clearPendingChannelSwitch();
+                setLastSelectedChannel(resolved);
+                return;
+            }
         }
 
         String failedChannel = parseFailedChannel(normalizedMessage);
@@ -525,10 +520,26 @@ public final class ChatChannelSwitcher implements HudElement {
             if (!pendingChannelRollback.isEmpty()) {
                 setLastSelectedChannel(pendingChannelRollback);
             }
-            pendingChannel = "";
-            pendingChannelRollback = "";
-            pendingChannelSinceAt = 0L;
+            clearPendingChannelSwitch();
         }
+    }
+
+    private void clearPendingChannelSwitch() {
+        pendingChannel = "";
+        pendingChannelRollback = "";
+        pendingChannelSinceAt = 0L;
+    }
+
+    private boolean isAlreadyInChannelMessage(String normalizedMessage) {
+        return normalizedMessage.contains("already in");
+    }
+
+    private String resolveAlreadyInChannel(String normalizedMessage) {
+        String parsed = parseChannelNameFromMessage(normalizedMessage);
+        if (!parsed.isEmpty()) {
+            return parsed;
+        }
+        return pendingChannel;
     }
 
     private String parseConfirmedChannel(String normalizedMessage) {
@@ -551,13 +562,6 @@ public final class ChatChannelSwitcher implements HudElement {
         return "";
     }
 
-    private String parseAlreadyInChannel(String normalizedMessage) {
-        if (!(normalizedMessage.contains("already in") && normalizedMessage.contains("channel"))) {
-            return "";
-        }
-        return parseChannelNameFromMessage(normalizedMessage);
-    }
-
     private String parseChannelNameFromMessage(String normalizedMessage) {
         if (normalizedMessage.contains(" all channel")) {
             return "all";
@@ -577,6 +581,9 @@ public final class ChatChannelSwitcher implements HudElement {
     }
 
     private String parseFailedChannel(String normalizedMessage) {
+        if (normalizedMessage.contains("already in")) {
+            return "";
+        }
         if (!normalizedMessage.contains("channel")) {
             return "";
         }

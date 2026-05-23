@@ -174,7 +174,6 @@ public class ConfigManager {
     public static int baityPresenceProxyPort = 0;
     public static String baityPresenceProxyAuth = "";
     public static boolean baityPresenceProxyFallbackDirect = true;
-    /** none | manual | auto — manual = user-configured; auto = written by port probe */
     public static String baityPresenceProxySource = "none";
     
     

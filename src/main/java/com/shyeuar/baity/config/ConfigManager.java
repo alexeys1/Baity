@@ -174,6 +174,8 @@ public class ConfigManager {
     public static int baityPresenceProxyPort = 0;
     public static String baityPresenceProxyAuth = "";
     public static boolean baityPresenceProxyFallbackDirect = true;
+    /** none | manual | auto — manual = user-configured; auto = written by port probe */
+    public static String baityPresenceProxySource = "none";
     
     
     
@@ -544,10 +546,19 @@ public class ConfigManager {
             (c, v) -> ConfigManager.baityPresenceSyncNotificationEnabled = (Boolean) v);
         registerField("BaityPresenceProxyHost", String.class,
             c -> ConfigManager.baityPresenceProxyHost,
-            (c, v) -> ConfigManager.baityPresenceProxyHost = (String) v);
+            (c, v) -> {
+                ConfigManager.baityPresenceProxyHost = (String) v;
+                refreshPresenceProxySourceFromHostPort();
+            });
         registerField("BaityPresenceProxyPort", Integer.class,
             c -> ConfigManager.baityPresenceProxyPort,
-            (c, v) -> ConfigManager.baityPresenceProxyPort = (Integer) v);
+            (c, v) -> {
+                ConfigManager.baityPresenceProxyPort = (Integer) v;
+                refreshPresenceProxySourceFromHostPort();
+            });
+        registerField("BaityPresenceProxySource", String.class,
+            c -> ConfigManager.baityPresenceProxySource,
+            (c, v) -> ConfigManager.baityPresenceProxySource = normalizePresenceProxySource((String) v));
         registerField("BaityPresenceProxyAuth", String.class,
             c -> ConfigManager.baityPresenceProxyAuth,
             (c, v) -> ConfigManager.baityPresenceProxyAuth = (String) v);
@@ -561,6 +572,28 @@ public class ConfigManager {
                                     java.util.function.Function<ConfigManager, Object> getter,
                                     java.util.function.BiConsumer<ConfigManager, Object> setter) {
         CONFIG_FIELDS.put(key, new SettingField(key, getter, setter, type));
+    }
+
+    private static String normalizePresenceProxySource(String raw) {
+        if (raw == null) {
+            return "none";
+        }
+        String lower = raw.trim().toLowerCase(java.util.Locale.ROOT);
+        if ("manual".equals(lower) || "auto".equals(lower)) {
+            return lower;
+        }
+        return "none";
+    }
+
+    private static void refreshPresenceProxySourceFromHostPort() {
+        String host = baityPresenceProxyHost == null ? "" : baityPresenceProxyHost.trim();
+        if (host.isEmpty() || baityPresenceProxyPort <= 0) {
+            baityPresenceProxySource = "none";
+            return;
+        }
+        if (!"auto".equalsIgnoreCase(baityPresenceProxySource)) {
+            baityPresenceProxySource = "manual";
+        }
     }
 
     private static void registerDroppedItemRarityScaleFields() {
@@ -802,6 +835,15 @@ public class ConfigManager {
             }
             if (!seenKeys.contains("BaityPresenceProxyFallbackDirect")) {
                 ConfigManager.baityPresenceProxyFallbackDirect = true;
+                needSave = true;
+            }
+            if (!seenKeys.contains("BaityPresenceProxySource")) {
+                String host = ConfigManager.baityPresenceProxyHost == null ? "" : ConfigManager.baityPresenceProxyHost.trim();
+                if (!host.isEmpty() && ConfigManager.baityPresenceProxyPort > 0) {
+                    ConfigManager.baityPresenceProxySource = "manual";
+                } else {
+                    ConfigManager.baityPresenceProxySource = "none";
+                }
                 needSave = true;
             }
             if (needSave) {

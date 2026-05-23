@@ -20,9 +20,6 @@ import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 import java.net.SocketTimeoutException;
 import java.net.HttpURLConnection;
-import java.net.Proxy;
-import java.net.URI;
-import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +33,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.Base64;
 
 @Environment(EnvType.CLIENT)
 public final class BaityPresenceSync {
@@ -67,7 +63,6 @@ public final class BaityPresenceSync {
     private static volatile boolean lastInWorld = false;
     private static volatile long nextTokenProvisionAllowedAt = 0L;
     private static final AtomicBoolean TOKEN_PROVISIONING = new AtomicBoolean(false);
-    private static final AtomicBoolean CONNECTIVITY_CHECK_RUNNING = new AtomicBoolean(false);
     private static final AtomicLong LAST_FETCH_EXCEPTION_WARN_AT = new AtomicLong(0L);
     private static final AtomicLong LAST_REPORT_EXCEPTION_WARN_AT = new AtomicLong(0L);
     private static final AtomicLong LAST_REGISTER_EXCEPTION_WARN_AT = new AtomicLong(0L);
@@ -80,7 +75,6 @@ public final class BaityPresenceSync {
     private static volatile boolean autoStartupResultShownInWorld = false;
     private static volatile boolean firstWorldSyncMsgShown = false;
     private static volatile boolean autoSyncTriggeredInWorld = false;
-    private static volatile boolean autoProbeCompleted = false;
 
     private static final Map<UUID, RemoteUserState> USERS_BY_UUID = new ConcurrentHashMap<>();
     private static final Map<String, ChromaProfile> CHROMA_BY_NAME = new ConcurrentHashMap<>();
@@ -100,16 +94,18 @@ public final class BaityPresenceSync {
         autoStartupResultSetAt = 0L;
         autoStartupResultShownInWorld = false;
         autoSyncTriggeredInWorld = false;
-        autoProbeCompleted = false;
         loadCacheFromDisk();
         if (ConfigManager.baityPresenceSyncEnabled) {
-            startConnectivitySelfCheck();
-            CompletableFuture.runAsync(() -> {
-                String fetchUrl = resolveFetchUrl();
-                ensureProxyForAutoSync(fetchUrl);
-                autoProbeCompleted = true;
-            });
+            CompletableFuture.runAsync(BaityPresenceSync::runPresenceConnectivityProbe);
         }
+    }
+
+    public static void runPresenceConnectivityProbe() {
+        String fetchUrl = resolveFetchUrl();
+        if (fetchUrl == null || fetchUrl.isBlank()) {
+            return;
+        }
+        PresenceProxyResolver.establishSession(toHealthUrl(fetchUrl.trim()));
     }
 
     public static void tick() {
@@ -145,82 +141,9 @@ public final class BaityPresenceSync {
         });
     }
 
-    public static void sendConnectivityHintNow() {
-        if (!ConfigManager.baityPresenceSyncEnabled) return;
-        String fetchUrl = resolveFetchUrl();
-        if (fetchUrl == null || fetchUrl.isBlank()) return;
-
-        String healthUrl = fetchUrl;
-        if (healthUrl.endsWith("/users.json")) {
-            healthUrl = healthUrl.substring(0, healthUrl.length() - "/users.json".length()) + "/health";
-        } else if (healthUrl.endsWith("/")) {
-            healthUrl = healthUrl + "health";
-        } else {
-            healthUrl = healthUrl + "/health";
-        }
-        final String finalHealthUrl = healthUrl;
-
-        CompletableFuture.runAsync(() -> {
-            boolean ok = healthCheck(finalHealthUrl);
-            MessageUtils.sendPresenceSyncNotification(ok, false);
-        });
+    static String syncReadToken() {
+        return DEFAULT_SYNC_ACCESS_TOKEN;
     }
-
-    private static void startConnectivitySelfCheck() {
-        if (!ConfigManager.baityPresenceSyncEnabled) return;
-        if (!CONNECTIVITY_CHECK_RUNNING.compareAndSet(false, true)) return;
-        String fetchUrl = resolveFetchUrl();
-        if (fetchUrl == null || fetchUrl.isBlank()) {
-            CONNECTIVITY_CHECK_RUNNING.set(false);
-            return;
-        }
-        String healthUrl = fetchUrl;
-        if (healthUrl.endsWith("/users.json")) {
-            healthUrl = healthUrl.substring(0, healthUrl.length() - "/users.json".length()) + "/health";
-        } else if (healthUrl.endsWith("/")) {
-            healthUrl = healthUrl + "health";
-        } else {
-            healthUrl = healthUrl + "/health";
-        }
-        final String finalHealthUrl = healthUrl;
-        CompletableFuture.runAsync(() -> {
-            healthCheck(finalHealthUrl);
-            CONNECTIVITY_CHECK_RUNNING.set(false);
-        });
-    }
-
-    private static boolean healthCheck(String url) {
-        HttpURLConnection connection = null;
-        try {
-            connection = openHttpConnection(url, 0);
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-            connection.setReadTimeout(READ_TIMEOUT_MS);
-            connection.setUseCaches(false);
-            connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestProperty("x-baity-token", DEFAULT_SYNC_ACCESS_TOKEN);
-            LocalPlayer player = Minecraft.getInstance().player;
-            if (player != null) {
-                connection.setRequestProperty("x-baity-uuid", player.getUUID().toString());
-            }
-            int code = connection.getResponseCode();
-            if (code >= 200 && code < 300) {
-                try (InputStream ignored = connection.getInputStream()) {
-                }
-                return true;
-            }
-        } catch (Exception ignored) {
-        } finally {
-            if (connection != null) connection.disconnect();
-        }
-        return false;
-    }
-
-    private static boolean isProxyReachableStatus(int code) {
-        if (code == 407) return false;
-        return code >= 200 && code < 500;
-    }
-
 
     public static void onClickGuiClosed() {
         attemptReport(System.currentTimeMillis(), false, false);
@@ -408,7 +331,7 @@ public final class BaityPresenceSync {
         if (enteredWorld && !firstWorldSyncMsgShown) {
             firstWorldSyncMsgShown = true;
         }
-        if (inWorld && ConfigManager.baityPresenceSyncEnabled && autoProbeCompleted && !autoSyncTriggeredInWorld) {
+        if (inWorld && ConfigManager.baityPresenceSyncEnabled && !autoSyncTriggeredInWorld) {
             autoSyncTriggeredInWorld = true;
             startReadThenWrite(System.currentTimeMillis(), true);
         }
@@ -443,7 +366,10 @@ public final class BaityPresenceSync {
         if (!forceRemoteSync && !ConfigManager.baityPresenceSyncEnabled) return;
 
         if (!forceRemoteSync && now < nextRemoteReadAllowedAt) {
-            attemptReport(now, forceUpload, forceRemoteSync);
+            CompletableFuture.runAsync(() -> {
+                runPresenceConnectivityProbe();
+                attemptReport(now, forceUpload, forceRemoteSync);
+            });
             return;
         }
 
@@ -451,18 +377,25 @@ public final class BaityPresenceSync {
 
         String fetchUrl = resolveFetchUrl();
         if (fetchUrl == null || fetchUrl.isBlank()) {
-            attemptReport(now, forceUpload, forceRemoteSync);
+            CompletableFuture.runAsync(() -> {
+                runPresenceConnectivityProbe();
+                attemptReport(now, forceUpload, forceRemoteSync);
+            });
             return;
         }
 
         String trimmed = fetchUrl.trim();
         if (!FETCHING.compareAndSet(false, true)) {
-            attemptReport(now, forceUpload, forceRemoteSync);
+            CompletableFuture.runAsync(() -> {
+                runPresenceConnectivityProbe();
+                attemptReport(now, forceUpload, forceRemoteSync);
+            });
             return;
         }
 
         CompletableFuture.runAsync(() -> {
             try {
+                runPresenceConnectivityProbe();
                 fetchAndReplace(trimmed, forceRemoteSync);
             } finally {
                 FETCHING.set(false);
@@ -856,15 +789,7 @@ public final class BaityPresenceSync {
     }
 
     private static HttpURLConnection openHttpConnection(String url, int attempt) throws Exception {
-        URI uri = URI.create(url);
-        Proxy proxy = resolveConfiguredProxy(attempt);
-        HttpURLConnection conn = (HttpURLConnection) (proxy == null
-                ? uri.toURL().openConnection()
-                : uri.toURL().openConnection(proxy));
-        if (proxy != null) {
-            applyProxyAuthIfConfigured(conn);
-        }
-        return conn;
+        return PresenceProxyResolver.openConnection(url, attempt);
     }
 
     private static void sleepRetryBackoff() {
@@ -884,129 +809,13 @@ public final class BaityPresenceSync {
         }
     }
 
-    private static Proxy resolveConfiguredProxy(int attempt) {
-        String host = ConfigManager.baityPresenceProxyHost == null ? "" : ConfigManager.baityPresenceProxyHost.trim();
-        int port = ConfigManager.baityPresenceProxyPort;
-        boolean hasProxy = !host.isEmpty() && port > 0;
-        if (!hasProxy) return null;
-        if (attempt > 0 && ConfigManager.baityPresenceProxyFallbackDirect) {
-            return null;
-        }
-        InetSocketAddress addr = new InetSocketAddress(host, port);
-        return new Proxy(Proxy.Type.HTTP, addr);
-    }
-
-    private static void applyProxyAuthIfConfigured(HttpURLConnection conn) {
-        String raw = ConfigManager.baityPresenceProxyAuth == null ? "" : ConfigManager.baityPresenceProxyAuth.trim();
-        if (raw.isEmpty()) return;
-        String token = Base64.getEncoder().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
-        conn.setRequestProperty("Proxy-Authorization", "Basic " + token);
-    }
-
-    private static boolean ensureProxyForAutoSync(String fetchUrl) {
-        String healthUrl = toHealthUrl(fetchUrl);
-        if (healthUrl == null || healthUrl.isBlank()) return false;
-
-        String host = ConfigManager.baityPresenceProxyHost == null ? "" : ConfigManager.baityPresenceProxyHost.trim();
-        int port = ConfigManager.baityPresenceProxyPort;
-        boolean hasConfiguredProxy = !host.isEmpty() && port > 0;
-
-        if (!hasConfiguredProxy) {
-            if (healthCheckDirect(healthUrl)) {
-                return true;
-            }
-            return probeAndSetProxy(healthUrl);
-        }
-        if (healthCheck(healthUrl)) {
-            return true;
-        }
-        if (healthCheckDirect(healthUrl)) {
-            ConfigManager.baityPresenceProxyHost = "";
-            ConfigManager.baityPresenceProxyPort = 0;
-            ConfigManager.requestSave();
-            return true;
-        }
-        return probeAndSetProxy(healthUrl);
-    }
-
-    private static boolean healthCheckDirect(String url) {
-        HttpURLConnection connection = null;
-        try {
-            URI uri = URI.create(url);
-            connection = (HttpURLConnection) uri.toURL().openConnection();
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-            connection.setReadTimeout(READ_TIMEOUT_MS);
-            connection.setUseCaches(false);
-            connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestProperty("x-baity-token", DEFAULT_SYNC_ACCESS_TOKEN);
-            LocalPlayer player = Minecraft.getInstance().player;
-            if (player != null) {
-                connection.setRequestProperty("x-baity-uuid", player.getUUID().toString());
-            }
-            int code = connection.getResponseCode();
-            if (isProxyReachableStatus(code)) {
-                try (InputStream ignored = connection.getInputStream()) {
-                }
-                return true;
-            }
-        } catch (Exception ignored) {
-        } finally {
-            if (connection != null) connection.disconnect();
-        }
-        return false;
-    }
-
-    private static String toHealthUrl(String anyUrl) {
+    static String toHealthUrl(String anyUrl) {
         if (anyUrl == null || anyUrl.isBlank()) return "";
         String u = anyUrl.trim();
         if (u.endsWith("/users.json")) return u.substring(0, u.length() - "/users.json".length()) + "/health";
         if (u.endsWith("/report")) return u.substring(0, u.length() - "/report".length()) + "/health";
         if (u.endsWith("/")) return u + "health";
         return u + "/health";
-    }
-
-    private static boolean probeAndSetProxy(String healthUrl) {
-        int[] ports = new int[]{7892, 7891, 7890};
-        for (int p : ports) {
-            if (healthCheckWithCandidateProxy(healthUrl, p)) {
-                ConfigManager.baityPresenceProxyHost = "127.0.0.1";
-                ConfigManager.baityPresenceProxyPort = p;
-                ConfigManager.requestSave();
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean healthCheckWithCandidateProxy(String url, int proxyPort) {
-        HttpURLConnection connection = null;
-        try {
-            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", proxyPort));
-            connection = (HttpURLConnection) new URI(url).toURL().openConnection(proxy);
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-            connection.setReadTimeout(READ_TIMEOUT_MS);
-            connection.setUseCaches(false);
-            connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestProperty("x-baity-token", DEFAULT_SYNC_ACCESS_TOKEN);
-            LocalPlayer player = Minecraft.getInstance().player;
-            if (player != null) {
-                connection.setRequestProperty("x-baity-uuid", player.getUUID().toString());
-            }
-            applyProxyAuthIfConfigured(connection);
-
-            int code = connection.getResponseCode();
-            if (isProxyReachableStatus(code)) {
-                try (InputStream ignored = connection.getInputStream()) {
-                }
-                return true;
-            }
-        } catch (Exception ignored) {
-        } finally {
-            if (connection != null) connection.disconnect();
-        }
-        return false;
     }
 
     private static String resolveRegisterUrl(String reportUrl) {

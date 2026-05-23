@@ -69,25 +69,6 @@ public class MessageUtils {
         }
     }
 
-    public static void sendPresenceSyncNotification(boolean ok) {
-        sendPresenceSyncNotification(ok, true);
-    }
-
-    public static void sendPresenceSyncNotification(boolean ok, boolean includeCancelLink) {
-        String status = ok ? "[Sync] Connectivity check OK. " : "[Sync] Connectivity check failed (network/proxy/VPN). ";
-        MutableComponent main = createColoredText(status, 0xFFFFFF);
-        if (!includeCancelLink) {
-            sendCustomMessage(createMessageWithPrefix(main));
-            return;
-        }
-        MutableComponent action = Component.literal("[Click to stop the prompt]")
-            .withStyle(style -> style
-                .withColor(0xFF69B4)
-                .withUnderlined(true)
-                .withClickEvent(new ClickEvent.RunCommand("/baity notification off")));
-        sendCustomMessage(createMessageWithPrefix(main.append(action)));
-    }
-
     public static void sendSyncStartForCommand() {
         sendCustomMessage(createMessageWithPrefix(createColoredText("Syncing remote data...", 0xFFFFFF)));
     }

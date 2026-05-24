@@ -1,5 +1,7 @@
 package com.shyeuar.baity.features.enchantlore;
 
+import com.shyeuar.baity.config.ConfigManager;
+import com.shyeuar.baity.utils.RomanNumeralUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.ChatFormatting;
@@ -41,7 +43,9 @@ final class EnchantLoreRender {
 
     static Component formatEnchant(EnchantLoreParser.ParsedEnchant parsed, long nowMs) {
         EnchantLore.Entry entry = parsed.toEntry();
-        String levelText = EnchantLoreParser.integerToRoman(parsed.level);
+        String levelText = ConfigManager.enchantLoreArabicNumerals
+                ? Integer.toString(parsed.level)
+                : RomanNumeralUtils.integerToRoman(parsed.level);
         return formatTierText(parsed.def.loreName + " " + levelText, entry, styleLevelFor(parsed), nowMs, 0.0f);
     }
 

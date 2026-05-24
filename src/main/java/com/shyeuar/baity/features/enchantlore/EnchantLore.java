@@ -76,11 +76,13 @@ public final class EnchantLore {
         LORE_CACHE.updateBefore(lore, stack);
         EnchantLoreParser.Section section = EnchantLoreParser.findSection(lore, stack);
         if (section == null) {
+            EnchantLoreNumeralApplier.applyToTooltip(lore, null, null);
             LORE_CACHE.updateAfter(lore, stack, true);
             return;
         }
         EnchantLoreParser.CollectResult collected = EnchantLoreParser.collectEnchants(lore, stack, section);
         if (collected.ordered().isEmpty()) {
+            EnchantLoreNumeralApplier.applyToTooltip(lore, null, null);
             LORE_CACHE.updateAfter(lore, stack, true);
             return;
         }
@@ -94,6 +96,9 @@ public final class EnchantLore {
         int insertIndex = section.start();
         lore.subList(section.start(), section.end() + 1).clear();
         lore.addAll(Math.min(insertIndex, lore.size()), insertLines);
+        int enchantStart = insertIndex;
+        int enchantEnd = insertIndex + insertLines.size() - 1;
+        EnchantLoreNumeralApplier.applyToTooltip(lore, enchantStart, enchantEnd);
         LORE_CACHE.updateAfter(lore, stack, !hasAnimatedRainbow(collected.ordered()));
     }
 

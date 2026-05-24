@@ -2,6 +2,7 @@ package com.shyeuar.baity.features.enchantlore;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
+import com.shyeuar.baity.utils.RomanNumeralUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -22,7 +23,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,21 +33,6 @@ final class EnchantLoreParser {
     private static final Pattern ENCHANTMENT_PATTERN = Pattern.compile(
             "(?<enchant>[A-Za-z][A-Za-z -]+) (?<levelNumeral>(?=[MDCLXVI])M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))(?=, |$| [\\d,]+$)"
     );
-    private static final TreeMap<Integer, String> INT_ROMAN_MAP = new TreeMap<>(Map.ofEntries(
-            Map.entry(1000, "M"),
-            Map.entry(900, "CM"),
-            Map.entry(500, "D"),
-            Map.entry(400, "CD"),
-            Map.entry(100, "C"),
-            Map.entry(90, "XC"),
-            Map.entry(50, "L"),
-            Map.entry(40, "XL"),
-            Map.entry(10, "X"),
-            Map.entry(9, "IX"),
-            Map.entry(5, "V"),
-            Map.entry(4, "IV"),
-            Map.entry(1, "I")
-    ));
     private static final Comparator<EnchantDef> ENCHANT_ORDER = Comparator
             .comparingInt((EnchantDef e) -> e.ultimate ? 0 : 1)
             .thenComparingInt(e -> e.stacking ? 0 : 1)
@@ -105,7 +90,7 @@ final class EnchantLoreParser {
                 if (def.isEmpty() || !isEnchantOnItem(def.get(), enchantments, attributes)) {
                     continue;
                 }
-                int level = parseNumeral(matcher.group("levelNumeral"));
+                int level = RomanNumeralUtils.parseNumeral(matcher.group("levelNumeral"));
                 if (level <= 0) {
                     continue;
                 }
@@ -128,16 +113,6 @@ final class EnchantLoreParser {
             }
         }
         return new CollectResult(ordered, hasLore);
-    }
-
-    static String integerToRoman(int number) {
-        StringBuilder result = new StringBuilder();
-        while (number > 0) {
-            var entry = INT_ROMAN_MAP.floorEntry(number);
-            result.append(entry.getValue());
-            number -= entry.getKey();
-        }
-        return result.toString();
     }
 
     static boolean isMiningTool(ItemStack stack) {
@@ -231,37 +206,6 @@ final class EnchantLoreParser {
         }
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         return data == null ? null : data.copyTag();
-    }
-
-    private static int parseNumeral(String numeral) {
-        if (numeral == null || numeral.isEmpty()) {
-            return 0;
-        }
-        int total = 0;
-        int prev = 0;
-        for (int i = numeral.length() - 1; i >= 0; i--) {
-            int val = romanValue(numeral.charAt(i));
-            if (val < prev) {
-                total -= val;
-            } else {
-                total += val;
-            }
-            prev = val;
-        }
-        return total;
-    }
-
-    private static int romanValue(char c) {
-        return switch (c) {
-            case 'I' -> 1;
-            case 'V' -> 5;
-            case 'X' -> 10;
-            case 'L' -> 50;
-            case 'C' -> 100;
-            case 'D' -> 500;
-            case 'M' -> 1000;
-            default -> 0;
-        };
     }
 
     private static int correctTooltipWidth(int maxTooltipWidth) {

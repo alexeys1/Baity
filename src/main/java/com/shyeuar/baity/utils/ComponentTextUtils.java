@@ -2,10 +2,12 @@ package com.shyeuar.baity.utils;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.network.chat.contents.PlainTextContents;
 import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.util.StringUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -117,5 +119,52 @@ public final class ComponentTextUtils {
             }
         }
         return null;
+    }
+
+    public static Component replaceComponent(Component original, String target, String replacement) {
+        if (original.getContents() instanceof PlainTextContents originalContents) {
+            String contentsText = originalContents.text();
+
+            if (!StringUtil.isNullOrEmpty(contentsText) && contentsText.contains(target)) {
+                return copyWithReplacedText(original, contentsText.replace(target, replacement));
+            }
+        }
+
+        List<Component> originalSiblings = original.getSiblings();
+        for (int i = 0; i < originalSiblings.size(); i++) {
+            Component sibling = originalSiblings.get(i);
+
+            if (sibling.getContents() instanceof PlainTextContents siblingContents) {
+                String contentsText = siblingContents.text();
+
+                if (!StringUtil.isNullOrEmpty(contentsText) && contentsText.contains(target)) {
+                    MutableComponent newComponent = original.copy();
+                    newComponent.getSiblings().set(
+                            i, copyWithReplacedText(sibling, contentsText.replace(target, replacement))
+                    );
+                    return newComponent;
+                }
+            }
+
+            if (!sibling.getSiblings().isEmpty()) {
+                Component replaced = replaceComponent(sibling, target, replacement);
+
+                if (replaced != sibling) {
+                    MutableComponent newComponent = original.copy();
+                    newComponent.getSiblings().set(i, replaced);
+                    return newComponent;
+                }
+            }
+        }
+
+        return original;
+    }
+
+    private static MutableComponent copyWithReplacedText(Component source, String replacedText) {
+        MutableComponent newComponent = MutableComponent.create(
+                PlainTextContents.create(replacedText)
+        ).withStyle(source.getStyle());
+        source.getSiblings().forEach(newComponent::append);
+        return newComponent;
     }
 }

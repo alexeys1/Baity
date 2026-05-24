@@ -164,6 +164,9 @@ public class ConfigManager {
     public static double enchantLoreRainbowSaturation = 0.8;
     public static int enchantLoreRainbowGradient = 100;
     public static int enchantLoreRainbowAngle = 45;
+    public static boolean enchantLoreRomanNumeralsGroupExpanded = false;
+    public static boolean enchantLoreArabicNumerals = false;
+    public static boolean enchantLoreDontReplaceRomanInItemName = false;
     public static boolean nametagDefaultNametag = false;
     public static String baityPresenceSyncUrl = "https://baity-presence-sync.1427637445.workers.dev/users.json";
     public static boolean baityPresenceSyncEnabled = true;
@@ -528,6 +531,21 @@ public class ConfigManager {
         registerField("EnchantLoreRainbowAngle", Integer.class,
             c -> ConfigManager.enchantLoreRainbowAngle,
             (c, v) -> ConfigManager.enchantLoreRainbowAngle = (Integer) v);
+        registerField("EnchantLoreRomanNumeralsGroupExpanded", Boolean.class,
+            c -> ConfigManager.enchantLoreRomanNumeralsGroupExpanded,
+            (c, v) -> ConfigManager.enchantLoreRomanNumeralsGroupExpanded = (Boolean) v);
+        registerField("EnchantLoreArabicNumerals", Boolean.class,
+            c -> ConfigManager.enchantLoreArabicNumerals,
+            (c, v) -> {
+                ConfigManager.enchantLoreArabicNumerals = (Boolean) v;
+                com.shyeuar.baity.features.enchantlore.EnchantLore.invalidateCache();
+            });
+        registerField("EnchantLoreDontReplaceRomanInItemName", Boolean.class,
+            c -> ConfigManager.enchantLoreDontReplaceRomanInItemName,
+            (c, v) -> {
+                ConfigManager.enchantLoreDontReplaceRomanInItemName = (Boolean) v;
+                com.shyeuar.baity.features.enchantlore.EnchantLore.invalidateCache();
+            });
         registerField("BaityPresenceSyncUrl", String.class,
             c -> ConfigManager.baityPresenceSyncUrl,
             (c, v) -> ConfigManager.baityPresenceSyncUrl = (String) v);

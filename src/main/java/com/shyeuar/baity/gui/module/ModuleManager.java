@@ -441,11 +441,17 @@ public class ModuleManager {
                 "color editer", "color editer", ModuleCategory.RENDER
         );
 
+        GroupValue enchantLoreRomanNumeralsGroup = new GroupValue("roman numerals", "roman numerals", ModuleCategory.RENDER)
+            .setExpanded(ConfigManager.enchantLoreRomanNumeralsGroupExpanded)
+            .setSubModuleSwitchChildName("arabic numerals")
+            .addChild(new Option("arabic numerals", "arabic numerals", ConfigManager.enchantLoreArabicNumerals, ModuleCategory.RENDER))
+            .addChild(new Option("don't replace item name", "don't replace item name", ConfigManager.enchantLoreDontReplaceRomanInItemName, ModuleCategory.RENDER));
+
         ModuleRegistry.registerModuleWithValues(
             "EnchantLore", "EnchantLore", ModuleCategory.RENDER,
             () -> ConfigManager.enchantLoreEnabled,
             val -> ConfigManager.enchantLoreEnabled = val,
-            new com.shyeuar.baity.gui.value.Value[]{enchantLoreColorEditor, enchantLoreRainbowGroup},
+            new com.shyeuar.baity.gui.value.Value[]{enchantLoreColorEditor, enchantLoreRainbowGroup, enchantLoreRomanNumeralsGroup},
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
                     "color editer",
@@ -479,6 +485,27 @@ public class ModuleManager {
                     "rainbow angle",
                     () -> (double) ConfigManager.enchantLoreRainbowAngle,
                     val -> ConfigManager.enchantLoreRainbowAngle = ((Number) val).intValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "roman numerals",
+                    () -> ConfigManager.enchantLoreRomanNumeralsGroupExpanded,
+                    val -> ConfigManager.enchantLoreRomanNumeralsGroupExpanded = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "arabic numerals",
+                    () -> ConfigManager.enchantLoreArabicNumerals,
+                    val -> {
+                        ConfigManager.enchantLoreArabicNumerals = (Boolean) val;
+                        com.shyeuar.baity.features.enchantlore.EnchantLore.invalidateCache();
+                    }
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "don't replace item name",
+                    () -> ConfigManager.enchantLoreDontReplaceRomanInItemName,
+                    val -> {
+                        ConfigManager.enchantLoreDontReplaceRomanInItemName = (Boolean) val;
+                        com.shyeuar.baity.features.enchantlore.EnchantLore.invalidateCache();
+                    }
                 )
             }
         );
@@ -844,6 +871,7 @@ public class ModuleManager {
         TooltipManager.registerTooltip("OldSneaking",
             MessageUtils.createColoredText("Restore the sneaking animation of version 1.7.", 0xFFFFFF)
                 .append(MessageUtils.createColoredText(" Fake sneaking eye height!", 0xFFFF00)));
+        TooltipManager.registerTooltip("arabic numerals", "Replace roman number with arabic number.", 0xFFFFFF);
     }
     
     public static List<Module> getModules() {

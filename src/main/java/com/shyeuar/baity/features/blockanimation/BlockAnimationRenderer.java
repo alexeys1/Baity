@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.shyeuar.baity.mixin.accessor.ItemInHandRendererAccessor;
 import com.shyeuar.baity.utils.BlockAnimationUtils;
+import com.shyeuar.baity.render.RenderScope;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.ArmedModel;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -54,7 +55,6 @@ public final class BlockAnimationRenderer {
             float equipProgress) {
 
         if (!BlockAnimationUtils.isFeatureActive()) return RenderResult.PASS;
-        if (interactionHand != InteractionHand.MAIN_HAND) return RenderResult.PASS;
         if (BlockAnimationUtils.isUsingConsumableAnimation(player)
                 && interactionHand == player.getUsedItemHand()) {
             return RenderResult.PASS;
@@ -67,11 +67,15 @@ public final class BlockAnimationRenderer {
         InteractionHand blockingHand = BlockAnimationUtils.getBlockingHand(player);
         if (blockingHand != interactionHand) return RenderResult.PASS;
 
-        if (itemStack.isEmpty() || itemStack.has(net.minecraft.core.component.DataComponents.MAP_ID)) {
+        ItemStack renderStack = itemStack;
+        if (renderStack.isEmpty() || !BlockAnimationUtils.isSword(renderStack.getItem())) {
+            renderStack = player.getItemInHand(interactionHand);
+        }
+        if (renderStack.isEmpty() || renderStack.has(net.minecraft.core.component.DataComponents.MAP_ID)) {
             return RenderResult.PASS;
         }
 
-        if (itemStack.is(net.minecraft.world.item.Items.CROSSBOW)) {
+        if (renderStack.is(net.minecraft.world.item.Items.CROSSBOW)) {
             return RenderResult.PASS;
         }
 
@@ -109,7 +113,7 @@ public final class BlockAnimationRenderer {
         }
 
         itemInHandRenderer.renderItem(player,
-                itemStack,
+                renderStack,
                 isHandSideRight ? ItemDisplayContext.FIRST_PERSON_RIGHT_HAND :
                         ItemDisplayContext.FIRST_PERSON_LEFT_HAND,
                 poseStack,
@@ -227,12 +231,12 @@ public final class BlockAnimationRenderer {
         ArmedModel<AvatarRenderState> avatarModel = (ArmedModel<AvatarRenderState>) model;
         avatarModel.translateToHand(renderState, humanoidArm, poseStack);
         boolean leftHand = humanoidArm == HumanoidArm.LEFT;
+        InteractionHand blockingHand = BlockAnimationUtils.getBlockingHand(player);
+        boolean worldContext = RenderScope.isWorldCameraContext(renderState);
 
         if (BlockAnimationUtils.isRotorAnimaMode()) {
-            applyRotorThirdPersonGripAdjustments(poseStack, leftHand);
-        }
-
-        if (blockingNow && !BlockAnimationUtils.isRotorAnimaMode()) {
+            applyRotorThirdPersonGripAdjustments(poseStack, leftHand, blockingHand);
+        } else if (blockingNow) {
             applyThirdPersonBlockTransform(poseStack, leftHand);
         }
         float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
@@ -247,7 +251,11 @@ public final class BlockAnimationRenderer {
                         (com.shyeuar.baity.mixin.accessor.ItemStackRenderStateAccessor.LayerRenderStateAccessor) (Object) firstLayer;
                 transform = layerAccessor.baity$getTransform();
             }
-            applyRotorThirdPersonSpinKeepingVanillaPose(poseStack, transform, leftHand, partialTick, player, blockingNow);
+            if (worldContext) {
+                applyRotorThirdPersonSpinKeepingVanillaPose(poseStack, transform, leftHand, partialTick, player, blockingNow);
+            } else {
+                applyRotorThirdPersonSpinLocal(poseStack, transform, leftHand, partialTick);
+            }
         } else {
             applySpinModeItemRotationThirdPerson(poseStack, leftHand, partialTick, player, blockingNow);
 
@@ -279,12 +287,19 @@ public final class BlockAnimationRenderer {
         poseStack.mulPose(Axis.ZP.rotation(dir * angle));
     }
 
-    private static void applyRotorThirdPersonGripAdjustments(PoseStack poseStack, boolean leftHand) {
+    private static void applyRotorThirdPersonGripAdjustments(
+            PoseStack poseStack,
+            boolean leftHand,
+            InteractionHand blockingHand
+    ) {
         float wobbleY = BlockAnimationCircleController.getRotorThirdPersonWobbleItemLocalY();
         poseStack.translate(0f,
                 ROTOR_THIRD_PERSON_ALONG_ARM_LOCAL_SINGLE_AXIS + ROTOR_THIRD_PERSON_EXTRA_LIFT_LOCAL_Y + wobbleY,
                 0f);
         float pitchDeg = leftHand ? ROTOR_THIRD_PERSON_TIP_PITCH_DEGREES : -ROTOR_THIRD_PERSON_TIP_PITCH_DEGREES;
+        if (blockingHand == InteractionHand.OFF_HAND) {
+            pitchDeg = -pitchDeg;
+        }
         poseStack.mulPose(Axis.XP.rotationDegrees(pitchDeg));
     }
 
@@ -345,6 +360,25 @@ public final class BlockAnimationRenderer {
         }
     }
 
+    private static void applyRotorThirdPersonSpinLocal(PoseStack poseStack,
+            ItemTransform transformOrNull,
+            boolean leftHand,
+            float partialTick) {
+        float angle = BlockAnimationCircleController.getRenderRadians(partialTick);
+        float dir = leftHand ? -1f : 1f;
+        if (Math.abs(angle) < 1e-5f) {
+            return;
+        }
+
+        if (transformOrNull != null && transformOrNull != ItemTransform.NO_TRANSFORM) {
+            applyItemTransform(transformOrNull, leftHand, poseStack);
+        }
+        applyCircleSpinItemLocalZ(poseStack, dir, -angle);
+        if (transformOrNull != null && transformOrNull != ItemTransform.NO_TRANSFORM) {
+            revertItemTransform(transformOrNull, leftHand, poseStack);
+        }
+    }
+
     private static void applyRotorThirdPersonSpinKeepingVanillaPose(PoseStack poseStack,
             ItemTransform transformOrNull,
             boolean leftHand,
@@ -352,7 +386,9 @@ public final class BlockAnimationRenderer {
             AbstractClientPlayer player,
             boolean blockingNow) {
         float angle = BlockAnimationCircleController.getRenderRadians(partialTick);
-        if (Math.abs(angle) < 1e-5f) return;
+        if (Math.abs(angle) < 1e-5f) {
+            return;
+        }
         float dir = leftHand ? -1f : 1f;
 
         float bodyYaw = Mth.rotLerp(partialTick, player.yBodyRotO, player.yBodyRot);

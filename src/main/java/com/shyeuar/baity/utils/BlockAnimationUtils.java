@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -48,7 +49,7 @@ public final class BlockAnimationUtils {
     public static boolean isPlayerBlockingWithSword(Player player) {
         if (!isFeatureActive()) return false;
         if (player == null) return false;
-        return isPlayerRightClicking() && canSwordBlock(player);
+        return isPlayerRightClicking() && getBlockingHand(player) != null;
     }
 
     public static boolean isUsingConsumableAnimation(Player player) {
@@ -66,14 +67,30 @@ public final class BlockAnimationUtils {
     }
   
     public static boolean canSwordBlock(Player player) {
-        if (!isFeatureActive()) return false;
-        if (player == null) return false;
-        return isSword(player.getMainHandItem().getItem());
+        return getBlockingHand(player) != null;
     }
 
     public static InteractionHand getBlockingHand(Player player) {
-        if (!canSwordBlock(player)) return null;
-        return InteractionHand.MAIN_HAND;
+        if (!isFeatureActive() || player == null) return null;
+
+        ItemStack mainHand = player.getMainHandItem();
+        ItemStack offHand = player.getOffhandItem();
+        boolean mainSword = isSword(mainHand.getItem());
+        boolean offSword = isSword(offHand.getItem());
+
+        if (mainSword && canActivateBlocking(player, offHand)) {
+            return InteractionHand.MAIN_HAND;
+        }
+        if (offSword && canActivateBlocking(player, mainHand)) {
+            return InteractionHand.OFF_HAND;
+        }
+        return null;
+    }
+
+    public static HumanoidArm getBlockingArm(Player player, HumanoidArm mainArm) {
+        InteractionHand blockingHand = getBlockingHand(player);
+        if (blockingHand == null) return mainArm;
+        return blockingHand == InteractionHand.MAIN_HAND ? mainArm : mainArm.getOpposite();
     }
 
     public static boolean isSword(Item item) {

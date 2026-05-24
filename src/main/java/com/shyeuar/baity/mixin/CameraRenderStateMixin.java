@@ -18,6 +18,22 @@ public abstract class CameraRenderStateMixin implements CameraRenderStateInterfa
 	
 	@Unique
 	private float baity$eyeHeight = 0.0F;
+
+	@Unique
+	private boolean baity$worldCamera = false;
+
+	@Unique
+	private int baity$nameTagEntityId = -1;
+
+	@Override
+	public boolean baity$isWorldCamera() {
+		return this.baity$worldCamera;
+	}
+
+	@Override
+	public void baity$setWorldCamera(boolean worldCamera) {
+		this.baity$worldCamera = worldCamera;
+	}
 	
 	@Override
 	public int baity$getId() {
@@ -57,5 +73,15 @@ public abstract class CameraRenderStateMixin implements CameraRenderStateInterfa
 	@Override
 	public void baity$setEyeHeight(float eyeHeight) {
 		this.baity$eyeHeight = eyeHeight;
+	}
+
+	@Override
+	public int baity$getNameTagEntityId() {
+		return this.baity$nameTagEntityId;
+	}
+
+	@Override
+	public void baity$setNameTagEntityId(int entityId) {
+		this.baity$nameTagEntityId = entityId;
 	}
 }

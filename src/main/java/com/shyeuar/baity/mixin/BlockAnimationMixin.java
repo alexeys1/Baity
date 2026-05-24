@@ -279,7 +279,7 @@ public abstract class BlockAnimationMixin {
 
             if (BlockAnimationUtils.getBlockingHand(mc.player) == null) return;
 
-            HumanoidArm swordArm = avatarState.mainArm;
+            HumanoidArm swordArm = BlockAnimationUtils.getBlockingArm(mc.player, avatarState.mainArm);
             ModelPart arm = swordArm == HumanoidArm.RIGHT ? this.rightArm : this.leftArm;
 
             float raiseFactor = 1f;

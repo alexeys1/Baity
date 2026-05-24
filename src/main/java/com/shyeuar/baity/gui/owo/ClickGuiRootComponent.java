@@ -10,6 +10,7 @@ import com.shyeuar.baity.gui.render.ValueStyleRenderer;
 import com.shyeuar.baity.gui.value.Value;
 import com.shyeuar.baity.gui.value.ModuleCategory;
 import com.shyeuar.baity.gui.value.ValueTreeUtils;
+import com.shyeuar.baity.utils.NickRenderUtils;
 import io.wispforest.owo.ui.base.BaseUIComponent;
 import io.wispforest.owo.ui.core.OwoUIGraphics;
 import io.wispforest.owo.ui.core.Positioning;
@@ -71,7 +72,16 @@ public class ClickGuiRootComponent extends BaseUIComponent {
     @Override
     public void draw(OwoUIGraphics context, int mouseX, int mouseY, float partialTicks, float delta) {
         if (guiGraphics == null) return;
-        
+
+        NickRenderUtils.beginClickGuiRenderScope();
+        try {
+            baity$drawGui(context, mouseX, mouseY, partialTicks, delta);
+        } finally {
+            NickRenderUtils.endClickGuiRenderScope();
+        }
+    }
+
+    private void baity$drawGui(OwoUIGraphics context, int mouseX, int mouseY, float partialTicks, float delta) {
         Minecraft client = Minecraft.getInstance();
         if (client == null) return;
         

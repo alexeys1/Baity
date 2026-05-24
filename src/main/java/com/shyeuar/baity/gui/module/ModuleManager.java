@@ -644,23 +644,37 @@ public class ModuleManager {
             }
         );
         
+        GroupValue nametagOptionsGroup = new GroupValue("nametag options", "nametag options", ModuleCategory.RENDER)
+            .setExpanded(ConfigManager.nametagOptionsGroupExpanded)
+            .addChild(new Option("show distance", "show distance", false, ModuleCategory.RENDER))
+            .addChild(new Option("show own nametag", "show own nametag", true, ModuleCategory.RENDER))
+            .addChild(new Option("force pink color", "force pink color", true, ModuleCategory.RENDER))
+            .addChild(new Option("focus player nametag", "focus player nametag", false, ModuleCategory.RENDER));
+
         ModuleRegistry.registerModuleWithValues(
             "Nametag", "Nametag", ModuleCategory.RENDER,
             () -> ConfigManager.nametagEnabled,
             val -> ConfigManager.nametagEnabled = val,
-            new Option[]{
-                new Option("default nametag", "default nametag", false, ModuleCategory.RENDER),
-                withSeparator(new Option("show distance", "show distance", false, ModuleCategory.RENDER)),
-                new Option("show own nametag", "show own nametag", true, ModuleCategory.RENDER),
-                withSeparator(new Option("force pink color", "force pink color", true, ModuleCategory.RENDER)),
-                new Option("focus player nametag", "focus player nametag", false, ModuleCategory.RENDER),
-                withSeparator(new Option("transparentize other tags", "transparentize other tags", false, ModuleCategory.RENDER))
+            new com.shyeuar.baity.gui.value.Value[]{
+                new Option("default nametag", "only show the default nametag", false, ModuleCategory.RENDER),
+                new Option("transparentize other tags", "transparent tags", false, ModuleCategory.RENDER),
+                nametagOptionsGroup
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
                     "default nametag",
                     () -> ConfigManager.nametagDefaultNametag,
                     val -> ConfigManager.nametagDefaultNametag = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "transparentize other tags",
+                    () -> ConfigManager.nametagTransparentizeOtherTags,
+                    val -> ConfigManager.nametagTransparentizeOtherTags = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "nametag options",
+                    () -> ConfigManager.nametagOptionsGroupExpanded,
+                    val -> ConfigManager.nametagOptionsGroupExpanded = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "show distance",
@@ -681,11 +695,6 @@ public class ModuleManager {
                     "focus player nametag",
                     () -> ConfigManager.nametagFocusPlayerNametag,
                     val -> ConfigManager.nametagFocusPlayerNametag = (Boolean) val
-                ),
-                new ModuleRegistry.ValueConfigInfo(
-                    "transparentize other tags",
-                    () -> ConfigManager.nametagTransparentizeOtherTags,
-                    val -> ConfigManager.nametagTransparentizeOtherTags = (Boolean) val
                 )
             }
         );
@@ -872,6 +881,8 @@ public class ModuleManager {
             MessageUtils.createColoredText("Restore the sneaking animation of version 1.7.", 0xFFFFFF)
                 .append(MessageUtils.createColoredText(" Fake sneaking eye height!", 0xFFFF00)));
         TooltipManager.registerTooltip("arabic numerals", "Replace roman number with arabic number.", 0xFFFFFF);
+        TooltipManager.registerTooltip("transparentize other tags", "Remove the black background of tags.", 0xFFFFFF);
+        TooltipManager.registerTooltip("NoTextShadow", "Disable all the text shadow in game.", 0xFFFFFF);
     }
     
     public static List<Module> getModules() {

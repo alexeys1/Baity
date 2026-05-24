@@ -15,8 +15,7 @@ public class ModuleInitializer {
         "show distance",
         "show own nametag",
         "force pink color",
-        "focus player nametag",
-        "transparentize other tags"
+        "focus player nametag"
     );
     private static final Set<String> REMINDER_OPTIONS = Set.of("cookie buff reminder", "god potion reminder");
     private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of("genshin elemental reaction", "compact damage number");
@@ -112,13 +111,27 @@ public class ModuleInitializer {
         if (playerEsp != null) {
             playerEsp.setEnabled(ConfigManager.nametagEnabled);
             for (Value v : playerEsp.getValues()) {
-                if (PLAYERESP_OPTIONS.contains(v.getName())) {
-                    switch (v.getName()) {
-                        case "show distance" -> v.setValue(ConfigManager.nametagShowDistance);
-                        case "show own nametag" -> v.setValue(ConfigManager.nametagShowOwnNametag);
-                        case "force pink color" -> v.setValue(ConfigManager.nametagForcePinkColor);
-                        case "focus player nametag" -> v.setValue(ConfigManager.nametagFocusPlayerNametag);
-                        case "transparentize other tags" -> v.setValue(ConfigManager.nametagTransparentizeOtherTags);
+                switch (v.getName()) {
+                    case "default nametag" -> v.setValue(ConfigManager.nametagDefaultNametag);
+                    case "transparentize other tags" -> v.setValue(ConfigManager.nametagTransparentizeOtherTags);
+                    case "nametag options" -> {
+                        if (v instanceof GroupValue group) {
+                            group.setExpanded(ConfigManager.nametagOptionsGroupExpanded);
+                            for (Value child : group.getChildren()) {
+                                if (PLAYERESP_OPTIONS.contains(child.getName())) {
+                                    switch (child.getName()) {
+                                        case "show distance" -> child.setValue(ConfigManager.nametagShowDistance);
+                                        case "show own nametag" -> child.setValue(ConfigManager.nametagShowOwnNametag);
+                                        case "force pink color" -> child.setValue(ConfigManager.nametagForcePinkColor);
+                                        case "focus player nametag" -> child.setValue(ConfigManager.nametagFocusPlayerNametag);
+                                        default -> {
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    default -> {
                     }
                 }
             }

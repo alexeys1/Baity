@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.config.ConfigManager;
+import com.shyeuar.baity.render.RenderScope;
 import com.shyeuar.baity.mixin.accessor.AvatarRenderStateAccessor;
 import com.shyeuar.baity.mixin.accessor.CameraRenderStateAccessor;
 import com.shyeuar.baity.mixin.accessor.PlayerAccessor;
@@ -110,7 +111,7 @@ public class OldSneakingMixin {
 		
 		@WrapOperation(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/HumanoidRenderState;)V", at = @At(value = "FIELD", opcode = Opcodes.GETFIELD, target = "Lnet/minecraft/client/renderer/entity/state/HumanoidRenderState;isCrouching:Z"))
 		private boolean baity$applyLegacySneakPose(HumanoidRenderState instance, Operation<Boolean> original) {
-			if (ConfigManager.oldSneakingEnabled && instance.isCrouching) {
+			if (ConfigManager.oldSneakingEnabled && instance.isCrouching && RenderScope.shouldApplyWorldEntityChanges()) {
 				body.xRot = BODY_ROTATION_X;
 				rightArm.xRot += ARM_ROTATION_OFFSET;
 				leftArm.xRot += ARM_ROTATION_OFFSET;
@@ -133,7 +134,7 @@ public class OldSneakingMixin {
 			if (ConfigManager.oldSneakingEnabled
 					&& baity$isPlayerSelf(livingEntityRenderState)
 					&& !livingEntityRenderState.hasPose(Pose.SWIMMING)
-					&& (Minecraft.getInstance().screen == null)) {
+					&& RenderScope.isWorldEntityRender(cameraRenderState)) {
 				final float cameraLerpValue = baity$interpolateCameraEyeHeight((CameraRenderStateAccessor) cameraRenderState);
 				AvatarRenderStateAccessor avatarAccessor = (AvatarRenderStateAccessor) livingEntityRenderState;
 				EntityDimensions standingDimensions = avatarAccessor.baity$getStandingDimensions();

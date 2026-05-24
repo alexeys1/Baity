@@ -9,4 +9,8 @@ public interface CameraRenderStateInterface {
 	void baity$setOldEyeHeight(float oldEyeHeight);
 	float baity$getEyeHeight();
 	void baity$setEyeHeight(float eyeHeight);
+	boolean baity$isWorldCamera();
+	void baity$setWorldCamera(boolean worldCamera);
+	int baity$getNameTagEntityId();
+	void baity$setNameTagEntityId(int entityId);
 }

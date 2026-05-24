@@ -34,6 +34,7 @@ public class ConfigManager {
     public static boolean nametagForcePinkColor = true;
     public static boolean nametagFocusPlayerNametag = false;
     public static boolean nametagTransparentizeOtherTags = false;
+    public static boolean nametagOptionsGroupExpanded = false;
     public static boolean pepCatEnabled = false;
     public static boolean reminderEnabled = false;
     public static boolean reminderCookieBuffEnabled = true;
@@ -263,6 +264,9 @@ public class ConfigManager {
         registerField("  TransparentizeOtherTags", Boolean.class,
             c -> ConfigManager.nametagTransparentizeOtherTags,
             (c, v) -> ConfigManager.nametagTransparentizeOtherTags = (Boolean) v);
+        registerField("NametagOptionsGroupExpanded", Boolean.class,
+            c -> ConfigManager.nametagOptionsGroupExpanded,
+            (c, v) -> ConfigManager.nametagOptionsGroupExpanded = (Boolean) v);
         registerField("PepCat", Boolean.class,
             c -> ConfigManager.pepCatEnabled,
             (c, v) -> ConfigManager.pepCatEnabled = (Boolean) v);

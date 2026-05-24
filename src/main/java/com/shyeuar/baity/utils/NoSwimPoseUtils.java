@@ -2,16 +2,24 @@ package com.shyeuar.baity.utils;
 
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
+import com.shyeuar.baity.render.RenderScope;
+import com.shyeuar.baity.render.interfaces.EntityRenderStateInterface;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Player;
 
 public final class NoSwimPoseUtils {
 
     public static final float STANDING_EYE_HEIGHT = 1.62F;
-    private static final long DELAY_MS = 500L;
-    private static long exitWaterTime = 0L;
+    public static final float WORLD_SWIM_NAMETAG_Y_OFFSET = 1.2F;
+
+    private static final long EXIT_GRACE_MS = 1000L;
+
     private static boolean wasInWater = false;
+    private static long exitWaterTime = 0L;
 
     private NoSwimPoseUtils() {}
 
@@ -20,41 +28,69 @@ public final class NoSwimPoseUtils {
         return m != null && m.isEnabled();
     }
 
-    public static boolean shouldApplyEyeHeightChange() {
-        if (!isFeatureActive()) return false;
-
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) return false;
-
-        boolean isHeadInWater = mc.player.isEyeInFluid(FluidTags.WATER);
-        long currentTime = System.currentTimeMillis();
-
-        if (isHeadInWater) {
-            wasInWater = true;
-            exitWaterTime = 0L;
-            return true;
-        }
-
-        if (wasInWater) {
-            if (exitWaterTime == 0L) {
-                exitWaterTime = currentTime;
-            }
-            long timeSinceExit = currentTime - exitWaterTime;
-            if (timeSinceExit < DELAY_MS) {
-                return true;
-            } else {
-                wasInWater = false;
-                exitWaterTime = 0L;
-                return false;
-            }
-        }
-
-        return false;
+    private enum SwimVisualPhase {
+        NONE,
+        ACTIVE,
+        GRACE
     }
 
-    public static boolean isSelfPlayer(Object entity) {
+    private static SwimVisualPhase resolveSwimVisualPhase() {
         Minecraft mc = Minecraft.getInstance();
-        return entity == mc.player;
+        if (mc.player == null || mc.level == null) {
+            return SwimVisualPhase.NONE;
+        }
+
+        long now = System.currentTimeMillis();
+
+        if (mc.player.isEyeInFluid(FluidTags.WATER)) {
+            wasInWater = true;
+            exitWaterTime = 0L;
+            return SwimVisualPhase.ACTIVE;
+        }
+
+        if (!wasInWater) {
+            return SwimVisualPhase.NONE;
+        }
+
+        if (mc.player.getPose() == Pose.SWIMMING) {
+            return SwimVisualPhase.ACTIVE;
+        }
+
+        if (exitWaterTime == 0L) {
+            exitWaterTime = now;
+        }
+        if (now - exitWaterTime < EXIT_GRACE_MS) {
+            return SwimVisualPhase.GRACE;
+        }
+
+        wasInWater = false;
+        exitWaterTime = 0L;
+        return SwimVisualPhase.NONE;
+    }
+
+    public static boolean isInWaterSwimVisualContext() {
+        SwimVisualPhase phase = resolveSwimVisualPhase();
+        return phase == SwimVisualPhase.ACTIVE || phase == SwimVisualPhase.GRACE;
+    }
+
+    public static boolean isInActiveSwimVisualContext() {
+        return resolveSwimVisualPhase() == SwimVisualPhase.ACTIVE;
+    }
+
+    public static boolean isAbnormalDrySwimPose() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
+            return false;
+        }
+        return mc.player.getPose() == Pose.SWIMMING && !isInWaterSwimVisualContext();
+    }
+
+    public static boolean shouldApplyEyeHeightChange() {
+        return isFeatureActive() && isInActiveSwimVisualContext();
+    }
+
+    public static boolean shouldApplyVisualOverrides() {
+        return isFeatureActive() && isInWaterSwimVisualContext();
     }
 
     public static boolean isSelfPlayerById(int entityId) {
@@ -62,38 +98,51 @@ public final class NoSwimPoseUtils {
         return mc.player != null && mc.player.getId() == entityId;
     }
 
+    public static boolean isSelfPlayer(Object entity) {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.player != null && entity == mc.player;
+    }
+
     public static boolean isSneaking() {
         Minecraft mc = Minecraft.getInstance();
         return mc.player != null && mc.options.keyShift.isDown();
     }
 
-    public static boolean isPlayerHeadInWaterBlock() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) return false;
-
-        return mc.player.isEyeInFluid(FluidTags.WATER);
-    }
-    
-    @Deprecated
-    public static boolean isPlayerInWaterBlock() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) return false;
-        
-        BlockPos playerPos = mc.player.blockPosition();
-        BlockPos feetPos = BlockPos.containing(mc.player.getX(), mc.player.getY(), mc.player.getZ());
-        
-        if (mc.level.getBlockState(playerPos).getFluidState().is(FluidTags.WATER)) {
-            return true;
+    public static boolean isWorldRenderContext(AvatarRenderState state) {
+        if (state instanceof EntityRenderStateInterface context) {
+            return context.baity$isWorldCameraContext();
         }
-        if (mc.level.getBlockState(feetPos).getFluidState().is(FluidTags.WATER)) {
-            return true;
-        }
-        
-        BlockPos bodyPos = BlockPos.containing(mc.player.getX(), mc.player.getY() + 0.5, mc.player.getZ());
-        if (mc.level.getBlockState(bodyPos).getFluidState().is(FluidTags.WATER)) {
-            return true;
-        }
-        
         return false;
+    }
+
+    public static boolean shouldApplyWorldSwimNametagOffset(Player player) {
+        return shouldApplyVisualOverrides() && player != null && player.getPose() == Pose.SWIMMING;
+    }
+
+    public static boolean shouldFreezeSwimAmount(Object entity) {
+        if (!shouldApplyVisualOverrides() || !isSelfPlayer(entity)) {
+            return false;
+        }
+        return RenderScope.isEntityRenderScope() && RenderScope.shouldApplyWorldEntityChanges();
+    }
+
+    public static void clearSwimRenderState(AvatarRenderState state) {
+        if (!shouldApplyVisualOverrides()) {
+            return;
+        }
+        state.isVisuallySwimming = false;
+        state.swimAmount = 0.0F;
+
+        if (isSneaking()) {
+            state.isCrouching = true;
+        }
+    }
+
+    public static void restoreSwimRenderStateFromEntity(AvatarRenderState state, LivingEntity entity) {
+        if (state == null || entity == null) {
+            return;
+        }
+        state.swimAmount = entity.getSwimAmount(1.0F);
+        state.isVisuallySwimming = entity.isVisuallySwimming();
     }
 }

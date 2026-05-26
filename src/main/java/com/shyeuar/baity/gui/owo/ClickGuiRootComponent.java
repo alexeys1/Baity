@@ -1,5 +1,6 @@
 package com.shyeuar.baity.gui.owo;
 
+import com.shyeuar.baity.gui.input.LineTextInput;
 import com.shyeuar.baity.gui.internal.ClickGuiState;
 import com.shyeuar.baity.gui.internal.ClickGuiLayout;
 import com.shyeuar.baity.gui.theme.Theme;
@@ -174,7 +175,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
     }
     
     private List<Module> getFilteredModules() {
-        String searchText = state.getSearchText().toLowerCase().trim();
+        String searchText = state.getSearchInput().getText().toLowerCase().trim();
         ModuleCategory selectedCategory = state.getSelectedCategory();
         
         if (cachedFilteredModules != null && 
@@ -284,11 +285,10 @@ public class ClickGuiRootComponent extends BaseUIComponent {
     private void renderSearchBar(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
         float iconSize = 12;
         float iconPadding = 4;
-        float searchX = ClickGuiState.SIDEBAR_WIDTH + 20;
-        float searchY = 15;
-        float searchHeight = 20;
-        
-        float searchWidth = ClickGuiState.CONTENT_WIDTH - 40;
+        float searchX = ClickGuiLayout.searchBarX();
+        float searchY = ClickGuiLayout.searchBarY();
+        float searchHeight = ClickGuiLayout.searchBarHeight();
+        float searchWidth = ClickGuiLayout.searchBarWidth();
         
         Identifier searchIcon = Identifier.fromNamespaceAndPath("baity", "textures/gui/search.png");
         int iconX = (int)(searchX + iconPadding);
@@ -296,26 +296,36 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         int iconColor = 0xFFFFFFFF;
         guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, searchIcon, iconX, iconY, 0, 0, (int)iconSize, (int)iconSize, (int)iconSize, (int)iconSize, iconColor);
         
-        float textStartX = searchX + iconSize + iconPadding * 2;
+        float textStartX = ClickGuiLayout.searchBarTextStartX();
         
         boolean focused = state.isSearchFocused();
-        
-        String searchText = state.getSearchText();
-        String displayText = (focused && searchText.isEmpty()) ? "" : 
-                            (searchText.isEmpty() ? "Search..." : searchText);
-        int textColor = searchText.isEmpty() ? 
-            theme.FONT.getRGB() : 
-            theme.FONT_C.getRGB();
-        
-        int textX = (int)textStartX;
-        int textY = (int)(searchY + 6);
-        if (!displayText.isEmpty()) {
-            guiGraphics.drawString(client.font, displayText, textX, textY, textColor, false);
-        }
-        
-        if (focused && System.currentTimeMillis() % 1000 < 500) {
-            int cursorX = textX + client.font.width(displayText);
-            guiGraphics.fill(cursorX, textY, cursorX + 1, textY + 9, theme.FONT_C.getRGB());
+        LineTextInput search = state.getSearchInput();
+        String searchText = search.getText();
+        boolean empty = searchText.isEmpty();
+
+        int textX = (int) textStartX;
+        int textY = (int) (searchY + 6);
+        if (focused) {
+            if (empty) {
+                guiGraphics.drawString(client.font, "Search...", textX, textY, theme.FONT.getRGB(), false);
+            }
+            LineTextInput.drawTextWithBlinkCursor(
+                guiGraphics,
+                client.font,
+                empty ? "" : searchText,
+                search.getCursorCp(),
+                search.hasSelection() ? search.getSelectionStartCp() : -1,
+                search.hasSelection() ? search.getSelectionEndCp() : -1,
+                textX,
+                textY,
+                theme.FONT_C.getRGB(),
+                true,
+                LineTextInput.shouldBlinkCursor()
+            );
+        } else if (!empty) {
+            guiGraphics.drawString(client.font, searchText, textX, textY, theme.FONT_C.getRGB(), false);
+        } else {
+            guiGraphics.drawString(client.font, "Search...", textX, textY, theme.FONT.getRGB(), false);
         }
         
         float lineY = searchY + searchHeight - 1;
@@ -580,7 +590,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 int subX1 = (int)(containerX1 + 4 + depth * 12);
                 int subX2 = (int)(containerX2 - 4 - depth * 8);
                 
-                ValueStyleRenderer.renderValue(guiGraphics, client, module, value, theme, subX1, subModY, subX2, dims.subOptionHeight, mouseX, mouseY, localAlpha, getTooltipText, getTooltipTextWithColors, getDisplayTextFormatter, state.getListeningButtonValueName(), tooltipInfo, state.getEditingSlider(), state.getSliderInputText(), state.getEditingGradient(), state.getGradientInputText(), state.getEditingTextInput(), state.getTextInputValue(), state.getTextInputCursorCpIndex());
+                ValueStyleRenderer.renderValue(guiGraphics, client, module, value, theme, subX1, subModY, subX2, dims.subOptionHeight, mouseX, mouseY, localAlpha, getTooltipText, getTooltipTextWithColors, getDisplayTextFormatter, state.getListeningButtonValueName(), tooltipInfo, state.getEditingSlider(), state.getSliderInput().getText(), state.getEditingGradient(), state.getGradientInput().getText(), state.getGradientInput().getCursorCp(), state.getSliderInput().getCursorCp(), state.getEditingTextInput(), state.getTextLineInput().getText(), state.getTextLineInput().getCursorCp(), state.getTextLineInput().hasSelection() ? state.getTextLineInput().getSelectionStartCp() : -1, state.getTextLineInput().hasSelection() ? state.getTextLineInput().getSelectionEndCp() : -1);
                 
                 
                 if (tooltipInfo != null && tooltipInfo.tooltip != null) {

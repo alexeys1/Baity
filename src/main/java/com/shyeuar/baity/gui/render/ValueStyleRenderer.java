@@ -1,5 +1,6 @@
 package com.shyeuar.baity.gui.render;
 
+import com.shyeuar.baity.gui.input.LineTextInput;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.theme.Theme;
 import com.shyeuar.baity.gui.value.Value;
@@ -223,14 +224,8 @@ public class ValueStyleRenderer {
 
    private static void drawCenteredClippedText(GuiGraphics context, net.minecraft.client.gui.Font font,
                                                String text, float lineX1, float lineY, float lineX2, int color) {
-       float lineWidth = lineX2 - lineX1;
-       int textWidth = font.width(text);
-       float drawX = lineX1 + (lineWidth - textWidth) * 0.5f;
-       float textAreaTop = lineY - 11f;
-       float drawY = textAreaTop + (11f - font.lineHeight) * 0.5f;
-       context.enableScissor((int) lineX1, (int) textAreaTop, (int) lineX2, (int) lineY);
-       context.drawString(font, text, Math.round(drawX), Math.round(drawY), color, false);
-       context.disableScissor();
+       LineTextInput.drawCenteredClippedWithBlinkCursor(
+           context, font, text, 0, -1, -1, lineX1, lineY, lineX2, color, false);
    }
 
    public static GradientEditorBottomLayout computeGradientEditorBottomLayout(
@@ -321,14 +316,16 @@ public class ValueStyleRenderer {
                                                           ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo,
                                                           float mouseX, float mouseY,
                                                           String syncTooltip) {
-       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex,
-               null, false, localAlpha, hoveredTooltipInfo, mouseX, mouseY, syncTooltip);
+       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex, 0,
+               null, false, 0, localAlpha, hoveredTooltipInfo, mouseX, mouseY, syncTooltip);
    }
 
    private static void renderGradientEditorBottomControls(GuiGraphics context, Minecraft client, Theme theme,
                                                           GradientEditorBottomLayout bottom, String selectedHex,
-                                                          boolean editingHex, String symbolDisplay,
-                                                          boolean editingSymbol, int localAlpha,
+                                                          boolean editingHex, int editingHexCursorCp,
+                                                          String symbolDisplay,
+                                                          boolean editingSymbol, int editingSymbolCursorCp,
+                                                          int localAlpha,
                                                           ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo,
                                                           float mouseX, float mouseY,
                                                           String syncTooltip) {
@@ -337,9 +334,9 @@ public class ValueStyleRenderer {
        if (bottom.hasSymbolInput && symbolDisplay != null) {
            boolean symbolHovered = GuiRenderUtil.isHovered(bottom.symbolInputX1, bottom.symbolInputY - 12, bottom.symbolInputX2, bottom.symbolInputY + 6, mouseX, mouseY);
            int symbolTextColor = editingSymbol ? hoverYellow : (symbolHovered ? hoverYellow : textColor);
-           String symbolPreview = editingSymbol ? symbolDisplay + "_" : symbolDisplay;
-           drawCenteredClippedText(context, client.font, symbolPreview,
-                   bottom.symbolInputX1, bottom.symbolInputY, bottom.symbolInputX2, symbolTextColor);
+           LineTextInput.drawCenteredClippedWithBlinkCursor(
+               context, client.font, symbolDisplay, editingSymbolCursorCp, -1, -1,
+               bottom.symbolInputX1, bottom.symbolInputY, bottom.symbolInputX2, symbolTextColor, editingSymbol);
            int symbolLineColor = symbolHovered || editingSymbol
                    ? hoverYellow
                    : ((new java.awt.Color(120, 120, 120, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
@@ -347,7 +344,15 @@ public class ValueStyleRenderer {
        }
        boolean inputHovered = GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, mouseX, mouseY);
        int inputTextColor = editingHex ? hoverYellow : (inputHovered ? hoverYellow : textColor);
-       context.drawString(client.font, selectedHex, (int) bottom.inputX1, (int) (bottom.inputY - 9), inputTextColor, false);
+       int hexTextY = (int) (bottom.inputY - 9);
+       if (editingHex) {
+           LineTextInput.drawTextWithBlinkCursor(
+               context, client.font, selectedHex, editingHexCursorCp, -1, -1,
+               (int) bottom.inputX1, hexTextY, inputTextColor, true,
+               LineTextInput.shouldBlinkCursor());
+       } else {
+           context.drawString(client.font, selectedHex, (int) bottom.inputX1, hexTextY, inputTextColor, false);
+       }
        int lineColor = inputHovered || editingHex
                ? hoverYellow
                : ((new java.awt.Color(120, 120, 120, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
@@ -381,49 +386,19 @@ public class ValueStyleRenderer {
                                  java.util.function.Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
                                  java.util.function.Function<Object, String> getDisplayTextFormatter,
                                  String listeningButtonValueName,
-                                 ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
-      renderValue(context, client, module, value, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha,
-                 getTooltipText, getTooltipTextWithColors, getDisplayTextFormatter, listeningButtonValueName, hoveredTooltipInfo,
-                   null, "", null, "", null, "", 0);
-   }
-   
-   public static void renderValue(GuiGraphics context, Minecraft client, Module module, Value value, Theme theme,
-                                 float x1, float y, float x2, float subOptionHeight,
-                                 float mouseX, float mouseY, int localAlpha,
-                                 java.util.function.Function<String, String> getTooltipText,
-                                 java.util.function.Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
-                                 java.util.function.Function<Object, String> getDisplayTextFormatter,
-                                 String listeningButtonValueName,
                                  ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo,
                                  com.shyeuar.baity.gui.internal.ClickGuiState.SliderInputInfo editingSlider,
                                  String sliderInputText,
                                  com.shyeuar.baity.gui.internal.ClickGuiState.GradientInputInfo editingGradient,
                                  String gradientInputText,
-                                 com.shyeuar.baity.gui.internal.ClickGuiState.TextInputInfo editingTextInput,
-                                 String textInputValue) {
-       int endCp = textInputValue == null ? 0 : textInputValue.codePointCount(0, textInputValue.length());
-       renderValue(context, client, module, value, theme,
-           x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha,
-           getTooltipText, getTooltipTextWithColors, getDisplayTextFormatter, listeningButtonValueName, hoveredTooltipInfo,
-           editingSlider, sliderInputText, editingGradient, gradientInputText, editingTextInput, textInputValue, endCp);
-   }
-                                 
-   public static void renderValue(GuiGraphics context, Minecraft client, Module module, Value value, Theme theme,
-                                 float x1, float y, float x2, float subOptionHeight,
-                                 float mouseX, float mouseY, int localAlpha,
-                                 java.util.function.Function<String, String> getTooltipText,
-                                 java.util.function.Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
-                                 java.util.function.Function<Object, String> getDisplayTextFormatter,
-                                 String listeningButtonValueName,
-                                 ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo,
-                                 com.shyeuar.baity.gui.internal.ClickGuiState.SliderInputInfo editingSlider,
-                                 String sliderInputText,
-                                 com.shyeuar.baity.gui.internal.ClickGuiState.GradientInputInfo editingGradient,
-                                 String gradientInputText,
+                                 int gradientInputCursorCp,
+                                 int sliderInputCursorCp,
                                  com.shyeuar.baity.gui.internal.ClickGuiState.TextInputInfo editingTextInput,
                                  String textInputValue,
-                                 int editingTextCursorCpIndex) {
-       
+                                 int editingTextCursorCpIndex,
+                                 int textSelectionStartCp,
+                                 int textSelectionEndCp) {
+
       ValueStyle style = value.getStyle();
        
       if (style == ValueStyle.BUTTON_LIKE && value instanceof ButtonValue) {
@@ -437,7 +412,7 @@ public class ValueStyleRenderer {
        } else if (style == ValueStyle.SLIDER && value instanceof SliderValue) {
            renderSliderValue(context, client, module, (SliderValue) value, theme,
                             x1, y, x2, subOptionHeight,
-                            mouseX, mouseY, localAlpha, editingSlider, sliderInputText);
+                            mouseX, mouseY, localAlpha, editingSlider, sliderInputText, sliderInputCursorCp);
        } else if (style == ValueStyle.FANCY_DMG_PRESET && value instanceof com.shyeuar.baity.gui.value.FancyDmgSplashPresetValue presetPalette) {
            renderFancyDmgPresetValue(context, client, presetPalette, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, hoveredTooltipInfo);
        } else if (style == ValueStyle.COLOR_PALETTE && value instanceof com.shyeuar.baity.gui.value.ColorPaletteValue) {
@@ -445,17 +420,18 @@ public class ValueStyleRenderer {
                                    x1, y, x2, subOptionHeight,
                                    mouseX, mouseY, localAlpha);
       } else if (style == ValueStyle.GRADIENT_EDITOR && value instanceof GradientEditorValue) {
-          renderGradientEditorValue(context, client, (GradientEditorValue) value, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingGradient, gradientInputText, hoveredTooltipInfo);
+          renderGradientEditorValue(context, client, (GradientEditorValue) value, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingGradient, gradientInputText, gradientInputCursorCp, hoveredTooltipInfo);
       } else if (style == ValueStyle.FANCY_DMG_COLOR_EDITOR && value instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor) {
-          renderFancyDmgColorEditorValue(context, client, fancyEditor, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingGradient, gradientInputText, hoveredTooltipInfo);
+          renderFancyDmgColorEditorValue(context, client, fancyEditor, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingGradient, gradientInputText, gradientInputCursorCp, hoveredTooltipInfo);
       } else if (style == ValueStyle.ENCHANT_LORE_COLOR_EDITOR && value instanceof EnchantLoreColorEditorValue) {
-          renderEnchantLoreColorEditorValue(context, client, (EnchantLoreColorEditorValue) value, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingGradient, gradientInputText, hoveredTooltipInfo);
+          renderEnchantLoreColorEditorValue(context, client, (EnchantLoreColorEditorValue) value, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingGradient, gradientInputText, gradientInputCursorCp, hoveredTooltipInfo);
       } else if (style == ValueStyle.CROSSHAIR_PAINTER && value instanceof CrosshairPainterValue) {
           renderCrosshairPainterValue(context, client, (CrosshairPainterValue) value, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, hoveredTooltipInfo);
       } else if (style == ValueStyle.TEXT_LINE_INPUT && value instanceof TextLineInputValue) {
           renderTextLineInputValue(context, client, module, (TextLineInputValue) value, theme,
               x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingTextInput, textInputValue,
-              editingTextCursorCpIndex, getTooltipText, getTooltipTextWithColors, hoveredTooltipInfo);
+              editingTextCursorCpIndex, textSelectionStartCp, textSelectionEndCp,
+              getTooltipText, getTooltipTextWithColors, hoveredTooltipInfo);
       } else {
            renderDefaultValue(context, client, module, value, theme,
                           x1, y, x2, subOptionHeight,
@@ -470,6 +446,8 @@ public class ValueStyleRenderer {
                                                com.shyeuar.baity.gui.internal.ClickGuiState.TextInputInfo editingTextInput,
                                                String textInputValue,
                                                int editingTextCursorCpIndex,
+                                               int textSelectionStartCp,
+                                               int textSelectionEndCp,
                                                java.util.function.Function<String, String> getTooltipText,
                                                java.util.function.Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
                                                ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
@@ -513,43 +491,18 @@ public class ValueStyleRenderer {
 
        String raw = editing ? textInputValue : String.valueOf(value.getValue());
        String preview = raw == null ? "" : raw;
-       if (editing) {
-           int cpCursor = Math.max(0, editingTextCursorCpIndex);
-           int charPos = cpIndexToCharIndex(preview, cpCursor);
-           preview = preview.substring(0, charPos) + "_" + preview.substring(charPos);
-       }
-       preview = limitByCodePoints(preview, 28);
+       preview = LineTextInput.limitByCodePoints(preview, 28);
        int valueTextColor = (hovered || editing) ? interactiveYellow : textColor;
-       context.drawString(client.font, preview, (int) lineX1, (int) (lineY - 9), valueTextColor, false);
-   }
-
-   private static int cpIndexToCharIndex(String s, int cpIndex) {
-       if (s == null) return 0;
-       int cpCount = s.codePointCount(0, s.length());
-       int target = Math.max(0, Math.min(cpIndex, cpCount));
-       int curCp = 0;
-       for (int charIdx = 0; charIdx < s.length(); ) {
-           if (curCp == target) return charIdx;
-           int cp = s.codePointAt(charIdx);
-           charIdx += Character.charCount(cp);
-           curCp++;
+       int textY = (int) (lineY - 9);
+       if (editing) {
+           LineTextInput.drawTextWithBlinkCursor(
+               context, client.font, preview, editingTextCursorCpIndex,
+               textSelectionStartCp, textSelectionEndCp,
+               (int) lineX1, textY, valueTextColor, true,
+               LineTextInput.shouldBlinkCursor());
+       } else {
+           context.drawString(client.font, preview, (int) lineX1, textY, valueTextColor, false);
        }
-       return s.length();
-   }
-
-   private static String limitByCodePoints(String s, int maxCp) {
-       if (s == null) return "";
-       int cpCount = s.codePointCount(0, s.length());
-       if (cpCount <= maxCp) return s;
-       int cpSeen = 0;
-       int charIdx = 0;
-       while (charIdx < s.length()) {
-           int cp = s.codePointAt(charIdx);
-           if (cpSeen >= maxCp) break;
-           charIdx += Character.charCount(cp);
-           cpSeen++;
-       }
-       return s.substring(0, charIdx);
    }
 
    public static void renderGroupValue(GuiGraphics context, Minecraft client, GroupValue groupValue, Theme theme,
@@ -683,13 +636,15 @@ public class ValueStyleRenderer {
    public static void renderSliderValue(GuiGraphics context, Minecraft client, Module module, SliderValue sliderValue, Theme theme,
                                         float x1, float y, float x2, float subOptionHeight,
                                         float mouseX, float mouseY, int localAlpha) {
-       renderSliderValue(context, client, module, sliderValue, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, null, "");
+       renderSliderValue(context, client, module, sliderValue, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, null, "", 0);
    }
    
    public static void renderSliderValue(GuiGraphics context, Minecraft client, Module module, SliderValue sliderValue, Theme theme,
                                         float x1, float y, float x2, float subOptionHeight,
                                         float mouseX, float mouseY, int localAlpha,
-                                        com.shyeuar.baity.gui.internal.ClickGuiState.SliderInputInfo editingSlider, String inputText) {
+                                        com.shyeuar.baity.gui.internal.ClickGuiState.SliderInputInfo editingSlider,
+                                        String inputText,
+                                        int inputCursorCp) {
        
        int baseValueColor = new java.awt.Color(40, 40, 40, 50).getRGB();
        int valueColor = (baseValueColor & 0x00FFFFFF) | (localAlpha << 24);
@@ -722,7 +677,7 @@ public class ValueStyleRenderer {
                           editingSlider.moduleName.equals(module.getName()) && 
                           editingSlider.valueName.equals(sliderValue.getName());
        
-       String valueText = isEditing ? inputText + "_" : sliderValue.getFormattedValue();
+       String valueText = isEditing ? inputText : sliderValue.getFormattedValue();
        int valueTextWidth = client.font.width(valueText);
        int valueDisplayWidth = Math.max(valueTextWidth + 8, 35);
        int valueDisplayX = resetBoxX - valueDisplayWidth - 8;
@@ -736,7 +691,14 @@ public class ValueStyleRenderer {
            (new java.awt.Color(255, 255, 100, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24) :
            (theme.FONT_C.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        int textX = valueDisplayX + (valueDisplayWidth - client.font.width(valueText)) / 2;
-       context.drawString(client.font, valueText, textX, valueDisplayY, valueTextColor, false);
+       if (isEditing) {
+           LineTextInput.drawTextWithBlinkCursor(
+               context, client.font, valueText, inputCursorCp, -1, -1,
+               textX, valueDisplayY, valueTextColor, true,
+               LineTextInput.shouldBlinkCursor());
+       } else {
+           context.drawString(client.font, valueText, textX, valueDisplayY, valueTextColor, false);
+       }
        
        int sliderWidth = 80;
        int sliderHeight = 4;
@@ -1216,6 +1178,7 @@ public class ValueStyleRenderer {
                                                 float x1, float y, float x2, float subOptionHeight, float mouseX, float mouseY, int localAlpha,
                                                 com.shyeuar.baity.gui.internal.ClickGuiState.GradientInputInfo editingGradient,
                                                 String gradientInputText,
+                                                int gradientInputCursorCp,
                                                 ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
        float blockHeight = getGradientEditorHeight(subOptionHeight);
        int bg = (new java.awt.Color(35, 35, 35, 180).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
@@ -1283,8 +1246,8 @@ public class ValueStyleRenderer {
       drawScaledLabel(context, client, "L", box1X1 + 6, box1Y2 + 2, textColor, 0.85f);
       drawScaledLabel(context, client, "R", box1X1 + 6, box2Y1 - 8, textColor, 0.85f);
 
-       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex, localAlpha,
-               hoveredTooltipInfo, mouseX, mouseY, "Set the selected color to the unselected color.");
+       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex, gradientInputCursorCp,
+               null, false, 0, localAlpha, hoveredTooltipInfo, mouseX, mouseY, "Set the selected color to the unselected color.");
 
       String raw = com.shyeuar.baity.config.ConfigManager.nickTweaksNickChanger;
       if (raw == null || raw.isBlank()) {
@@ -1309,6 +1272,7 @@ public class ValueStyleRenderer {
                                                      float mouseX, float mouseY, int localAlpha,
                                                      com.shyeuar.baity.gui.internal.ClickGuiState.GradientInputInfo editingGradient,
                                                      String gradientInputText,
+                                                     int gradientInputCursorCp,
                                                      ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
        GradientEditorValue gradient = value.gradient();
        float blockHeight = getGradientEditorHeight(subOptionHeight);
@@ -1333,9 +1297,8 @@ public class ValueStyleRenderer {
        if (editingSymbol) {
            symbolDisplay = gradientInputText;
        }
-       String symbolForLayout = editingSymbol ? symbolDisplay + "_" : symbolDisplay;
        GradientEditorBottomLayout bottom = computeGradientEditorBottomLayout(
-               client, x1, y, x2, blockHeight, selectedHex, true, symbolForLayout, editingSymbol);
+               client, x1, y, x2, blockHeight, selectedHex, true, symbolDisplay, editingSymbol);
        float mapX1 = bottom.mapX1;
        float mapY1 = bottom.mapY1;
        float mapX2 = bottom.mapX2;
@@ -1387,8 +1350,8 @@ public class ValueStyleRenderer {
        drawScaledLabel(context, client, "L", box1X1 + 6, box1Y2 + 2, textColor, 0.85f);
        drawScaledLabel(context, client, "R", box1X1 + 6, box2Y1 - 8, textColor, 0.85f);
 
-       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex,
-               symbolDisplay, editingSymbol, localAlpha, hoveredTooltipInfo, mouseX, mouseY,
+       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex, gradientInputCursorCp,
+               symbolDisplay, editingSymbol, gradientInputCursorCp, localAlpha, hoveredTooltipInfo, mouseX, mouseY,
                "Set the selected color to the unselected color.");
 
        FancyDmgEditorBottomRowLayout row = layoutFancyDmgEditorBottomRow(client, x1, y, blockHeight, bottom.symbolInputX1);
@@ -1447,6 +1410,7 @@ public class ValueStyleRenderer {
                                                         float x1, float y, float x2, float subOptionHeight, float mouseX, float mouseY, int localAlpha,
                                                         com.shyeuar.baity.gui.internal.ClickGuiState.GradientInputInfo editingGradient,
                                                         String gradientInputText,
+                                                        int gradientInputCursorCp,
                                                         ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
        GradientEditorValue gradient = value.gradient();
        float blockHeight = getGradientEditorHeight(subOptionHeight);
@@ -1513,8 +1477,8 @@ public class ValueStyleRenderer {
        drawScaledLabel(context, client, "R", box1X1 + 6, box2Y1 - 8, textColor, 0.85f);
 
        boolean editingHex = editingGradient != null && value.getName().equals(editingGradient.valueName);
-       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex, localAlpha,
-               hoveredTooltipInfo, mouseX, mouseY, "Set the selected color to the unselected color.");
+       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex, gradientInputCursorCp,
+               null, false, 0, localAlpha, hoveredTooltipInfo, mouseX, mouseY, "Set the selected color to the unselected color.");
 
        float tierBtnX1 = x1 + 10;
        float tierBtnY1 = y + blockHeight - 22;

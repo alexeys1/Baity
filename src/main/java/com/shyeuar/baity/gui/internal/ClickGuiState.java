@@ -1,5 +1,6 @@
 package com.shyeuar.baity.gui.internal;
 
+import com.shyeuar.baity.gui.input.LineTextInput;
 import com.shyeuar.baity.gui.value.ModuleCategory;
 import net.minecraft.client.Minecraft;
 import java.util.HashMap;
@@ -29,7 +30,7 @@ public class ClickGuiState {
     public static final float LIST_TOP_PADDING = 60f;
     public static final float ITEM_HEIGHT = 30f;
     
-    private String searchText = "";
+    private final LineTextInput searchInput = new LineTextInput(LineTextInput.Policy.search());
     private boolean isSearchFocused = false;
     
     private boolean isListeningForKey = false;
@@ -41,7 +42,7 @@ public class ClickGuiState {
     private GradientDragInfo draggingGradient = null;
     
     private SliderInputInfo editingSlider = null;
-    private String sliderInputText = "";
+    private final LineTextInput sliderInput = new LineTextInput(LineTextInput.Policy.search());
     
     private final Map<String, Float> moduleExpandAnimations = new HashMap<>();
     
@@ -160,9 +161,8 @@ public class ClickGuiState {
     public boolean isAutoCheck() { return isAutoCheck; }
     public void setAutoCheck(boolean autoCheck) { isAutoCheck = autoCheck; }
     
-    public String getSearchText() { return searchText; }
-    public void setSearchText(String text) { searchText = text; }
-    
+    public LineTextInput getSearchInput() { return searchInput; }
+
     public boolean isSearchFocused() { return isSearchFocused; }
     public void setSearchFocused(boolean focused) { isSearchFocused = focused; }
     
@@ -178,17 +178,16 @@ public class ClickGuiState {
     public void setDraggingGradient(GradientDragInfo info) { draggingGradient = info; }
     
     public SliderInputInfo getEditingSlider() { return editingSlider; }
-    public void setEditingSlider(SliderInputInfo info) { 
+    public LineTextInput getSliderInput() { return sliderInput; }
+
+    public void setEditingSlider(SliderInputInfo info) {
         editingSlider = info;
         if (info == null) {
-            sliderInputText = "";
+            sliderInput.clear();
             originalSliderValue = null;
         }
     }
-    
-    public String getSliderInputText() { return sliderInputText; }
-    public void setSliderInputText(String text) { sliderInputText = text; }
-    
+
     public boolean isEditingSlider() { return editingSlider != null; }
     
     private Double originalSliderValue = null;
@@ -244,22 +243,22 @@ public class ClickGuiState {
     }
     
     private GradientInputInfo editingGradient = null;
-    private String gradientInputText = "";
+    private final LineTextInput gradientInput = new LineTextInput(LineTextInput.Policy.hexColor());
     private TextInputInfo editingTextInput = null;
-    private String textInputValue = "";
-    private int textInputCursorCpIndex = 0;
-    
+    private final LineTextInput textLineInput = new LineTextInput(LineTextInput.Policy.freeText(28));
+
+    public LineTextInput getGradientInput() { return gradientInput; }
+    public LineTextInput getTextLineInput() { return textLineInput; }
+
     public GradientInputInfo getEditingGradient() { return editingGradient; }
     public void setEditingGradient(GradientInputInfo info) {
         editingGradient = info;
         if (info == null) {
-            gradientInputText = "";
+            gradientInput.clear();
         }
     }
     public boolean isEditingGradient() { return editingGradient != null; }
-    public String getGradientInputText() { return gradientInputText; }
-    public void setGradientInputText(String text) { gradientInputText = text; }
-    
+
     public static class GradientInputInfo {
         public final String moduleName;
         public final String valueName;
@@ -282,16 +281,10 @@ public class ClickGuiState {
     public void setEditingTextInput(TextInputInfo info) {
         editingTextInput = info;
         if (info == null) {
-            textInputValue = "";
+            textLineInput.clear();
         }
     }
     public boolean isEditingTextInput() { return editingTextInput != null; }
-    public String getTextInputValue() { return textInputValue; }
-    public void setTextInputValue(String value) { textInputValue = value == null ? "" : value; }
-    public int getTextInputCursorCpIndex() { return textInputCursorCpIndex; }
-    public void setTextInputCursorCpIndex(int cpIndex) {
-        textInputCursorCpIndex = Math.max(0, cpIndex);
-    }
 
     public static class TextInputInfo {
         public final String moduleName;

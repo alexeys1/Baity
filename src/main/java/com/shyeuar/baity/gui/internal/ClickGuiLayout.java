@@ -120,6 +120,39 @@ public class ClickGuiLayout {
         float scaledMouseY = ((float)mouseY - state.getWindowY()) / scaleRatio;
         return new ScaledCoordinates(scaledMouseX, scaledMouseY, scaleRatio);
     }
+
+    public static float searchBarX() {
+        return ClickGuiState.SIDEBAR_WIDTH + 20;
+    }
+
+    public static float searchBarY() {
+        return 15;
+    }
+
+    public static float searchBarWidth() {
+        return ClickGuiState.CONTENT_WIDTH - 40;
+    }
+
+    public static float searchBarHeight() {
+        return 20;
+    }
+
+    public static float searchBarTextStartX() {
+        float iconSize = 12;
+        float iconPadding = 4;
+        return searchBarX() + iconSize + iconPadding * 2;
+    }
+
+    public static boolean isSearchBarHovered(float mouseX, float mouseY) {
+        return com.shyeuar.baity.gui.render.GuiRenderUtil.isHovered(
+            searchBarX(),
+            searchBarY(),
+            searchBarX() + searchBarWidth(),
+            searchBarY() + searchBarHeight(),
+            mouseX,
+            mouseY
+        );
+    }
     
     public static void initializeWindowPosition(ClickGuiState state, int screenWidth, int screenHeight) {
         float scaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();

@@ -12,6 +12,7 @@ import com.shyeuar.baity.gui.value.EnchantLoreColorEditorValue;
 import com.shyeuar.baity.gui.value.GradientEditorValue;
 import com.shyeuar.baity.features.enchantlore.EnchantLore;
 import com.shyeuar.baity.gui.value.SliderValue;
+import com.shyeuar.baity.gui.input.LineTextInput;
 import com.shyeuar.baity.gui.value.TextLineInputValue;
 import com.shyeuar.baity.gui.value.ValueTreeUtils;
 import com.shyeuar.baity.gui.value.ValueTypeRegistry;
@@ -38,6 +39,8 @@ public class ClickGuiInputHandler {
     private int painterDragButton = -1;
     private int painterLastPx = Integer.MIN_VALUE;
     private int painterLastPy = Integer.MIN_VALUE;
+    private LineTextInput lineInputDragTarget;
+    private float lineInputDragTextX;
     
     public ClickGuiInputHandler(ClickGuiState state, TimerUtils timer, 
                                BiConsumer<com.shyeuar.baity.gui.module.Module, com.shyeuar.baity.gui.value.ButtonValue> onTriggerValueClick) {
@@ -59,16 +62,18 @@ public class ClickGuiInputHandler {
             return true;
         }
 
+        if (handleSearchInput(coords, button)) {
+            return true;
+        }
+
         if (button == 0 && state.isEditingGradient()) {
             if (!isClickInsideEditingGradientInput(coords)) {
                 state.setEditingGradient(null);
-                state.setGradientInputText("");
             }
         }
         if (button == 0 && state.isEditingTextInput()) {
             if (!isClickInsideEditingTextInput(coords)) {
                 state.setEditingTextInput(null);
-                state.setTextInputValue("");
             }
         }
 
@@ -154,11 +159,7 @@ public class ClickGuiInputHandler {
         if (button == 0 && handleWindowDrag(coords, mouseX, mouseY)) {
             return true;
         }
-        
-        if (handleSearchInput(coords, button)) {
-            return true;
-        }
-        
+
         if (handleCategoryClick(coords)) {
             return true;
         }
@@ -238,19 +239,12 @@ public class ClickGuiInputHandler {
     
     public boolean handleKeyPress(int keyCode, int scanCode, int modifiers) {
         if (state.isSearchFocused()) {
-            if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-                String current = state.getSearchText();
-                if (!current.isEmpty()) {
-                    state.setSearchText(current.substring(0, current.length() - 1));
-                }
-                return true;
-            }
-            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            LineTextInput.KeyResult result = state.getSearchInput().handleKey(keyCode, modifiers);
+            if (result == LineTextInput.KeyResult.CANCEL || result == LineTextInput.KeyResult.COMMIT) {
                 state.setSearchFocused(false);
                 return true;
             }
-            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
-                state.setSearchFocused(false);
+            if (result == LineTextInput.KeyResult.HANDLED) {
                 return true;
             }
         }
@@ -264,24 +258,48 @@ public class ClickGuiInputHandler {
         }
         
         if (state.isEditingSlider()) {
-            return handleSliderInput(keyCode);
-        }
-        if (state.isEditingGradient()) {
-            return handleGradientHexInput(keyCode);
-        }
-        if (state.isEditingTextInput()) {
-            if ((modifiers & GLFW.GLFW_MOD_CONTROL) != 0 && keyCode == GLFW.GLFW_KEY_V) {
-                String clip = net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard();
-                if (clip != null && !clip.isEmpty()) {
-                    String current = state.getTextInputValue();
-                    int cursorCp = state.getTextInputCursorCpIndex();
-                    int charPos = cpIndexToCharIndex(current, cursorCp);
-                    state.setTextInputValue(current.substring(0, charPos) + clip + current.substring(charPos));
-                    state.setTextInputCursorCpIndex(cursorCp + clip.codePointCount(0, clip.length()));
-                }
+            syncSliderInputPolicy();
+            LineTextInput.KeyResult result = state.getSliderInput().handleKey(keyCode, modifiers);
+            if (result == LineTextInput.KeyResult.CANCEL) {
+                cancelSliderInput();
                 return true;
             }
-            return handleTextLineInput(keyCode);
+            if (result == LineTextInput.KeyResult.COMMIT) {
+                commitSliderInput();
+                return true;
+            }
+            if (result == LineTextInput.KeyResult.HANDLED) {
+                return true;
+            }
+        }
+        if (state.isEditingGradient()) {
+            syncGradientInputPolicy();
+            LineTextInput.KeyResult result = state.getGradientInput().handleKey(keyCode, modifiers);
+            if (result == LineTextInput.KeyResult.CANCEL) {
+                state.setEditingGradient(null);
+                return true;
+            }
+            if (result == LineTextInput.KeyResult.COMMIT) {
+                commitGradientInput();
+                return true;
+            }
+            if (result == LineTextInput.KeyResult.HANDLED) {
+                return true;
+            }
+        }
+        if (state.isEditingTextInput()) {
+            LineTextInput.KeyResult result = state.getTextLineInput().handleKey(keyCode, modifiers);
+            if (result == LineTextInput.KeyResult.CANCEL) {
+                state.setEditingTextInput(null);
+                return true;
+            }
+            if (result == LineTextInput.KeyResult.COMMIT) {
+                commitTextLineInput();
+                return true;
+            }
+            if (result == LineTextInput.KeyResult.HANDLED) {
+                return true;
+            }
         }
         
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
@@ -303,243 +321,188 @@ public class ClickGuiInputHandler {
 
     public boolean handleCodePointTyped(int codePoint, int modifiers) {
         if (state.isEditingSlider()) {
-            String current = state.getSliderInputText();
-            char ch = (char) codePoint;
-            if (Character.isDigit(codePoint) || ch == '.' || ch == '-') {
-                if (ch == '-' && !current.isEmpty()) return true;
-                if (ch == '.' && current.contains(".")) return true;
-                state.setSliderInputText(current + ch);
-            }
-            return true;
+            syncSliderInputPolicy();
+            return state.getSliderInput().handleCodePoint(codePoint);
         }
         if (state.isEditingGradient()) {
-            ClickGuiState.GradientInputInfo editInfo = state.getEditingGradient();
-            if (editInfo != null && editInfo.symbolInput) {
-                if (Character.isISOControl(codePoint)) {
-                    return false;
-                }
-                String current = state.getGradientInputText();
-                String insert = new String(Character.toChars(codePoint));
-                String next = current + insert;
-                if (com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.symbolCodePointCount(next)
-                        > com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.MAX_DAMAGE_SYMBOL_CODE_POINTS) {
-                    return true;
-                }
-                state.setGradientInputText(next);
-                return true;
-            }
-            String current = state.getGradientInputText();
-            char ch = (char) codePoint;
-            if ((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')) {
-                if (current.length() < 6) {
-                    state.setGradientInputText(current + ch);
-                }
-            }
-            return true;
+            syncGradientInputPolicy();
+            return state.getGradientInput().handleCodePoint(codePoint);
         }
         if (state.isEditingTextInput()) {
-            if (Character.isISOControl(codePoint)) return false;
-
-            String current = state.getTextInputValue();
-            int cursorCp = state.getTextInputCursorCpIndex();
-            int charPos = cpIndexToCharIndex(current, cursorCp);
-            String insert = new String(Character.toChars(codePoint));
-            state.setTextInputValue(current.substring(0, charPos) + insert + current.substring(charPos));
-            state.setTextInputCursorCpIndex(cursorCp + 1);
-            return true;
+            return state.getTextLineInput().handleCodePoint(codePoint);
         }
-        
+
         if (state.isSearchFocused()) {
-            if (codePoint >= 32 && codePoint < 127) {
-                state.setSearchText(state.getSearchText() + (char) codePoint);
-                return true;
-            }
+            return state.getSearchInput().handleCodePoint(codePoint);
         }
-        
+
         return false;
     }
 
-    private static int cpIndexToCharIndex(String s, int cpIndex) {
-        if (s == null) return 0;
-        int cpCount = s.codePointCount(0, s.length());
-        int target = Math.max(0, Math.min(cpIndex, cpCount));
-        int curCp = 0;
-        for (int charIdx = 0; charIdx < s.length(); ) {
-            if (curCp == target) return charIdx;
-            int cp = s.codePointAt(charIdx);
-            charIdx += Character.charCount(cp);
-            curCp++;
+    private void syncGradientInputPolicy() {
+        ClickGuiState.GradientInputInfo editInfo = state.getEditingGradient();
+        if (editInfo == null) {
+            return;
         }
-        return s.length();
-    }
-    
-    private boolean handleSliderInput(int keyCode) {
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            cancelSliderInput();
-            return true;
-        }
-        
-        if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-            String current = state.getSliderInputText();
-            if (!current.isEmpty()) {
-                state.setSliderInputText(current.substring(0, current.length() - 1));
-            }
-            return true;
-        }
-        
-        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
-            ClickGuiState.SliderInputInfo editInfo = state.getEditingSlider();
-            if (editInfo != null) {
-                String inputText = state.getSliderInputText();
-                try {
-                    double newValue = Double.parseDouble(inputText);
-                    for (Module module : ModuleManager.getModules()) {
-                        if (!module.getName().equals(editInfo.moduleName)) continue;
-                        Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
-                        if (found instanceof SliderValue) {
-                            SliderValue sliderValue = (SliderValue) found;
-                                if (sliderValue.trySetValue(newValue)) {
-                                if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
-                                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), sliderValue.getValue());
-                                    }
-                            }
-                        }
-                    }
-                } catch (NumberFormatException ignored) {
-                }
-            }
-            state.setEditingSlider(null);
-            state.setSliderInputText("");
-            return true;
-        }
-        
-        return false;
-    }
-    
-    private boolean handleGradientHexInput(int keyCode) {
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            state.setEditingGradient(null);
-            state.setGradientInputText("");
-            return true;
-        }
-        if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-            String current = state.getGradientInputText();
-            if (!current.isEmpty()) {
-                int codePoints = current.codePointCount(0, current.length());
-                if (codePoints > 0) {
-                    state.setGradientInputText(current.substring(0, current.offsetByCodePoints(0, codePoints - 1)));
-                }
-            }
-            return true;
-        }
-        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
-            ClickGuiState.GradientInputInfo editInfo = state.getEditingGradient();
-            if (editInfo != null) {
-                String raw = state.getGradientInputText();
-                if (editInfo.symbolInput) {
-                    for (Module module : ModuleManager.getModules()) {
-                        if (!module.getName().equals(editInfo.moduleName)) continue;
-                        Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
-                        if (found instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor) {
-                            fancyEditor.setSymbols(raw);
-                            fancyEditor.persistToConfig();
-                            if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
-                                ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), fancyEditor.getValue());
-                            }
-                        }
-                    }
-                } else {
-                    String hex = raw.trim();
-                    if (hex.startsWith("#")) hex = hex.substring(1);
-                    if (hex.matches("^[0-9A-Fa-f]{6}$")) {
-                        for (Module module : ModuleManager.getModules()) {
-                            if (!module.getName().equals(editInfo.moduleName)) continue;
-                            Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
-                            if (found instanceof EnchantLoreColorEditorValue colorEditor) {
-                                colorEditor.gradient().applyHexToSelected("#" + hex);
-                                colorEditor.persistCurrentTier();
-                                EnchantLore.invalidateCache();
-                                if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
-                                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), found.getValue());
-                                }
-                            } else if (found instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor) {
-                                fancyEditor.gradient().applyHexToSelected("#" + hex);
-                                fancyEditor.persistToConfig();
-                                if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
-                                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), fancyEditor.getValue());
-                                }
-                            } else if (found instanceof GradientEditorValue ge) {
-                                ge.applyHexToSelected("#" + hex);
-                                if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
-                                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), ge.getValue());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            state.setEditingGradient(null);
-            state.setGradientInputText("");
-            return true;
-        }
-        return false;
+        state.getGradientInput().setPolicy(
+            editInfo.symbolInput ? LineTextInput.Policy.damageSymbols() : LineTextInput.Policy.hexColor()
+        );
     }
 
-    private boolean handleTextLineInput(int keyCode) {
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            state.setEditingTextInput(null);
-            state.setTextInputValue("");
-            state.setTextInputCursorCpIndex(0);
-            return true;
+    private void commitGradientInput() {
+        ClickGuiState.GradientInputInfo editInfo = state.getEditingGradient();
+        if (editInfo == null) {
+            return;
         }
-        if (keyCode == GLFW.GLFW_KEY_LEFT) {
-            if (state.getTextInputCursorCpIndex() > 0) {
-                state.setTextInputCursorCpIndex(state.getTextInputCursorCpIndex() - 1);
+        String raw = state.getGradientInput().getText();
+        if (editInfo.symbolInput) {
+            for (Module module : ModuleManager.getModules()) {
+                if (!module.getName().equals(editInfo.moduleName)) continue;
+                Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
+                if (found instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor) {
+                    fancyEditor.setSymbols(raw);
+                    fancyEditor.persistToConfig();
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), fancyEditor.getValue());
+                    }
+                }
             }
-            return true;
-        }
-        if (keyCode == GLFW.GLFW_KEY_RIGHT) {
-            String current = state.getTextInputValue();
-            int maxCp = current.codePointCount(0, current.length());
-            if (state.getTextInputCursorCpIndex() < maxCp) {
-                state.setTextInputCursorCpIndex(state.getTextInputCursorCpIndex() + 1);
-            }
-            return true;
-        }
-        if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-            String current = state.getTextInputValue();
-            int cursorCp = state.getTextInputCursorCpIndex();
-            if (cursorCp > 0 && !current.isEmpty()) {
-                int leftCp = cursorCp - 1;
-                int leftChar = cpIndexToCharIndex(current, leftCp);
-                int rightChar = cpIndexToCharIndex(current, cursorCp);
-                state.setTextInputValue(current.substring(0, leftChar) + current.substring(rightChar));
-                state.setTextInputCursorCpIndex(leftCp);
-            }
-            return true;
-        }
-        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
-            ClickGuiState.TextInputInfo info = state.getEditingTextInput();
-            if (info != null) {
-                Module module = ModuleManager.getModuleByName(info.moduleName);
-                if (module != null) {
-                    Value found = ValueTreeUtils.findByName(module, info.valueName);
-                    if (found instanceof TextLineInputValue) {
-                        found.setValue(state.getTextInputValue());
+        } else {
+            String hex = raw.trim();
+            if (hex.startsWith("#")) hex = hex.substring(1);
+            if (hex.matches("^[0-9A-Fa-f]{6}$")) {
+                for (Module module : ModuleManager.getModules()) {
+                    if (!module.getName().equals(editInfo.moduleName)) continue;
+                    Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
+                    if (found instanceof EnchantLoreColorEditorValue colorEditor) {
+                        colorEditor.gradient().applyHexToSelected("#" + hex);
+                        colorEditor.persistCurrentTier();
+                        EnchantLore.invalidateCache();
                         if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
                             ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), found.getValue());
                         }
+                    } else if (found instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor) {
+                        fancyEditor.gradient().applyHexToSelected("#" + hex);
+                        fancyEditor.persistToConfig();
+                        if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                            ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), fancyEditor.getValue());
+                        }
+                    } else if (found instanceof GradientEditorValue ge) {
+                        ge.applyHexToSelected("#" + hex);
+                        if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                            ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), ge.getValue());
+                        }
                     }
                 }
             }
-            state.setEditingTextInput(null);
-            return true;
         }
-        return false;
+        state.setEditingGradient(null);
     }
-    
+
+    private void commitTextLineInput() {
+        ClickGuiState.TextInputInfo info = state.getEditingTextInput();
+        if (info != null) {
+            Module module = ModuleManager.getModuleByName(info.moduleName);
+            if (module != null) {
+                Value found = ValueTreeUtils.findByName(module, info.valueName);
+                if (found instanceof TextLineInputValue) {
+                    found.setValue(state.getTextLineInput().getText());
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), found.getValue());
+                    }
+                }
+            }
+        }
+        state.setEditingTextInput(null);
+    }
+
+    private void beginGradientHexEdit(String moduleName, String valueName, int lineIndex, String initialHexWithoutHash) {
+        state.getGradientInput().setPolicy(LineTextInput.Policy.hexColor());
+        state.setEditingGradient(new ClickGuiState.GradientInputInfo(moduleName, valueName, lineIndex));
+        if (initialHexWithoutHash == null || initialHexWithoutHash.isEmpty()) {
+            state.getGradientInput().clear();
+        } else {
+            state.getGradientInput().setTextAndCursorToEnd(initialHexWithoutHash);
+        }
+    }
+
+    private void beginGradientSymbolEdit(String moduleName, String valueName, String symbols) {
+        state.getGradientInput().setPolicy(LineTextInput.Policy.damageSymbols());
+        state.setEditingGradient(new ClickGuiState.GradientInputInfo(moduleName, valueName, 0, true));
+        state.getGradientInput().setTextAndCursorToEnd(symbols == null ? "" : symbols);
+    }
+
+    private void syncSliderInputPolicy() {
+        ClickGuiState.SliderInputInfo editInfo = state.getEditingSlider();
+        if (editInfo == null) {
+            return;
+        }
+        for (Module module : ModuleManager.getModules()) {
+            if (!module.getName().equals(editInfo.moduleName)) {
+                continue;
+            }
+            Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
+            if (found instanceof SliderValue sliderValue) {
+                state.getSliderInput().setPolicy(LineTextInput.Policy.forSlider(sliderValue));
+                return;
+            }
+        }
+    }
+
+    private void beginSliderEdit(SliderValue sliderValue, String moduleName, String valueName) {
+        state.getSliderInput().setPolicy(LineTextInput.Policy.forSlider(sliderValue));
+        state.setEditingSlider(new ClickGuiState.SliderInputInfo(moduleName, valueName));
+        state.getSliderInput().setTextAndCursorToEnd(sliderValue.getFormattedValue());
+        state.setOriginalSliderValue(sliderValue.getDoubleValue());
+    }
+
+    private void commitSliderInput() {
+        ClickGuiState.SliderInputInfo editInfo = state.getEditingSlider();
+        if (editInfo != null) {
+            for (Module module : ModuleManager.getModules()) {
+                if (!module.getName().equals(editInfo.moduleName)) {
+                    continue;
+                }
+                Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
+                if (found instanceof SliderValue sliderValue) {
+                    if (LineTextInput.tryCommitSlider(sliderValue, state.getSliderInput().getText())) {
+                        if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                            ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), sliderValue.getValue());
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        state.setEditingSlider(null);
+    }
+
+    private void beginLineInputDrag(LineTextInput input, float textDrawX) {
+        lineInputDragTarget = input;
+        lineInputDragTextX = textDrawX;
+    }
+
+    private void updateLineInputDrag(double mouseX) {
+        if (lineInputDragTarget == null) {
+            return;
+        }
+        Minecraft client = Minecraft.getInstance();
+        if (client == null) {
+            return;
+        }
+        lineInputDragTarget.onMouseDrag(client.font, (float) mouseX - lineInputDragTextX);
+    }
+
+    private void endLineInputDrag() {
+        if (lineInputDragTarget != null) {
+            lineInputDragTarget.onMouseReleased();
+            lineInputDragTarget = null;
+        }
+    }
+
     public void handleMouseRelease(int button) {
         if (button == 0) {
+            endLineInputDrag();
             state.resetDragState();
             state.setDraggingSlider(null);
             state.setDraggingGradient(null);
@@ -550,6 +513,7 @@ public class ClickGuiInputHandler {
     }
    
     public void handleMouseMove(double mouseX, double mouseY) {
+        updateLineInputDrag(mouseX);
         if (state.isDragging()) {
             ClickGuiLayout.updateWindowPosition(state, mouseX, mouseY, state.getDragX(), state.getDragY());
         }
@@ -915,21 +879,26 @@ public class ClickGuiInputHandler {
     }
     
     private boolean handleSearchInput(ClickGuiLayout.ScaledCoordinates coords, int button) {
-        if (button != 0) return false;
-        
-        float searchX = ClickGuiState.SIDEBAR_WIDTH + 20;
-        float searchY = 15;
-        float searchWidth = ClickGuiState.CONTENT_WIDTH - 40;
-        float searchHeight = 20;
-        
-        if (GuiRenderUtil.isHovered(searchX, searchY, searchX + searchWidth, searchY + searchHeight, 
-                                    coords.mouseX, coords.mouseY)) {
-            state.setSearchFocused(true);
-            return true;
-        } else {
-            state.setSearchFocused(false);
+        if (button != 0) {
+            return false;
         }
-        
+
+        if (ClickGuiLayout.isSearchBarHovered(coords.mouseX, coords.mouseY)) {
+            float textStartX = ClickGuiLayout.searchBarTextStartX();
+            Minecraft client = Minecraft.getInstance();
+            state.setSearchFocused(true);
+            if (client != null) {
+                state.getSearchInput().onMousePressed(client.font, coords.mouseX - textStartX);
+                beginLineInputDrag(state.getSearchInput(), textStartX);
+            }
+            return true;
+        }
+
+        if (state.isSearchFocused()) {
+            state.setSearchFocused(false);
+            state.getSearchInput().clearSelection();
+        }
+
         return false;
     }
     
@@ -1020,7 +989,7 @@ public class ClickGuiInputHandler {
             
             if (hovered && timer.delay(100)) {
                 state.setSelectedCategory(category);
-                state.setSearchText("");
+                state.getSearchInput().clear();
                 state.setSearchFocused(false);
                 timer.reset();
                 return true;
@@ -1072,7 +1041,7 @@ public class ClickGuiInputHandler {
     }
     
     private List<Module> getFilteredModules() {
-        String searchText = state.getSearchText().toLowerCase().trim();
+        String searchText = state.getSearchInput().getText().toLowerCase().trim();
         
         if (searchText.isEmpty()) {
             return ModuleManager.getModulesByCategory(state.getSelectedCategory());
@@ -1259,9 +1228,16 @@ public class ClickGuiInputHandler {
                 int valueDisplayHeight = dims.subOptionHeight - 4;
                 
                 if (GuiRenderUtil.isHovered(valueDisplayX, valueDisplayY, valueDisplayX + valueDisplayWidth, valueDisplayY + valueDisplayHeight, coords.mouseX, coords.mouseY)) {
-                    state.setEditingSlider(new ClickGuiState.SliderInputInfo(module.getName(), value.getName()));
-                    state.setSliderInputText(sliderValue.getFormattedValue());
-                    state.setOriginalSliderValue(sliderValue.getDoubleValue());
+                    if (state.isEditingSlider()
+                        && state.getEditingSlider().moduleName.equals(module.getName())
+                        && state.getEditingSlider().valueName.equals(value.getName())) {
+                        String display = state.getSliderInput().getText();
+                        int textX = valueDisplayX + (valueDisplayWidth - client.font.width(display)) / 2;
+                        state.getSliderInput().onMousePressed(client.font, (float) coords.mouseX - textX);
+                        beginLineInputDrag(state.getSliderInput(), textX);
+                    } else {
+                        beginSliderEdit(sliderValue, module.getName(), value.getName());
+                    }
                     timer.reset();
                     return true;
                 }
@@ -1399,8 +1375,7 @@ public class ClickGuiInputHandler {
                 }
                 if (GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, coords.mouseX, coords.mouseY)) {
                     SoundUtils.playWoodenButton();
-                    state.setEditingGradient(new ClickGuiState.GradientInputInfo(module.getName(), value.getName(), gradientValue.getSelectedPoint()));
-                    state.setGradientInputText("");
+                    beginGradientHexEdit(module.getName(), value.getName(), gradientValue.getSelectedPoint(), "");
                     timer.reset();
                     return true;
                 }
@@ -1494,10 +1469,17 @@ public class ClickGuiInputHandler {
                 float hoverY1 = lineY - 10;
                 float hoverY2 = lineY + 5;
                 if (GuiRenderUtil.isHovered(lineX1, hoverY1, lineX2, hoverY2, coords.mouseX, coords.mouseY)) {
-                    state.setEditingTextInput(new ClickGuiState.TextInputInfo(module.getName(), value.getName()));
-                    String start = String.valueOf(value.getValue());
-                    state.setTextInputValue(start);
-                    state.setTextInputCursorCpIndex(start.codePointCount(0, start.length()));
+                    if (state.isEditingTextInput()
+                        && state.getEditingTextInput().moduleName.equals(module.getName())
+                        && state.getEditingTextInput().valueName.equals(value.getName())) {
+                        Minecraft client = Minecraft.getInstance();
+                        state.getTextLineInput().onMousePressed(client.font, (float) coords.mouseX - lineX1);
+                        beginLineInputDrag(state.getTextLineInput(), lineX1);
+                    } else {
+                        state.setEditingTextInput(new ClickGuiState.TextInputInfo(module.getName(), value.getName()));
+                        String start = String.valueOf(value.getValue());
+                        state.getTextLineInput().setTextAndCursorToEnd(start == null ? "" : start);
+                    }
                     timer.reset();
                     return true;
                 }
@@ -1881,15 +1863,13 @@ public class ClickGuiInputHandler {
 
         if (bottom.hasSymbolInput && GuiRenderUtil.isHovered(bottom.symbolInputX1, bottom.symbolInputY - 12, bottom.symbolInputX2, bottom.symbolInputY + 6, coords.mouseX, coords.mouseY)) {
             SoundUtils.playWoodenButton();
-            state.setEditingGradient(new ClickGuiState.GradientInputInfo(module.getName(), fancyEditor.getName(), 0, true));
-            state.setGradientInputText(fancyEditor.getSymbols());
+            beginGradientSymbolEdit(module.getName(), fancyEditor.getName(), fancyEditor.getSymbols());
             return true;
         }
 
         if (GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, coords.mouseX, coords.mouseY)) {
             SoundUtils.playWoodenButton();
-            state.setEditingGradient(new ClickGuiState.GradientInputInfo(module.getName(), fancyEditor.getName(), gradientValue.getSelectedPoint()));
-            state.setGradientInputText("");
+            beginGradientHexEdit(module.getName(), fancyEditor.getName(), gradientValue.getSelectedPoint(), "");
             return true;
         }
 
@@ -2017,8 +1997,7 @@ public class ClickGuiInputHandler {
 
         if (GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, coords.mouseX, coords.mouseY)) {
             SoundUtils.playWoodenButton();
-            state.setEditingGradient(new ClickGuiState.GradientInputInfo(module.getName(), colorEditor.getName(), gradientValue.getSelectedPoint()));
-            state.setGradientInputText("");
+            beginGradientHexEdit(module.getName(), colorEditor.getName(), gradientValue.getSelectedPoint(), "");
             return true;
         }
 

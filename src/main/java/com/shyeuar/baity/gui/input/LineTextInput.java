@@ -1,18 +1,18 @@
 package com.shyeuar.baity.gui.input;
 
-import com.mojang.blaze3d.platform.InputConstants;
 import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings;
 import com.shyeuar.baity.gui.value.SliderValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.InputQuirks;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.function.BiPredicate;
 
 public final class LineTextInput {
 
-    private static final int SELECTION_BG = 0xFF3355AA;
+    private static final int PASTE_CHAR_LIMIT = 2024;
 
     public enum KeyResult {
         NOT_HANDLED,
@@ -23,10 +23,7 @@ public final class LineTextInput {
 
     private Policy policy;
     private String text = "";
-    private int cursorCp = 0;
-    private int selectionAnchorCp = -1;
-    private int selectionEndCp = -1;
-    private boolean dragSelecting;
+    private Integer caretCp;
 
     public LineTextInput(Policy policy) {
         this.policy = policy;
@@ -40,156 +37,97 @@ public final class LineTextInput {
         return text;
     }
 
+    public Integer getCaretCp() {
+        return caretCp;
+    }
+
     public void setText(String value) {
         text = sanitize(value == null ? "" : value);
-        clampCursor();
-        clearSelection();
+        clampCaret();
     }
 
-    public void setTextAndCursorToEnd(String value) {
+    public void setTextAndCaretAtEnd(String value) {
         text = sanitize(value == null ? "" : value);
-        cursorCp = codePointCount(text);
-        clearSelection();
-    }
-
-    public int getCursorCp() {
-        return cursorCp;
-    }
-
-    public void setCursorCp(int cpIndex) {
-        cursorCp = Math.max(0, Math.min(cpIndex, codePointCount(text)));
-    }
-
-    public boolean hasSelection() {
-        return selectionAnchorCp >= 0 && selectionEndCp >= 0 && selectionAnchorCp != selectionEndCp;
-    }
-
-    public int getSelectionStartCp() {
-        if (!hasSelection()) {
-            return cursorCp;
-        }
-        return Math.min(selectionAnchorCp, selectionEndCp);
-    }
-
-    public int getSelectionEndCp() {
-        if (!hasSelection()) {
-            return cursorCp;
-        }
-        return Math.max(selectionAnchorCp, selectionEndCp);
+        caretCp = null;
     }
 
     public void clear() {
         text = "";
-        cursorCp = 0;
-        clearSelection();
-    }
-
-    public void clearSelection() {
-        selectionAnchorCp = -1;
-        selectionEndCp = -1;
-        dragSelecting = false;
+        caretCp = null;
     }
 
     public KeyResult handleKey(int keyCode, int modifiers) {
-        boolean shift = (modifiers & GLFW.GLFW_MOD_SHIFT) != 0;
-
-        if (isShortcutModifierDown(modifiers)) {
-            if (keyCode == GLFW.GLFW_KEY_V) {
-                Minecraft mc = Minecraft.getInstance();
-                if (mc != null) {
-                    String clip = mc.keyboardHandler.getClipboard();
-                    if (clip != null && !clip.isEmpty()) {
-                        replaceSelectionWith(clip);
-                    }
-                }
-                return KeyResult.HANDLED;
-            }
-            if (keyCode == GLFW.GLFW_KEY_C || keyCode == GLFW.GLFW_KEY_INSERT) {
-                copyToClipboard();
-                return KeyResult.HANDLED;
-            }
-            if (keyCode == GLFW.GLFW_KEY_A) {
-                if (!text.isEmpty()) {
-                    selectionAnchorCp = 0;
-                    selectionEndCp = codePointCount(text);
-                    cursorCp = selectionEndCp;
-                }
-                return KeyResult.HANDLED;
-            }
-        }
-
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             return KeyResult.CANCEL;
         }
         if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
             return KeyResult.COMMIT;
         }
+        if (isCopyShortcut(keyCode)) {
+            setClipboard(text);
+            return KeyResult.HANDLED;
+        }
+        if (isPasteShortcut(keyCode)) {
+            pasteFromClipboard();
+            return KeyResult.HANDLED;
+        }
         if (keyCode == GLFW.GLFW_KEY_LEFT) {
-            moveCursor(-1, shift);
+            moveCaretLeft();
             return KeyResult.HANDLED;
         }
         if (keyCode == GLFW.GLFW_KEY_RIGHT) {
-            moveCursor(1, shift);
+            moveCaretRight();
             return KeyResult.HANDLED;
         }
-        if (keyCode == GLFW.GLFW_KEY_HOME) {
-            moveCursorTo(0, shift);
-            return KeyResult.HANDLED;
-        }
-        if (keyCode == GLFW.GLFW_KEY_END) {
-            moveCursorTo(codePointCount(text), shift);
-            return KeyResult.HANDLED;
-        }
-        if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-            if (hasSelection()) {
-                deleteSelection();
-            } else {
-                deleteBeforeCursor();
-            }
-            return KeyResult.HANDLED;
-        }
-        if (keyCode == GLFW.GLFW_KEY_DELETE) {
-            if (hasSelection()) {
-                deleteSelection();
-            } else {
-                deleteAfterCursor();
-            }
+        if (keyCode == GLFW.GLFW_KEY_BACKSPACE || (isMac() && keyCode == GLFW.GLFW_KEY_DELETE)) {
+            deleteBehindCaret(isPrimaryModifierDown());
             return KeyResult.HANDLED;
         }
         return KeyResult.NOT_HANDLED;
     }
 
     public boolean handleCodePoint(int codePoint) {
+        if (codePoint == 0) {
+            return false;
+        }
+        if (codePoint == '\b') {
+            deleteBehindCaret(isPrimaryModifierDown());
+            return true;
+        }
+        if (codePoint == 127) {
+            if (isMac()) {
+                deleteBehindCaret(isPrimaryModifierDown());
+                return true;
+            }
+            return false;
+        }
         if (Character.isISOControl(codePoint)) {
             return false;
         }
         if (!policy.isAllowed(text, codePoint)) {
             return true;
         }
-        replaceSelectionWith(new String(Character.toChars(codePoint)));
+        insertAtCaret(new String(Character.toChars(codePoint)));
         return true;
     }
 
     public void onMousePressed(Font font, float localX) {
-        setCursorFromFontX(font, localX);
-        selectionAnchorCp = cursorCp;
-        selectionEndCp = cursorCp;
-        dragSelecting = true;
-    }
-
-    public void onMouseDrag(Font font, float localX) {
-        if (!dragSelecting) {
+        int cpCount = codePointCount(text);
+        if (cpCount == 0) {
+            caretCp = null;
             return;
         }
-        setCursorFromFontX(font, localX);
-        selectionEndCp = cursorCp;
-    }
-
-    public void onMouseReleased() {
-        if (selectionAnchorCp == selectionEndCp) {
-            clearSelection();
+        int bestCp = 0;
+        int bestDist = Integer.MAX_VALUE;
+        for (int cp = 0; cp <= cpCount; cp++) {
+            int width = font.width(text.substring(0, cpIndexToCharIndex(text, cp)));
+            int dist = Math.abs(width - Math.round(localX));
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestCp = cp;
+            }
         }
-        dragSelecting = false;
+        caretCp = bestCp >= cpCount ? null : bestCp;
     }
 
     public static boolean tryCommitSlider(SliderValue slider, String inputText) {
@@ -256,9 +194,7 @@ public final class LineTextInput {
         GuiGraphics context,
         Font font,
         String text,
-        int cursorCp,
-        int selectionStartCp,
-        int selectionEndCp,
+        Integer caretCp,
         int x,
         int y,
         int color,
@@ -268,34 +204,28 @@ public final class LineTextInput {
         if (text == null) {
             text = "";
         }
-        boolean hasSelection = selectionStartCp >= 0 && selectionEndCp >= 0 && selectionStartCp != selectionEndCp;
-        if (hasSelection) {
-            int selStart = Math.min(selectionStartCp, selectionEndCp);
-            int selEnd = Math.max(selectionStartCp, selectionEndCp);
-            int x0 = x + font.width(text.substring(0, cpIndexToCharIndex(text, selStart)));
-            int x1 = x + font.width(text.substring(0, cpIndexToCharIndex(text, selEnd)));
-            context.fill(x0, y, x1, y + 9, SELECTION_BG);
+        if (!focused || !blinkOn) {
+            context.drawString(font, text, x, y, color, false);
+            return;
         }
-        int charPos = cpIndexToCharIndex(text, cursorCp);
+        int cpCount = codePointCount(text);
+        int drawCp = caretCp != null ? caretCp : cpCount;
+        int charPos = cpIndexToCharIndex(text, drawCp);
         String before = text.substring(0, charPos);
         String after = text.substring(charPos);
         context.drawString(font, before, x, y, color, false);
-        int cursorX = x + font.width(before);
+        int caretX = x + font.width(before);
         if (!after.isEmpty()) {
-            context.drawString(font, after, cursorX, y, color, false);
+            context.drawString(font, after, caretX, y, color, false);
         }
-        if (focused && blinkOn) {
-            context.fill(cursorX, y, cursorX + 1, y + 9, color);
-        }
+        context.fill(caretX, y, caretX + 1, y + 9, color);
     }
 
     public static void drawCenteredClippedWithBlinkCursor(
         GuiGraphics context,
         Font font,
         String text,
-        int cursorCp,
-        int selectionStartCp,
-        int selectionEndCp,
+        Integer caretCp,
         float lineX1,
         float lineY,
         float lineX2,
@@ -316,9 +246,7 @@ public final class LineTextInput {
             context,
             font,
             text,
-            cursorCp,
-            selectionStartCp,
-            selectionEndCp,
+            caretCp,
             drawX,
             drawYInt,
             color,
@@ -328,75 +256,57 @@ public final class LineTextInput {
         context.disableScissor();
     }
 
-    private void copyToClipboard() {
-        String toCopy = hasSelection() ? getSelectedText() : text;
-        if (toCopy.isEmpty()) {
-            return;
-        }
-        Minecraft mc = Minecraft.getInstance();
-        if (mc == null) {
-            return;
-        }
-        mc.keyboardHandler.setClipboard(toCopy);
-    }
-
-    private String getSelectedText() {
-        int startCp = getSelectionStartCp();
-        int endCp = getSelectionEndCp();
-        int startChar = cpIndexToCharIndex(text, startCp);
-        int endChar = cpIndexToCharIndex(text, endCp);
-        return text.substring(startChar, endChar);
-    }
-
-    private void moveCursor(int delta, boolean shift) {
-        int next = Math.max(0, Math.min(cursorCp + delta, codePointCount(text)));
-        moveCursorTo(next, shift);
-    }
-
-    private void moveCursorTo(int cp, boolean shift) {
-        if (shift) {
-            if (selectionAnchorCp < 0) {
-                selectionAnchorCp = cursorCp;
-            }
-            cursorCp = cp;
-            selectionEndCp = cursorCp;
-        } else {
-            cursorCp = cp;
-            clearSelection();
-        }
-    }
-
-    private void setCursorFromFontX(Font font, float localX) {
+    private void moveCaretLeft() {
         int cpCount = codePointCount(text);
-        if (cpCount == 0) {
-            cursorCp = 0;
-            return;
+        if (caretCp == null) {
+            caretCp = Math.max(0, cpCount - 1);
+        } else {
+            caretCp = Math.max(0, caretCp - 1);
         }
-        int bestCp = 0;
-        int bestDist = Integer.MAX_VALUE;
-        for (int cp = 0; cp <= cpCount; cp++) {
-            int width = font.width(text.substring(0, cpIndexToCharIndex(text, cp)));
-            int dist = Math.abs(width - Math.round(localX));
-            if (dist < bestDist) {
-                bestDist = dist;
-                bestCp = cp;
-            }
-        }
-        cursorCp = bestCp;
     }
 
-    private void replaceSelectionWith(String insert) {
-        if (insert == null) {
-            insert = "";
+    private void moveCaretRight() {
+        if (caretCp == null) {
+            return;
         }
-        if (hasSelection()) {
-            int startChar = cpIndexToCharIndex(text, getSelectionStartCp());
-            int endChar = cpIndexToCharIndex(text, getSelectionEndCp());
-            text = text.substring(0, startChar) + text.substring(endChar);
-            cursorCp = getSelectionStartCp();
-            clearSelection();
+        int cpCount = codePointCount(text);
+        if (caretCp >= cpCount - 1) {
+            caretCp = null;
+        } else {
+            caretCp++;
         }
-        if (insert.isEmpty()) {
+    }
+
+    private void deleteBehindCaret(boolean deleteWord) {
+        if (text.isEmpty()) {
+            return;
+        }
+        if (caretCp != null) {
+            if (caretCp == 0) {
+                return;
+            }
+            int leftCp = caretCp - 1;
+            int leftChar = cpIndexToCharIndex(text, leftCp);
+            int rightChar = cpIndexToCharIndex(text, caretCp);
+            text = text.substring(0, leftChar) + text.substring(rightChar);
+            caretCp = leftCp;
+            return;
+        }
+        if (deleteWord) {
+            text = dropLastWord(text);
+        } else {
+            int cpCount = codePointCount(text);
+            if (cpCount <= 1) {
+                text = "";
+            } else {
+                int cutFrom = cpIndexToCharIndex(text, cpCount - 1);
+                text = text.substring(0, cutFrom);
+            }
+        }
+    }
+
+    private void insertAtCaret(String insert) {
+        if (insert == null || insert.isEmpty()) {
             return;
         }
         StringBuilder filtered = new StringBuilder();
@@ -413,42 +323,69 @@ public final class LineTextInput {
             return;
         }
         String addition = filtered.toString();
-        int charPos = cpIndexToCharIndex(text, cursorCp);
-        String merged = text.substring(0, charPos) + addition + text.substring(charPos);
-        text = sanitize(merged);
-        cursorCp = Math.min(cursorCp + addition.codePointCount(0, addition.length()), codePointCount(text));
+        if (caretCp == null) {
+            text = sanitize(text + addition);
+        } else {
+            int charPos = cpIndexToCharIndex(text, caretCp);
+            text = sanitize(text.substring(0, charPos) + addition + text.substring(charPos));
+            caretCp = Math.min(caretCp + addition.codePointCount(0, addition.length()), codePointCount(text));
+        }
     }
 
-    private void deleteSelection() {
-        if (!hasSelection()) {
+    private void pasteFromClipboard() {
+        String clip = getClipboard();
+        if (clip == null || clip.isEmpty()) {
             return;
         }
-        int startChar = cpIndexToCharIndex(text, getSelectionStartCp());
-        int endChar = cpIndexToCharIndex(text, getSelectionEndCp());
-        text = text.substring(0, startChar) + text.substring(endChar);
-        cursorCp = getSelectionStartCp();
-        clearSelection();
+        if (clip.length() > PASTE_CHAR_LIMIT) {
+            clip = clip.substring(0, PASTE_CHAR_LIMIT);
+        }
+        insertAtCaret(clip);
     }
 
-    private void deleteBeforeCursor() {
-        if (cursorCp <= 0 || text.isEmpty()) {
-            return;
+    private static String dropLastWord(String value) {
+        int space = value.lastIndexOf(' ');
+        if (space < 0) {
+            return "";
         }
-        int leftCp = cursorCp - 1;
-        int leftChar = cpIndexToCharIndex(text, leftCp);
-        int rightChar = cpIndexToCharIndex(text, cursorCp);
-        text = text.substring(0, leftChar) + text.substring(rightChar);
-        cursorCp = leftCp;
+        return value.substring(0, space);
     }
 
-    private void deleteAfterCursor() {
-        int cpCount = codePointCount(text);
-        if (cursorCp >= cpCount || text.isEmpty()) {
-            return;
+    private static boolean isMac() {
+        return System.getProperty("os.name", "").toLowerCase().contains("mac");
+    }
+
+    private static long windowHandle() {
+        Minecraft client = Minecraft.getInstance();
+        return client.getWindow().handle();
+    }
+
+    private static boolean isKeyDown(int key) {
+        return GLFW.glfwGetKey(windowHandle(), key) == GLFW.GLFW_PRESS;
+    }
+
+    private static boolean isPrimaryModifierDown() {
+        if (InputQuirks.REPLACE_CTRL_KEY_WITH_CMD_KEY) {
+            return isKeyDown(GLFW.GLFW_KEY_LEFT_SUPER) || isKeyDown(GLFW.GLFW_KEY_RIGHT_SUPER);
         }
-        int leftChar = cpIndexToCharIndex(text, cursorCp);
-        int rightChar = cpIndexToCharIndex(text, cursorCp + 1);
-        text = text.substring(0, leftChar) + text.substring(rightChar);
+        return isKeyDown(GLFW.GLFW_KEY_LEFT_CONTROL) || isKeyDown(GLFW.GLFW_KEY_RIGHT_CONTROL);
+    }
+
+    private static boolean isCopyShortcut(int keyCode) {
+        return keyCode == GLFW.GLFW_KEY_C && isPrimaryModifierDown();
+    }
+
+    private static boolean isPasteShortcut(int keyCode) {
+        return keyCode == GLFW.GLFW_KEY_V && isPrimaryModifierDown();
+    }
+
+    private static String getClipboard() {
+        Minecraft client = Minecraft.getInstance();
+        return client.keyboardHandler.getClipboard();
+    }
+
+    private static void setClipboard(String value) {
+        Minecraft.getInstance().keyboardHandler.setClipboard(value);
     }
 
     private String sanitize(String raw) {
@@ -468,26 +405,20 @@ public final class LineTextInput {
         return out.toString();
     }
 
-    private void clampCursor() {
-        cursorCp = Math.max(0, Math.min(cursorCp, codePointCount(text)));
+    private void clampCaret() {
+        if (caretCp == null) {
+            return;
+        }
+        int cpCount = codePointCount(text);
+        if (caretCp >= cpCount) {
+            caretCp = null;
+        } else {
+            caretCp = Math.max(0, caretCp);
+        }
     }
 
     private static int codePointCount(String s) {
         return s == null || s.isEmpty() ? 0 : s.codePointCount(0, s.length());
-    }
-
-    private static boolean isShortcutModifierDown(int modifiers) {
-        if ((modifiers & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SUPER)) != 0) {
-            return true;
-        }
-        Minecraft mc = Minecraft.getInstance();
-        if (mc == null) {
-            return false;
-        }
-        return InputConstants.isKeyDown(mc.getWindow(), GLFW.GLFW_KEY_LEFT_CONTROL)
-            || InputConstants.isKeyDown(mc.getWindow(), GLFW.GLFW_KEY_RIGHT_CONTROL)
-            || InputConstants.isKeyDown(mc.getWindow(), GLFW.GLFW_KEY_LEFT_SUPER)
-            || InputConstants.isKeyDown(mc.getWindow(), GLFW.GLFW_KEY_RIGHT_SUPER);
     }
 
     private static boolean isSliderCharAllowed(SliderValue slider, String textBefore, int codePoint) {
@@ -554,10 +485,7 @@ public final class LineTextInput {
 
         try {
             double v = Double.parseDouble((negative ? "-" : "") + s);
-            if (v > slider.getMaxValue()) {
-                return false;
-            }
-            return true;
+            return v <= slider.getMaxValue();
         } catch (NumberFormatException ex) {
             return false;
         }

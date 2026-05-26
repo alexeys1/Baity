@@ -95,6 +95,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         
         float scaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
+        boolean suppressTooltips = ClickGuiLayout.shouldSuppressContentTooltips(coords.mouseX, coords.mouseY);
         
         OwoRenderAdapter adapter = OwoRenderAdapter.of(context, guiGraphics);
         
@@ -135,9 +136,9 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         
         for (Module module : modules) {
             renderModule(adapter, client, module, contentX + 10, modY, contentX + contentWidth - 10,
-                        coords.mouseX, coords.mouseY, visibleTop, visibleBottom);
+                        coords.mouseX, coords.mouseY, visibleTop, visibleBottom, suppressTooltips);
             
-            if (tooltipInfo != null && tooltipInfo.tooltip != null) {
+            if (!suppressTooltips && tooltipInfo != null && tooltipInfo.tooltip != null) {
                 state.setHoveredTooltip(tooltipInfo.tooltip);
                 state.setHoveredTooltipText(tooltipInfo.tooltipText);
                 state.setTooltipX(tooltipInfo.x);
@@ -147,7 +148,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             modY += 30;
             
             modY += renderSubOptions(adapter, client, module, contentX + 20, modY, contentX + contentWidth - 20,
-                                   visibleHeight, coords.mouseX, coords.mouseY);
+                                   visibleHeight, coords.mouseX, coords.mouseY, suppressTooltips);
         }
         
         guiGraphics.disableScissor();
@@ -313,9 +314,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 guiGraphics,
                 client.font,
                 empty ? "" : searchText,
-                search.getCursorCp(),
-                search.hasSelection() ? search.getSelectionStartCp() : -1,
-                search.hasSelection() ? search.getSelectionEndCp() : -1,
+                search.getCaretCp(),
                 textX,
                 textY,
                 theme.FONT_C.getRGB(),
@@ -376,7 +375,8 @@ public class ClickGuiRootComponent extends BaseUIComponent {
     
     private void renderModule(OwoRenderAdapter adapter, Minecraft client, Module module,
                              float x, float modY, float width,
-                             float mouseX, float mouseY, float visibleTop, float visibleBottom) {
+                             float mouseX, float mouseY, float visibleTop, float visibleBottom,
+                             boolean suppressTooltips) {
         float x2 = x + (width - x);
         float moduleHeight = 25f;
         
@@ -416,7 +416,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         }
         guiGraphics.drawString(client.font, displayName, (int)(x + 10), (int)(modY + 8), theme.FONT_C.getRGB(), false);
         
-        if (hovered && tooltipInfo != null) {
+        if (hovered && !suppressTooltips && tooltipInfo != null) {
             String tooltip = getTooltipText.apply(module.getName());
             if (tooltip != null) {
                 tooltipInfo.tooltip = tooltip;
@@ -528,7 +528,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
     private float renderSubOptions(OwoRenderAdapter adapter, Minecraft client, Module module,
                                   float containerX1, float modY, float containerX2,
                                   float visibleHeight,
-                                  float mouseX, float mouseY) {
+                                  float mouseX, float mouseY, boolean suppressTooltips) {
         java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
         int subOptionCount = entries.size();
         
@@ -590,10 +590,10 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 int subX1 = (int)(containerX1 + 4 + depth * 12);
                 int subX2 = (int)(containerX2 - 4 - depth * 8);
                 
-                ValueStyleRenderer.renderValue(guiGraphics, client, module, value, theme, subX1, subModY, subX2, dims.subOptionHeight, mouseX, mouseY, localAlpha, getTooltipText, getTooltipTextWithColors, getDisplayTextFormatter, state.getListeningButtonValueName(), tooltipInfo, state.getEditingSlider(), state.getSliderInput().getText(), state.getEditingGradient(), state.getGradientInput().getText(), state.getGradientInput().getCursorCp(), state.getSliderInput().getCursorCp(), state.getEditingTextInput(), state.getTextLineInput().getText(), state.getTextLineInput().getCursorCp(), state.getTextLineInput().hasSelection() ? state.getTextLineInput().getSelectionStartCp() : -1, state.getTextLineInput().hasSelection() ? state.getTextLineInput().getSelectionEndCp() : -1);
+                ValueStyleRenderer.renderValue(guiGraphics, client, module, value, theme, subX1, subModY, subX2, dims.subOptionHeight, mouseX, mouseY, localAlpha, getTooltipText, getTooltipTextWithColors, getDisplayTextFormatter, state.getListeningButtonValueName(), tooltipInfo, state.getEditingSlider(), state.getSliderInput().getText(), state.getEditingGradient(), state.getGradientInput().getText(), state.getGradientInput().getCaretCp(), state.getSliderInput().getCaretCp(), state.getEditingTextInput(), state.getTextLineInput().getText(), state.getTextLineInput().getCaretCp());
                 
                 
-                if (tooltipInfo != null && tooltipInfo.tooltip != null) {
+                if (!suppressTooltips && tooltipInfo != null && tooltipInfo.tooltip != null) {
                     state.setHoveredTooltip(tooltipInfo.tooltip);
                     state.setHoveredTooltipText(tooltipInfo.tooltipText);
                     state.setTooltipX(tooltipInfo.x);

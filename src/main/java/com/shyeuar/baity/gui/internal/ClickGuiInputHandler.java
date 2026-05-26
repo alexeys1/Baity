@@ -39,9 +39,6 @@ public class ClickGuiInputHandler {
     private int painterDragButton = -1;
     private int painterLastPx = Integer.MIN_VALUE;
     private int painterLastPy = Integer.MIN_VALUE;
-    private LineTextInput lineInputDragTarget;
-    private float lineInputDragTextX;
-    
     public ClickGuiInputHandler(ClickGuiState state, TimerUtils timer, 
                                BiConsumer<com.shyeuar.baity.gui.module.Module, com.shyeuar.baity.gui.value.ButtonValue> onTriggerValueClick) {
         this.state = state;
@@ -422,14 +419,14 @@ public class ClickGuiInputHandler {
         if (initialHexWithoutHash == null || initialHexWithoutHash.isEmpty()) {
             state.getGradientInput().clear();
         } else {
-            state.getGradientInput().setTextAndCursorToEnd(initialHexWithoutHash);
+            state.getGradientInput().setTextAndCaretAtEnd(initialHexWithoutHash);
         }
     }
 
     private void beginGradientSymbolEdit(String moduleName, String valueName, String symbols) {
         state.getGradientInput().setPolicy(LineTextInput.Policy.damageSymbols());
         state.setEditingGradient(new ClickGuiState.GradientInputInfo(moduleName, valueName, 0, true));
-        state.getGradientInput().setTextAndCursorToEnd(symbols == null ? "" : symbols);
+        state.getGradientInput().setTextAndCaretAtEnd(symbols == null ? "" : symbols);
     }
 
     private void syncSliderInputPolicy() {
@@ -452,7 +449,7 @@ public class ClickGuiInputHandler {
     private void beginSliderEdit(SliderValue sliderValue, String moduleName, String valueName) {
         state.getSliderInput().setPolicy(LineTextInput.Policy.forSlider(sliderValue));
         state.setEditingSlider(new ClickGuiState.SliderInputInfo(moduleName, valueName));
-        state.getSliderInput().setTextAndCursorToEnd(sliderValue.getFormattedValue());
+        state.getSliderInput().setTextAndCaretAtEnd(sliderValue.getFormattedValue());
         state.setOriginalSliderValue(sliderValue.getDoubleValue());
     }
 
@@ -477,32 +474,8 @@ public class ClickGuiInputHandler {
         state.setEditingSlider(null);
     }
 
-    private void beginLineInputDrag(LineTextInput input, float textDrawX) {
-        lineInputDragTarget = input;
-        lineInputDragTextX = textDrawX;
-    }
-
-    private void updateLineInputDrag(double mouseX) {
-        if (lineInputDragTarget == null) {
-            return;
-        }
-        Minecraft client = Minecraft.getInstance();
-        if (client == null) {
-            return;
-        }
-        lineInputDragTarget.onMouseDrag(client.font, (float) mouseX - lineInputDragTextX);
-    }
-
-    private void endLineInputDrag() {
-        if (lineInputDragTarget != null) {
-            lineInputDragTarget.onMouseReleased();
-            lineInputDragTarget = null;
-        }
-    }
-
     public void handleMouseRelease(int button) {
         if (button == 0) {
-            endLineInputDrag();
             state.resetDragState();
             state.setDraggingSlider(null);
             state.setDraggingGradient(null);
@@ -513,7 +486,6 @@ public class ClickGuiInputHandler {
     }
    
     public void handleMouseMove(double mouseX, double mouseY) {
-        updateLineInputDrag(mouseX);
         if (state.isDragging()) {
             ClickGuiLayout.updateWindowPosition(state, mouseX, mouseY, state.getDragX(), state.getDragY());
         }
@@ -889,14 +861,12 @@ public class ClickGuiInputHandler {
             state.setSearchFocused(true);
             if (client != null) {
                 state.getSearchInput().onMousePressed(client.font, coords.mouseX - textStartX);
-                beginLineInputDrag(state.getSearchInput(), textStartX);
             }
             return true;
         }
 
         if (state.isSearchFocused()) {
             state.setSearchFocused(false);
-            state.getSearchInput().clearSelection();
         }
 
         return false;
@@ -1234,7 +1204,6 @@ public class ClickGuiInputHandler {
                         String display = state.getSliderInput().getText();
                         int textX = valueDisplayX + (valueDisplayWidth - client.font.width(display)) / 2;
                         state.getSliderInput().onMousePressed(client.font, (float) coords.mouseX - textX);
-                        beginLineInputDrag(state.getSliderInput(), textX);
                     } else {
                         beginSliderEdit(sliderValue, module.getName(), value.getName());
                     }
@@ -1474,11 +1443,10 @@ public class ClickGuiInputHandler {
                         && state.getEditingTextInput().valueName.equals(value.getName())) {
                         Minecraft client = Minecraft.getInstance();
                         state.getTextLineInput().onMousePressed(client.font, (float) coords.mouseX - lineX1);
-                        beginLineInputDrag(state.getTextLineInput(), lineX1);
                     } else {
                         state.setEditingTextInput(new ClickGuiState.TextInputInfo(module.getName(), value.getName()));
                         String start = String.valueOf(value.getValue());
-                        state.getTextLineInput().setTextAndCursorToEnd(start == null ? "" : start);
+                        state.getTextLineInput().setTextAndCaretAtEnd(start == null ? "" : start);
                     }
                     timer.reset();
                     return true;

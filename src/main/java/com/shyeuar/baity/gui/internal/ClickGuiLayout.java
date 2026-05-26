@@ -153,6 +153,13 @@ public class ClickGuiLayout {
             mouseY
         );
     }
+
+    public static boolean shouldSuppressContentTooltips(float mouseX, float mouseY) {
+        if (isSearchBarHovered(mouseX, mouseY)) {
+            return true;
+        }
+        return mouseY < ClickGuiState.LIST_TOP_PADDING;
+    }
     
     public static void initializeWindowPosition(ClickGuiState state, int screenWidth, int screenHeight) {
         float scaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();

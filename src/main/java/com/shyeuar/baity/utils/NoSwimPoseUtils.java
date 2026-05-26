@@ -1,5 +1,6 @@
 package com.shyeuar.baity.utils;
 
+import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.render.RenderScope;
@@ -7,6 +8,7 @@ import com.shyeuar.baity.render.interfaces.EntityRenderStateInterface;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
@@ -77,20 +79,71 @@ public final class NoSwimPoseUtils {
         return resolveSwimVisualPhase() == SwimVisualPhase.ACTIVE;
     }
 
-    public static boolean isAbnormalDrySwimPose() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) {
-            return false;
-        }
-        return mc.player.getPose() == Pose.SWIMMING && !isInWaterSwimVisualContext();
-    }
-
     public static boolean shouldApplyEyeHeightChange() {
         return isFeatureActive() && isInActiveSwimVisualContext();
     }
 
+    public static boolean shouldApplyCameraEyeHeightChange() {
+        if (!shouldApplyEyeHeightChange()) {
+            return false;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null) {
+            return false;
+        }
+        if (mc.options.getCameraType().isFirstPerson()) {
+            return true;
+        }
+        return isSwimmingPose(mc.player);
+    }
+
+    public static boolean shouldSnapCameraEyeHeight(Player player) {
+        return shouldApplyCameraEyeHeightChange() && isSwimmingPose(player);
+    }
+
+    public static boolean isSwimmingPose(Player player) {
+        return player.getPose() == Pose.SWIMMING;
+    }
+
+    public static float getCameraEyeHeight(Player player) {
+        if (!shouldApplyEyeHeightChange() || !shouldApplyCameraEyeHeightChange()) {
+            return player.getEyeHeight();
+        }
+        if (isSwimmingPose(player)) {
+            return STANDING_EYE_HEIGHT;
+        }
+        if (ConfigManager.oldSneakingEnabled) {
+            if (OldSneakingUtils.shouldApplyInCurrentView()
+                && OldSneakingUtils.isEligiblePlayer(player)
+                && OldSneakingUtils.isPhysicallyCrouching(player)) {
+                return OldSneakingUtils.getVisualEyeHeight(player);
+            }
+            return STANDING_EYE_HEIGHT;
+        }
+        return getWadingEyeHeight(player);
+    }
+
+    private static float getWadingEyeHeight(Player player) {
+        float standing = STANDING_EYE_HEIGHT;
+        if (!isSneaking() && !player.isCrouching()) {
+            return standing;
+        }
+        float crouch = player.getDimensions(Pose.CROUCHING).eyeHeight() * player.getScale();
+        float vanillaStand = player.getDimensions(Pose.STANDING).eyeHeight() * player.getScale();
+        float span = vanillaStand - crouch;
+        if (span > 0.001F) {
+            float progress = Mth.clamp((vanillaStand - player.getEyeHeight()) / span, 0.0F, 1.0F);
+            return Mth.lerp(progress, standing, crouch);
+        }
+        return crouch;
+    }
+
     public static boolean shouldApplyVisualOverrides() {
         return isFeatureActive() && isInWaterSwimVisualContext();
+    }
+
+    public static boolean shouldApplyWorldSwimNametagOffset(Player player) {
+        return shouldApplyVisualOverrides() && player != null && player.getPose() == Pose.SWIMMING;
     }
 
     public static boolean isSelfPlayerById(int entityId) {
@@ -115,8 +168,16 @@ public final class NoSwimPoseUtils {
         return false;
     }
 
-    public static boolean shouldApplyWorldSwimNametagOffset(Player player) {
-        return shouldApplyVisualOverrides() && player != null && player.getPose() == Pose.SWIMMING;
+    public static boolean shouldClearSelfSwimState(AvatarRenderState state) {
+        return isSelfPlayerById(state.id) && isWorldRenderContext(state);
+    }
+
+    public static boolean isAbnormalDrySwimPose() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
+            return false;
+        }
+        return mc.player.getPose() == Pose.SWIMMING && !isInWaterSwimVisualContext();
     }
 
     public static boolean shouldFreezeSwimAmount(Object entity) {
@@ -133,7 +194,8 @@ public final class NoSwimPoseUtils {
         state.isVisuallySwimming = false;
         state.swimAmount = 0.0F;
 
-        if (isSneaking()) {
+        Minecraft mc = Minecraft.getInstance();
+        if (isSneaking() && mc.player != null && !isSwimmingPose(mc.player)) {
             state.isCrouching = true;
         }
     }

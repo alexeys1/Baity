@@ -17,9 +17,11 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -31,25 +33,16 @@ public class NoSwimPoseMixin {
 
         @Inject(method = "setupRotations", at = @At("HEAD"))
         private void baity$preventSwimTransform(AvatarRenderState state, PoseStack matrixStack, float f, float g, CallbackInfo ci) {
-            if (!NoSwimPoseUtils.shouldApplyVisualOverrides() || !NoSwimPoseUtils.isSelfPlayerById(state.id)) {
-                return;
+            if (NoSwimPoseUtils.shouldClearSelfSwimState(state)) {
+                NoSwimPoseUtils.clearSwimRenderState(state);
             }
-            if (!NoSwimPoseUtils.isWorldRenderContext(state)) {
-                return;
-            }
-
-            NoSwimPoseUtils.clearSwimRenderState(state);
         }
 
         @Inject(method = "setupRotations", at = @At("TAIL"))
         private void baity$clearSwimAfterRotations(AvatarRenderState state, PoseStack matrixStack, float f, float g, CallbackInfo ci) {
-            if (!NoSwimPoseUtils.shouldApplyVisualOverrides() || !NoSwimPoseUtils.isSelfPlayerById(state.id)) {
-                return;
+            if (NoSwimPoseUtils.shouldClearSelfSwimState(state)) {
+                NoSwimPoseUtils.clearSwimRenderState(state);
             }
-            if (!NoSwimPoseUtils.isWorldRenderContext(state)) {
-                return;
-            }
-            NoSwimPoseUtils.clearSwimRenderState(state);
         }
     }
 
@@ -58,25 +51,16 @@ public class NoSwimPoseMixin {
 
         @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V", at = @At("HEAD"))
         private void baity$modifySwimmingPose(AvatarRenderState state, CallbackInfo ci) {
-            if (!NoSwimPoseUtils.shouldApplyVisualOverrides() || !NoSwimPoseUtils.isSelfPlayerById(state.id)) {
-                return;
+            if (NoSwimPoseUtils.shouldClearSelfSwimState(state)) {
+                NoSwimPoseUtils.clearSwimRenderState(state);
             }
-            if (!NoSwimPoseUtils.isWorldRenderContext(state)) {
-                return;
-            }
-
-            NoSwimPoseUtils.clearSwimRenderState(state);
         }
 
         @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V", at = @At("TAIL"))
         private void baity$clearSwimAfterAnim(AvatarRenderState state, CallbackInfo ci) {
-            if (!NoSwimPoseUtils.shouldApplyVisualOverrides() || !NoSwimPoseUtils.isSelfPlayerById(state.id)) {
-                return;
+            if (NoSwimPoseUtils.shouldClearSelfSwimState(state)) {
+                NoSwimPoseUtils.clearSwimRenderState(state);
             }
-            if (!NoSwimPoseUtils.isWorldRenderContext(state)) {
-                return;
-            }
-            NoSwimPoseUtils.clearSwimRenderState(state);
         }
     }
 
@@ -92,6 +76,9 @@ public class NoSwimPoseMixin {
         @Shadow
         private Entity entity;
 
+        @Unique
+        private boolean baity$wasSwimEyeHeightOverride;
+
         @ModifyExpressionValue(
             method = "setup",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;lerp(FFF)F", ordinal = 1)
@@ -101,9 +88,8 @@ public class NoSwimPoseMixin {
             if (mc.player == null || focusedEntity != mc.player) {
                 return original;
             }
-
-            if (NoSwimPoseUtils.shouldApplyEyeHeightChange()) {
-                return NoSwimPoseUtils.STANDING_EYE_HEIGHT;
+            if (mc.player != null && NoSwimPoseUtils.shouldSnapCameraEyeHeight(mc.player)) {
+                return NoSwimPoseUtils.getCameraEyeHeight(mc.player);
             }
             return original;
         }
@@ -111,10 +97,27 @@ public class NoSwimPoseMixin {
         @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;getEyeHeight()F"))
         private float baity$standingEyeHeightDuringSwimVisual(Entity instance, Operation<Float> original) {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null && instance == mc.player && NoSwimPoseUtils.shouldApplyEyeHeightChange()) {
-                return NoSwimPoseUtils.STANDING_EYE_HEIGHT;
+            if (mc.player != null && instance == mc.player && instance instanceof Player player
+                && NoSwimPoseUtils.shouldApplyCameraEyeHeightChange()) {
+                return NoSwimPoseUtils.getCameraEyeHeight(player);
             }
             return original.call(instance);
+        }
+
+        @Inject(method = "tick", at = @At("HEAD"))
+        private void baity$syncEyeHeightOnSwimVisualRelease(CallbackInfo ci) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player == null || this.entity != mc.player) {
+                return;
+            }
+
+            boolean swimOverride = NoSwimPoseUtils.shouldApplyCameraEyeHeightChange();
+            if (this.baity$wasSwimEyeHeightOverride && !swimOverride) {
+                float realEyeHeight = mc.player.getEyeHeight();
+                this.eyeHeightOld = realEyeHeight;
+                this.eyeHeight = realEyeHeight;
+            }
+            this.baity$wasSwimEyeHeightOverride = swimOverride;
         }
 
         @WrapOperation(
@@ -123,9 +126,10 @@ public class NoSwimPoseMixin {
         )
         private void baity$snapEyeHeightDuringSwimVisual(Camera instance, float value, Operation<Void> original) {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null && this.entity == mc.player && NoSwimPoseUtils.shouldApplyEyeHeightChange()) {
-                this.eyeHeight = NoSwimPoseUtils.STANDING_EYE_HEIGHT;
-                this.eyeHeightOld = NoSwimPoseUtils.STANDING_EYE_HEIGHT;
+            if (mc.player != null && this.entity == mc.player && NoSwimPoseUtils.shouldSnapCameraEyeHeight((Player) mc.player)) {
+                float visualEye = NoSwimPoseUtils.getCameraEyeHeight((Player) mc.player);
+                this.eyeHeight = visualEye;
+                this.eyeHeightOld = visualEye;
                 return;
             }
             original.call(instance, value);
@@ -158,10 +162,8 @@ public class NoSwimPoseMixin {
             CameraRenderState cameraState,
             CallbackInfo ci
         ) {
-            if (!RenderScope.isWorldEntityRender(cameraState)) {
-                return;
-            }
-            if (!NoSwimPoseUtils.isSelfPlayerById(state.id) || !NoSwimPoseUtils.shouldApplyVisualOverrides()) {
+            if (!RenderScope.isWorldEntityRender(cameraState)
+                || !NoSwimPoseUtils.isSelfPlayerById(state.id)) {
                 return;
             }
 

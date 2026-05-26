@@ -1,5 +1,6 @@
 package com.shyeuar.baity.config;
 
+import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,11 +64,18 @@ public class ConfigManager {
     
     public static boolean fancyDmgSplashEnabled = false;
     public static boolean fancyDmgSplashGenshinReaction = false;
+    public static boolean fancyDmgSplashSyncNonCritical = false;
     public static boolean fancyDmgSplashCompactDamageNumber = true;
-    public static int fancyDmgSplashColorPalette = 0;
+    public static int fancyDmgSplashBuiltinPresetMask = 0;
+    public static int fancyDmgSplashCustomPresetMask = 1;
+    public static String fancyDmgSplashCustomPresets = "";
+    public static int fancyDmgSplashEditingCustomIndex = 0;
     public static int fancyDmgSplashCritGradientStart = 0xFFFF55;
     public static int fancyDmgSplashCritGradientEnd = 0xFF5555;
     public static int fancyDmgSplashNormalDamageColor = 0xFFFFFF;
+    public static String fancyDmgSplashDamageSymbols = "✧";
+    public static boolean fancyDmgSplashBold = false;
+    public static String fancyDmgSplashSeparator = "none";
     
     public static boolean noSwimPoseEnabled = false; 
     
@@ -342,12 +350,30 @@ public class ConfigManager {
         registerField("FancyDmgSplashGenshinReaction", Boolean.class,
             c -> ConfigManager.fancyDmgSplashGenshinReaction,
             (c, v) -> ConfigManager.fancyDmgSplashGenshinReaction = (Boolean) v);
+        registerField("FancyDmgSplashSyncNonCritical", Boolean.class,
+            c -> ConfigManager.fancyDmgSplashSyncNonCritical,
+            (c, v) -> ConfigManager.fancyDmgSplashSyncNonCritical = (Boolean) v);
         registerField("FancyDmgSplashCompactDamageNumber", Boolean.class,
             c -> ConfigManager.fancyDmgSplashCompactDamageNumber,
             (c, v) -> ConfigManager.fancyDmgSplashCompactDamageNumber = (Boolean) v);
-        registerField("FancyDmgSplashColorPalette", Integer.class,
-            c -> ConfigManager.fancyDmgSplashColorPalette,
-            (c, v) -> ConfigManager.fancyDmgSplashColorPalette = (Integer) v);
+        registerField("FancyDmgSplashBuiltinPresetMask", Integer.class,
+            c -> ConfigManager.fancyDmgSplashBuiltinPresetMask,
+            (c, v) -> ConfigManager.fancyDmgSplashBuiltinPresetMask = (Integer) v);
+        registerField("FancyDmgSplashCustomPresetMask", Integer.class,
+            c -> ConfigManager.fancyDmgSplashCustomPresetMask,
+            (c, v) -> ConfigManager.fancyDmgSplashCustomPresetMask = (Integer) v);
+        registerField("FancyDmgSplashCustomPresets", String.class,
+            c -> ConfigManager.fancyDmgSplashCustomPresets,
+            (c, v) -> {
+                ConfigManager.fancyDmgSplashCustomPresets = (String) v;
+                com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.decodeCustomPresets((String) v);
+            });
+        registerField("FancyDmgSplashEditingCustomIndex", Integer.class,
+            c -> ConfigManager.fancyDmgSplashEditingCustomIndex,
+            (c, v) -> ConfigManager.fancyDmgSplashEditingCustomIndex = (Integer) v);
+        registerField("FancyDmgSplashPreset", Long.class,
+            c -> com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.packPaletteConfig(),
+            (c, v) -> com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.unpackPaletteConfig(((Number) v).longValue()));
         registerField("FancyDmgSplashCritGradientStart", Integer.class,
             c -> ConfigManager.fancyDmgSplashCritGradientStart,
             (c, v) -> ConfigManager.fancyDmgSplashCritGradientStart = (Integer) v);
@@ -357,6 +383,18 @@ public class ConfigManager {
         registerField("FancyDmgSplashNormalDamageColor", Integer.class,
             c -> ConfigManager.fancyDmgSplashNormalDamageColor,
             (c, v) -> ConfigManager.fancyDmgSplashNormalDamageColor = (Integer) v);
+        registerField("FancyDmgSplashDamageSymbols", String.class,
+            c -> ConfigManager.fancyDmgSplashDamageSymbols,
+            (c, v) -> ConfigManager.fancyDmgSplashDamageSymbols = (String) v);
+        registerField("FancyDmgSplashBold", Boolean.class,
+            c -> ConfigManager.fancyDmgSplashBold,
+            (c, v) -> ConfigManager.fancyDmgSplashBold = (Boolean) v);
+        registerField("FancyDmgSplashSeparator", String.class,
+            c -> ConfigManager.fancyDmgSplashSeparator,
+            (c, v) -> ConfigManager.fancyDmgSplashSeparator = (String) v);
+        registerField("FancyDmgSplashColorEditor", String.class,
+            c -> com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.encodeColorEditor(),
+            (c, v) -> com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.decodeColorEditor((String) v));
         registerField("NoSwimPose", Boolean.class,
             c -> ConfigManager.noSwimPoseEnabled,
             (c, v) -> ConfigManager.noSwimPoseEnabled = (Boolean) v);
@@ -778,6 +816,8 @@ public class ConfigManager {
                 legacyKeyAliases.put("ThirdPersonCrosshair", "ThirdPersonBackCrosshair");
                 
                 legacyKeyAliases.put("FishHookTimerHideArmorStand", "FishHookTimerHideDefaultTimer");
+                legacyKeyAliases.put("FancyDmgSplashColorPalette", "FancyDmgSplashBuiltinPresetMask");
+                legacyKeyAliases.put("FancyDmgSplashActivePresetIndex", "FancyDmgSplashBuiltinPresetMask");
 
                 boolean legacy2dDroppedItemPresent = false;
                 

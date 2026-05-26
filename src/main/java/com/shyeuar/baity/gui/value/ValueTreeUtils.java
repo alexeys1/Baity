@@ -1,6 +1,7 @@
 package com.shyeuar.baity.gui.value;
 
 import com.shyeuar.baity.gui.module.Module;
+import com.shyeuar.baity.managers.ModuleInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 
@@ -16,9 +17,15 @@ public final class ValueTreeUtils {
         List<ValueEntry> out = new ArrayList<>();
         for (Value value : module.getValues()) {
             if ("enabled".equals(value.getName())) continue;
+            if (isHiddenFromGui(module, value)) continue;
             appendVisible(value, 0, null, out);
         }
         return out;
+    }
+
+    private static boolean isHiddenFromGui(Module module, Value value) {
+        return "FancyDmgSplash".equals(module.getName())
+                && ModuleInitializer.isHiddenGuiValue(value.getName());
     }
 
     public static List<ValueEntry> getAllEntries(Module module) {

@@ -11,6 +11,8 @@ public class GradientEditorValue implements Value {
     private final ModuleCategory category;
     private int startColor;
     private int endColor;
+    private final int defaultStartColor;
+    private final int defaultEndColor;
     private int selectedPoint;
     private float startHue;
     private float startSat;
@@ -25,6 +27,14 @@ public class GradientEditorValue implements Value {
         this.category = category;
         this.startColor = startColor & 0xFFFFFF;
         this.endColor = endColor & 0xFFFFFF;
+        this.defaultStartColor = this.startColor;
+        this.defaultEndColor = this.endColor;
+        updateHsvFromColors();
+    }
+
+    public void resetToDefault() {
+        startColor = defaultStartColor;
+        endColor = defaultEndColor;
         updateHsvFromColors();
     }
 

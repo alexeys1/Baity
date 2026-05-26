@@ -68,6 +68,16 @@ public class ConfigSynchronizer {
         if (config != null) {
             config.setConfigValue(value);
             ConfigManager.saveConfig();
+
+            if ("FancyDmgSplash".equals(moduleName)
+                    && !"preset".equals(valueName)
+                    && !"genshin elemental reaction".equals(valueName)
+                    && ("color editor".equals(valueName)
+                    || "bold".equals(valueName)
+                    || "compact damage number".equals(valueName)
+                    || "separator".equals(valueName))) {
+                com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.onAppearanceSettingChanged();
+            }
             
             Module module = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName(moduleName);
             if (module != null) {

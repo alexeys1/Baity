@@ -496,7 +496,6 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 guiGraphics.drawString(client.font, keyTextObj, baseX + prefixWidth, baseY, keyNameRGB, false);
             } else if (displayPlainText.startsWith("☄") || 
                        displayPlainText.toUpperCase().contains("NOTSET") || 
-                       displayPlainText.toUpperCase().contains("NONE") || 
                        displayPlainText.toUpperCase().contains("UNKNOWN")) {
                 String prefix = "☄";
                 String notsetText = displayPlainText.startsWith("☄") ? displayPlainText.substring(1) : (" " + displayPlainText);
@@ -558,7 +557,10 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 float currentHeight = dims.subOptionHeight;
                 if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.COLOR_PALETTE) {
                     currentHeight = dims.subOptionHeight * 2;
+                } else if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.FANCY_DMG_PRESET) {
+                    currentHeight = com.shyeuar.baity.gui.render.ValueStyleRenderer.getFancyDmgPresetHeight(dims.subOptionHeight);
                 } else if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.GRADIENT_EDITOR
+                        || value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.FANCY_DMG_COLOR_EDITOR
                         || value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.ENCHANT_LORE_COLOR_EDITOR) {
                     currentHeight = dims.subOptionHeight * 6;
                 } else if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.CROSSHAIR_PAINTER) {

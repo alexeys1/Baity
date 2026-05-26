@@ -148,7 +148,6 @@ public class ModuleStyleRenderer {
                context.drawString(client.font, keyTextObj, baseX + prefixWidth, baseY, keyNameRGB, false);
            } else if (displayPlainText.startsWith("☄") || 
                        displayPlainText.toUpperCase().contains("NOTSET") || 
-                       displayPlainText.toUpperCase().contains("NONE") || 
                        displayPlainText.toUpperCase().contains("UNKNOWN")) {
                String prefix = "☄";
                String notsetText = displayPlainText.startsWith("☄") ? displayPlainText.substring(1) : (" " + displayPlainText);

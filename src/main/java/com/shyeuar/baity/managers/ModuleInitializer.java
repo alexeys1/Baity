@@ -18,9 +18,22 @@ public class ModuleInitializer {
         "focus player nametag"
     );
     private static final Set<String> REMINDER_OPTIONS = Set.of("cookie buff reminder", "god potion reminder");
-    private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of("genshin elemental reaction", "compact damage number");
+    private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of(
+            "sync non-critical dmg",
+            "genshin elemental reaction",
+            "bold",
+            "compact damage number"
+    );
+    private static final Set<String> FANCYDMGSPLASH_HIDDEN_GUI = Set.of(
+            "bold",
+            "compact damage number"
+    );
     private static final Set<String> HIGHLIGHTS_OPTIONS = Set.of("shulker", "invisibug", "pest");
     private static final Set<String> NODEBUFF_OPTIONS = Set.of("remove nausea", "remove blindness");
+
+    public static boolean isHiddenGuiValue(String valueName) {
+        return FANCYDMGSPLASH_HIDDEN_GUI.contains(valueName);
+    }
     
     public static void initializeModules() {
         initializeSmolPeople();
@@ -143,13 +156,27 @@ public class ModuleInitializer {
         if (fancyDmgSplash != null) {
             fancyDmgSplash.setEnabled(ConfigManager.fancyDmgSplashEnabled);
             for (Value v : fancyDmgSplash.getValues()) {
-                if (FANCYDMGSPLASH_OPTIONS.contains(v.getName())) {
-                    switch (v.getName()) {
-                        case "genshin elemental reaction" -> v.setValue(ConfigManager.fancyDmgSplashGenshinReaction);
-                        case "compact damage number" -> v.setValue(ConfigManager.fancyDmgSplashCompactDamageNumber);
+                switch (v.getName()) {
+                    case "sync non-critical dmg" -> v.setValue(ConfigManager.fancyDmgSplashSyncNonCritical);
+                    case "genshin elemental reaction" -> v.setValue(ConfigManager.fancyDmgSplashGenshinReaction);
+                    case "bold" -> v.setValue(ConfigManager.fancyDmgSplashBold);
+                    case "compact damage number" -> v.setValue(ConfigManager.fancyDmgSplashCompactDamageNumber);
+                    case "color editor" -> {
+                        if (v instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue editor) {
+                            editor.setValue(com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.encodeColorEditor());
+                        }
+                    }
+                    case "separator" -> {
+                        if (v instanceof com.shyeuar.baity.gui.value.ButtonValue button) {
+                            button.setValue(ConfigManager.fancyDmgSplashSeparator);
+                        }
+                    }
+                    case "preset" -> v.setValue(com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.packPaletteConfig());
+                    default -> {
                     }
                 }
             }
+            com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.ensureInitialized();
         }
     }
 

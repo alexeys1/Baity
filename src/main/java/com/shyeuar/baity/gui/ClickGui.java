@@ -356,6 +356,20 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         if ("FishHookTimer".equals(module.getName()) && "custom timer template".equals(buttonValue.getName())) {
             net.minecraft.util.Util.getPlatform().openUri(
                     java.net.URI.create(com.shyeuar.baity.features.fishing.FishHookTimerTemplateManager.DOCS_URL));
+            return;
+        }
+
+        if ("FancyDmgSplash".equals(module.getName()) && "separator".equals(buttonValue.getName())) {
+            String current = buttonValue.getValue() == null ? "none" : String.valueOf(buttonValue.getValue());
+            String next = switch (current) {
+                case "none" -> "comma";
+                case "comma" -> "hyphen";
+                case "hyphen" -> "underscore";
+                default -> "none";
+            };
+            buttonValue.setValue(next);
+            com.shyeuar.baity.config.ConfigManager.fancyDmgSplashSeparator = next;
+            ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
         }
     }
     

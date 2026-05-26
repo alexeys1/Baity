@@ -21,14 +21,14 @@ import java.util.UUID;
 @Environment(EnvType.CLIENT)
 public class ElementalReactionDetector {
     
-    public static final int CRYO = 0x99FFFF;    // 冰
-    public static final int HYDRO = 0x33CCFF;   // 水
-    public static final int ELECTRO = 0xE19BFF; // 雷
-    public static final int PYRO = 0xFF9B00;    // 火
-    public static final int GEO = 0xFFCC66;     // 岩
-    public static final int ANEMO = 0x66FFCC;   // 风
-    public static final int DENDRO = 0xBAFF37;  // 草
-    public static final int PHYSICAL = 0xFFFFFF; // 物理
+    public static final int CRYO = 0x99FFFF;
+    public static final int HYDRO = 0x33CCFF;
+    public static final int ELECTRO = 0xE19BFF;
+    public static final int PYRO = 0xFF9B00;
+    public static final int GEO = 0xFFCC66;
+    public static final int ANEMO = 0x66FFCC;
+    public static final int DENDRO = 0xBAFF37;
+    public static final int PHYSICAL = 0xFFFFFF;
     
     private static final List<DamageRecord> recentDamages = new ArrayList<>();
     private static final int MAX_HISTORY = 6;
@@ -44,9 +44,6 @@ public class ElementalReactionDetector {
     
     private static boolean bloomState = false;
     private static Vec3 bloomTargetPos = null;
-    
-    private static long lastWetReactionTime = 0;
-    private static final long WET_COOLDOWN_MS = 3000; 
     
     private static long lastImmuneReactionTime = 0;
     private static final long IMMUNE_COOLDOWN_MS = 2000; 
@@ -72,21 +69,26 @@ public class ElementalReactionDetector {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) {
             return null;
         }
-        
-        if (!isColorSelected(color)) {
+        if (!FancyDmgSplashPresetStore.isActiveReactionColor(color)) {
             return null;
         }
-        
+        return recordElementDamage(color, targetPos);
+    }
+
+    public static ReactionResult recordForcedElementDamage(int color, Vec3 targetPos) {
+        if (!ConfigManager.fancyDmgSplashGenshinReaction) {
+            return null;
+        }
+        return recordElementDamage(color, targetPos);
+    }
+
+    private static ReactionResult recordElementDamage(int color, Vec3 targetPos) {
         long currentTime = System.currentTimeMillis();
-        
         cleanExpiredHistory(currentTime);
-        
         recentDamages.add(new DamageRecord(color, targetPos, currentTime));
-        
         while (recentDamages.size() > MAX_HISTORY) {
             recentDamages.remove(0);
         }
-        
         return detectReaction(color, targetPos);
     }
     
@@ -113,17 +115,7 @@ public class ElementalReactionDetector {
         return recentDamages.get(recentDamages.size() - 1).time;
     }
     
-    private static boolean isColorSelected(int color) {
-        int colorMask = ConfigManager.fancyDmgSplashColorPalette;
-        int[] presetColors = ColorPaletteValue.PRESET_COLORS;
-        for (int i = 0; i < presetColors.length; i++) {
-            if (presetColors[i] == color && (colorMask & (1 << i)) != 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
+
     private static boolean isSameTarget(Vec3 pos1, Vec3 pos2) {
         if (pos1 == null || pos2 == null) return false;
         return pos1.distanceToSqr(pos2) < 4.0; 
@@ -502,7 +494,6 @@ public class ElementalReactionDetector {
         entityInRange.clear();
         entityWasOnFire.clear();
         entityFireCooldown.clear();
-        lastWetReactionTime = 0;
         lastImmuneReactionTime = 0;
         lastWitherCloakImmuneTime = 0;
         witherCloakActive = false;

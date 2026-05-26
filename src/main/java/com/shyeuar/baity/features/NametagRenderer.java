@@ -5,6 +5,7 @@ import com.shyeuar.baity.config.DevConfig;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
+import com.shyeuar.baity.utils.ClientPickUtils;
 import com.shyeuar.baity.utils.ModuleUtils;
 import com.shyeuar.baity.utils.NickRenderUtils;
 import net.fabricmc.api.EnvType;
@@ -111,11 +112,9 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         matrices.pushPose();
         try {
             float heightOffset = player.getBbHeight() + 0.5f;
-
-            Module noSwimPoseModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("NoSwimPose");
-            if (noSwimPoseModule != null && noSwimPoseModule.isEnabled() && player == mc.player
-                && com.shyeuar.baity.utils.NoSwimPoseUtils.shouldApplyEyeHeightChange()) {
-                heightOffset = com.shyeuar.baity.utils.NoSwimPoseUtils.STANDING_EYE_HEIGHT + 0.5f;
+            if (player == mc.player) {
+                float partialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+                heightOffset = ClientPickUtils.getSelfNametagHeightOffset(player, partialTick);
             }
             
             Module smolPeopleModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("SmolPeople");

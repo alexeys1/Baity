@@ -125,13 +125,16 @@ public class ValueStyleRenderer {
        public final float syncX1, syncY1, syncX2, syncY2;
        public final float resetX1, resetY1, resetX2, resetY2;
        public final float inputX1, inputY, inputX2;
+       public final float symbolInputX1, symbolInputY, symbolInputX2;
        public final boolean hasReset;
+       public final boolean hasSymbolInput;
 
        public GradientEditorBottomLayout(float mapX1, float mapY1, float mapX2, float mapY2,
                                          float syncX1, float syncY1, float syncX2, float syncY2,
                                          float resetX1, float resetY1, float resetX2, float resetY2,
                                          float inputX1, float inputY, float inputX2,
-                                         boolean hasReset) {
+                                         float symbolInputX1, float symbolInputY, float symbolInputX2,
+                                         boolean hasReset, boolean hasSymbolInput) {
            this.mapX1 = mapX1;
            this.mapY1 = mapY1;
            this.mapX2 = mapX2;
@@ -147,13 +150,98 @@ public class ValueStyleRenderer {
            this.inputX1 = inputX1;
            this.inputY = inputY;
            this.inputX2 = inputX2;
+           this.symbolInputX1 = symbolInputX1;
+           this.symbolInputY = symbolInputY;
+           this.symbolInputX2 = symbolInputX2;
            this.hasReset = hasReset;
+           this.hasSymbolInput = hasSymbolInput;
        }
    }
 
    public static GradientEditorBottomLayout computeGradientEditorBottomLayout(
            Minecraft client, float x1, float y, float x2, float blockHeight,
            String hexDisplay, boolean withReset) {
+       return computeGradientEditorBottomLayout(client, x1, y, x2, blockHeight, hexDisplay, withReset, null);
+   }
+
+   public static final float FANCY_DMG_EDITOR_TOGGLE_SIZE = 18f;
+   public static final float FANCY_DMG_EDITOR_TOGGLE_GAP = 6f;
+
+   public static final class FancyDmgEditorBottomRowLayout {
+       public final float previewX1, previewY1, previewX2, previewY2;
+       public final float compactX1, compactY1, compactX2, compactY2;
+       public final float boldX1, boldY1, boldX2, boldY2;
+       public final float deleteX1, deleteY1, deleteX2, deleteY2;
+
+       FancyDmgEditorBottomRowLayout(float previewX1, float previewY1, float previewX2, float previewY2,
+                                     float compactX1, float compactY1, float compactX2, float compactY2,
+                                     float boldX1, float boldY1, float boldX2, float boldY2,
+                                     float deleteX1, float deleteY1, float deleteX2, float deleteY2) {
+           this.previewX1 = previewX1;
+           this.previewY1 = previewY1;
+           this.previewX2 = previewX2;
+           this.previewY2 = previewY2;
+           this.compactX1 = compactX1;
+           this.compactY1 = compactY1;
+           this.compactX2 = compactX2;
+           this.compactY2 = compactY2;
+           this.boldX1 = boldX1;
+           this.boldY1 = boldY1;
+           this.boldX2 = boldX2;
+           this.boldY2 = boldY2;
+           this.deleteX1 = deleteX1;
+           this.deleteY1 = deleteY1;
+           this.deleteX2 = deleteX2;
+           this.deleteY2 = deleteY2;
+       }
+   }
+
+   public static FancyDmgEditorBottomRowLayout layoutFancyDmgEditorBottomRow(Minecraft client, float x1, float y,
+                                                                             float blockHeight, float symbolInputX1) {
+       float toggleSize = FANCY_DMG_EDITOR_TOGGLE_SIZE;
+       float gap = FANCY_DMG_EDITOR_TOGGLE_GAP;
+       float previewY1 = y + blockHeight - 22f;
+       float previewY2 = previewY1 + com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.previewButtonHeight(client.font);
+       float toggleY1 = previewY1 - 1f;
+       float toggleY2 = toggleY1 + toggleSize;
+
+       float deleteX2 = symbolInputX1 - gap;
+       float deleteX1 = deleteX2 - toggleSize;
+       float boldX2 = deleteX1 - gap;
+       float boldX1 = boldX2 - toggleSize;
+       float compactX2 = boldX1 - gap;
+       float compactX1 = compactX2 - toggleSize;
+       float previewX1 = x1 + 10f;
+       float previewX2 = compactX1 - gap;
+
+       return new FancyDmgEditorBottomRowLayout(
+               previewX1, previewY1, previewX2, previewY2,
+               compactX1, toggleY1, compactX2, toggleY2,
+               boldX1, toggleY1, boldX2, toggleY2,
+               deleteX1, toggleY1, deleteX2, toggleY2);
+   }
+
+   private static void drawCenteredClippedText(GuiGraphics context, net.minecraft.client.gui.Font font,
+                                               String text, float lineX1, float lineY, float lineX2, int color) {
+       float lineWidth = lineX2 - lineX1;
+       int textWidth = font.width(text);
+       float drawX = lineX1 + (lineWidth - textWidth) * 0.5f;
+       float textAreaTop = lineY - 11f;
+       float drawY = textAreaTop + (11f - font.lineHeight) * 0.5f;
+       context.enableScissor((int) lineX1, (int) textAreaTop, (int) lineX2, (int) lineY);
+       context.drawString(font, text, Math.round(drawX), Math.round(drawY), color, false);
+       context.disableScissor();
+   }
+
+   public static GradientEditorBottomLayout computeGradientEditorBottomLayout(
+           Minecraft client, float x1, float y, float x2, float blockHeight,
+           String hexDisplay, boolean withReset, String symbolDisplay) {
+       return computeGradientEditorBottomLayout(client, x1, y, x2, blockHeight, hexDisplay, withReset, symbolDisplay, false);
+   }
+
+   public static GradientEditorBottomLayout computeGradientEditorBottomLayout(
+           Minecraft client, float x1, float y, float x2, float blockHeight,
+           String hexDisplay, boolean withReset, String symbolDisplay, boolean editingSymbol) {
        float syncX2 = x2 - 8f;
        float syncY2 = y + blockHeight - 8f;
        float syncX1 = syncX2 - 48f;
@@ -173,6 +261,16 @@ public class ValueStyleRenderer {
        float inputX2 = rowRight;
        float inputX1 = inputX2 - hexW;
        float inputY = syncY2 - 3f;
+       float symbolInputX1 = 0f;
+       float symbolInputX2 = 0f;
+       float symbolInputY = inputY;
+       boolean hasSymbolInput = symbolDisplay != null;
+       if (hasSymbolInput) {
+           float symbolLineWidth = com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.symbolInputWidth(client.font);
+           symbolInputX2 = inputX1 - 8f;
+           symbolInputX1 = symbolInputX2 - symbolLineWidth;
+           symbolInputY = inputY;
+       }
        float mapX1 = x1 + 8f;
        float mapY1 = y + 22f;
        float mapX2 = Math.max(mapX1 + 40f, (x2 - 48f) - 8f);
@@ -182,7 +280,8 @@ public class ValueStyleRenderer {
                syncX1, syncY1, syncX2, syncY2,
                resetX1, resetY1, resetX2, resetY2,
                inputX1, inputY, inputX2,
-               withReset);
+               symbolInputX1, symbolInputY, symbolInputX2,
+               withReset, hasSymbolInput);
    }
 
    private static void drawCenteredButtonLabel(GuiGraphics context, net.minecraft.client.gui.Font font,
@@ -222,9 +321,31 @@ public class ValueStyleRenderer {
                                                           ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo,
                                                           float mouseX, float mouseY,
                                                           String syncTooltip) {
+       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex,
+               null, false, localAlpha, hoveredTooltipInfo, mouseX, mouseY, syncTooltip);
+   }
+
+   private static void renderGradientEditorBottomControls(GuiGraphics context, Minecraft client, Theme theme,
+                                                          GradientEditorBottomLayout bottom, String selectedHex,
+                                                          boolean editingHex, String symbolDisplay,
+                                                          boolean editingSymbol, int localAlpha,
+                                                          ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo,
+                                                          float mouseX, float mouseY,
+                                                          String syncTooltip) {
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       boolean inputHovered = GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, mouseX, mouseY);
        int hoverYellow = (new java.awt.Color(255, 255, 0, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       if (bottom.hasSymbolInput && symbolDisplay != null) {
+           boolean symbolHovered = GuiRenderUtil.isHovered(bottom.symbolInputX1, bottom.symbolInputY - 12, bottom.symbolInputX2, bottom.symbolInputY + 6, mouseX, mouseY);
+           int symbolTextColor = editingSymbol ? hoverYellow : (symbolHovered ? hoverYellow : textColor);
+           String symbolPreview = editingSymbol ? symbolDisplay + "_" : symbolDisplay;
+           drawCenteredClippedText(context, client.font, symbolPreview,
+                   bottom.symbolInputX1, bottom.symbolInputY, bottom.symbolInputX2, symbolTextColor);
+           int symbolLineColor = symbolHovered || editingSymbol
+                   ? hoverYellow
+                   : ((new java.awt.Color(120, 120, 120, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
+           GuiRenderUtil.drawRoundedRect(context, bottom.symbolInputX1, bottom.symbolInputY, bottom.symbolInputX2, bottom.symbolInputY + 1, 0, symbolLineColor);
+       }
+       boolean inputHovered = GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, mouseX, mouseY);
        int inputTextColor = editingHex ? hoverYellow : (inputHovered ? hoverYellow : textColor);
        context.drawString(client.font, selectedHex, (int) bottom.inputX1, (int) (bottom.inputY - 9), inputTextColor, false);
        int lineColor = inputHovered || editingHex
@@ -317,12 +438,16 @@ public class ValueStyleRenderer {
            renderSliderValue(context, client, module, (SliderValue) value, theme,
                             x1, y, x2, subOptionHeight,
                             mouseX, mouseY, localAlpha, editingSlider, sliderInputText);
+       } else if (style == ValueStyle.FANCY_DMG_PRESET && value instanceof com.shyeuar.baity.gui.value.FancyDmgSplashPresetValue presetPalette) {
+           renderFancyDmgPresetValue(context, client, presetPalette, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, hoveredTooltipInfo);
        } else if (style == ValueStyle.COLOR_PALETTE && value instanceof com.shyeuar.baity.gui.value.ColorPaletteValue) {
            renderColorPaletteValue(context, client, module, (com.shyeuar.baity.gui.value.ColorPaletteValue) value, theme,
                                    x1, y, x2, subOptionHeight,
                                    mouseX, mouseY, localAlpha);
       } else if (style == ValueStyle.GRADIENT_EDITOR && value instanceof GradientEditorValue) {
           renderGradientEditorValue(context, client, (GradientEditorValue) value, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingGradient, gradientInputText, hoveredTooltipInfo);
+      } else if (style == ValueStyle.FANCY_DMG_COLOR_EDITOR && value instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor) {
+          renderFancyDmgColorEditorValue(context, client, fancyEditor, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingGradient, gradientInputText, hoveredTooltipInfo);
       } else if (style == ValueStyle.ENCHANT_LORE_COLOR_EDITOR && value instanceof EnchantLoreColorEditorValue) {
           renderEnchantLoreColorEditorValue(context, client, (EnchantLoreColorEditorValue) value, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, editingGradient, gradientInputText, hoveredTooltipInfo);
       } else if (style == ValueStyle.CROSSHAIR_PAINTER && value instanceof CrosshairPainterValue) {
@@ -694,6 +819,227 @@ public class ValueStyleRenderer {
        }
    }
    
+   public static final class FancyDmgPresetGridLayout {
+       public final float boxSize;
+       public final float spacing;
+       public final float startX;
+       public final float firstRowY;
+       public final float rowStride;
+       public final float editFramePad;
+
+       FancyDmgPresetGridLayout(float boxSize, float spacing, float startX, float firstRowY, float rowStride, float editFramePad) {
+           this.boxSize = boxSize;
+           this.spacing = spacing;
+           this.startX = startX;
+           this.firstRowY = firstRowY;
+           this.rowStride = rowStride;
+           this.editFramePad = editFramePad;
+       }
+
+       public float boxX(int column) {
+           return startX + column * (boxSize + spacing);
+       }
+
+       public float boxY(int row) {
+           return firstRowY + row * rowStride + (rowStride - boxSize) * 0.5f;
+       }
+   }
+
+   public static FancyDmgPresetGridLayout layoutFancyDmgPresetGrid(Minecraft client, float x1, float y, float x2,
+                                                                  float subOptionHeight) {
+       float totalWidth = x2 - x1 - 16f;
+       float boxSize = com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.presetSwatchSize(client.font);
+       float spacing = (totalWidth - 8f * boxSize) / 7f;
+       if (spacing < 3f) {
+           spacing = 3f;
+           boxSize = (totalWidth - 7f * spacing) / 8f;
+       }
+       float editFramePad = com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.PRESET_EDIT_FRAME_PAD;
+       float rowStride = com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.presetRowStride(subOptionHeight, client.font);
+       return new FancyDmgPresetGridLayout(boxSize, spacing, x1 + 8f, y + subOptionHeight, rowStride, editFramePad);
+   }
+
+   public static void renderFancyDmgPresetValue(GuiGraphics context, Minecraft client,
+                                               com.shyeuar.baity.gui.value.FancyDmgSplashPresetValue paletteValue,
+                                               Theme theme, float x1, float y, float x2, float subOptionHeight,
+                                               float mouseX, float mouseY, int localAlpha,
+                                               ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
+       FancyDmgPresetGridLayout grid = layoutFancyDmgPresetGrid(client, x1, y, x2, subOptionHeight);
+       int customRows = paletteValue.getCustomRowCount();
+       float bottom = grid.boxY(customRows) + grid.boxSize + grid.editFramePad + 4f;
+       float paletteHeight = bottom - y;
+       int baseValueColor = new java.awt.Color(40, 40, 40, 50).getRGB();
+       int valueColor = (baseValueColor & 0x00FFFFFF) | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + paletteHeight, 6, valueColor);
+
+       int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       context.drawString(client.font, paletteValue.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
+       String presetHint = "(Lclick to select,Rclick to edit)";
+       int hintColor = (new java.awt.Color(160, 160, 160, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       int hintW = client.font.width(presetHint);
+       context.drawString(client.font, presetHint, (int) (x2 - 8 - hintW), (int) (y + 6), hintColor, false);
+
+       int themeDarkBorder = new java.awt.Color(50, 50, 50, 255).getRGB();
+       int themePurpleBorder = theme.BG_3.getRGB();
+       float boxY = grid.boxY(0);
+
+       for (int i = 0; i < paletteValue.getBuiltinCount(); i++) {
+           float boxX = grid.boxX(i);
+           int color = paletteValue.getBuiltinColor(i);
+           boolean hovered = GuiRenderUtil.isHovered(boxX, boxY, boxX + grid.boxSize, boxY + grid.boxSize, mouseX, mouseY);
+           drawPresetSwatch(context, client, boxX, boxY, grid.boxSize, color, color, paletteValue.isBuiltinSelected(i),
+                   paletteValue.isEditingBuiltin(i), hovered, grid.editFramePad, themeDarkBorder, themePurpleBorder, localAlpha);
+           if (hovered && hoveredTooltipInfo != null) {
+               String tooltip = paletteValue.getBuiltinTooltip(i);
+               if (tooltip != null) {
+                   hoveredTooltipInfo.tooltip = tooltip;
+                   hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal(tooltip);
+                   hoveredTooltipInfo.x = (int) (mouseX + 5);
+                   hoveredTooltipInfo.y = (int) (mouseY + 5);
+               }
+           }
+       }
+
+       int addIndex = paletteValue.getCustomCount();
+       for (int row = 0; row < customRows; row++) {
+           float rowBoxY = grid.boxY(row + 1);
+           for (int col = 0; col < 8; col++) {
+               int slot = row * 8 + col;
+               if (slot > addIndex) {
+                   break;
+               }
+               float boxX = grid.boxX(col);
+               boolean hovered = GuiRenderUtil.isHovered(boxX, rowBoxY, boxX + grid.boxSize, rowBoxY + grid.boxSize, mouseX, mouseY);
+               if (slot == addIndex) {
+                   drawAddPresetButton(context, client, boxX, rowBoxY, grid.boxSize, hovered, themeDarkBorder, themePurpleBorder, localAlpha);
+                   continue;
+               }
+               int start = paletteValue.getCustomGradientStart(slot);
+               int end = paletteValue.getCustomGradientEnd(slot);
+               drawPresetSwatch(context, client, boxX, rowBoxY, grid.boxSize, start, end, paletteValue.isCustomSelected(slot),
+                       paletteValue.isEditingCustom(slot), hovered, grid.editFramePad, themeDarkBorder, themePurpleBorder, localAlpha);
+           }
+       }
+   }
+
+   private static void drawPresetSwatch(GuiGraphics context, Minecraft client, float boxX, float boxY, float boxSize,
+                                        int start, int end, boolean selected, boolean editing, boolean hovered,
+                                        float editFramePad, int themeDarkBorder, int themePurpleBorder, int localAlpha) {
+       int inner = (int) (boxSize - 2);
+       if ((start & 0xFFFFFF) == (end & 0xFFFFFF)) {
+           int fillColor = (start & 0x00FFFFFF) | (localAlpha << 24);
+           GuiRenderUtil.drawRoundedRect(context, boxX + 1, boxY + 1, boxX + boxSize - 1, boxY + boxSize - 1, 2, fillColor);
+       } else {
+           for (int px = 0; px < inner; px++) {
+               float ratio = inner <= 1 ? 0f : px / (float) (inner - 1);
+               int color = com.shyeuar.baity.utils.ColorGradientUtils.blendColors(start & 0xFFFFFF, end & 0xFFFFFF, ratio);
+               int fillColor = (color & 0x00FFFFFF) | (localAlpha << 24);
+               context.fill((int) boxX + 1 + px, (int) boxY + 1, (int) boxX + 2 + px, (int) (boxY + boxSize - 1), fillColor);
+           }
+       }
+       int borderColor = selected || hovered
+               ? ((themePurpleBorder & 0x00FFFFFF) | (localAlpha << 24))
+               : ((themeDarkBorder & 0x00FFFFFF) | (localAlpha << 24));
+       GuiRenderUtil.drawRoundedRectOutline(context, boxX, boxY, boxX + boxSize, boxY + boxSize, 2, borderColor);
+       if (selected) {
+           GuiRenderUtil.drawRoundedRectOutline(context, boxX - 1, boxY - 1, boxX + boxSize + 1, boxY + boxSize + 1, 3, borderColor);
+       }
+       if (editing) {
+           float frameX1 = boxX - editFramePad;
+           float frameY1 = boxY - editFramePad;
+           float frameX2 = boxX + boxSize + editFramePad;
+           float frameY2 = boxY + boxSize + editFramePad;
+           int skyBlue = (com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.PRESET_SKY_BLUE_RGB & 0xFFFFFF)
+                   | (localAlpha << 24);
+           GuiRenderUtil.drawRoundedRectOutline(context, frameX1, frameY1, frameX2, frameY2, 3, skyBlue);
+           drawPresetEditingMarker(context, client, frameX2, frameY1, boxSize, localAlpha);
+       }
+   }
+
+   private static void drawPresetDeleteButton(GuiGraphics context, float x1, float y1, float size, boolean armed,
+                                              boolean hovered, boolean enabled, int localAlpha, int purple) {
+       int greyBorder = (new java.awt.Color(220, 220, 220, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       int greyBg = (new java.awt.Color(30, 30, 30, 80).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       int iconColor;
+       if (armed && enabled) {
+           int bg3 = com.shyeuar.baity.gui.theme.LinearTheme.BG_TERTIARY.getRGB() & 0xFFFFFF;
+           int hubFace = blendArgb(bg3, 0xFF6A5C, 0.35f);
+           int hubRim = blendArgb(0xFF8A7A, 0xFFB0A8, 0.5f);
+           int face = (hubFace & 0x00FFFFFF) | (localAlpha << 24);
+           int rim = (hubRim & 0x00FFFFFF) | (localAlpha << 24);
+           GuiRenderUtil.drawRoundedRect(context, x1, y1, x1 + size, y1 + size, 2, face);
+           GuiRenderUtil.drawRoundedRectOutline(context, x1, y1, x1 + size, y1 + size, 2, rim);
+           iconColor = (0xFFFFECEA & 0x00FFFFFF) | (localAlpha << 24);
+       } else {
+           int border = enabled && hovered ? purple : greyBorder;
+           GuiRenderUtil.drawRoundedRect(context, x1, y1, x1 + size, y1 + size, 2, greyBg);
+           GuiRenderUtil.drawRoundedRectOutline(context, x1, y1, x1 + size, y1 + size, 2, border);
+           iconColor = enabled
+                   ? ((0xFFCCCCCC & 0x00FFFFFF) | (localAlpha << 24))
+                   : ((0xFF888888 & 0x00FFFFFF) | (localAlpha << 24));
+       }
+       drawRadialCloseIcon(context, x1 + size * 0.5f, y1 + size * 0.5f, size, iconColor);
+   }
+
+   private static void drawRadialCloseIcon(GuiGraphics context, float centerX, float centerY, float buttonSize, int color) {
+       float half = buttonSize * 0.22f;
+       int stroke = Math.max(2, Math.round(buttonSize * 0.11f));
+       drawThickLine(context, centerX - half, centerY - half, centerX + half, centerY + half, stroke, color);
+       drawThickLine(context, centerX - half, centerY + half, centerX + half, centerY - half, stroke, color);
+   }
+
+   private static void drawPresetEditingMarker(GuiGraphics context, Minecraft client, float frameX2, float frameY1,
+                                               float boxSize, int localAlpha) {
+       String mark = "✯";
+       float scale = Math.min(0.9f, boxSize / client.font.lineHeight * 0.55f);
+       int color = (com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.PRESET_SKY_BLUE_RGB & 0xFFFFFF)
+               | (localAlpha << 24);
+       float scaledW = client.font.width(mark) * scale;
+       float scaledH = client.font.lineHeight * scale;
+       float markX = frameX2 - scaledW;
+       float markY = frameY1 - scaledH * 0.35f;
+       drawScaledLabel(context, client, mark, markX, markY, color, scale);
+   }
+
+   private static void drawAddPresetButton(GuiGraphics context, Minecraft client, float boxX, float boxY, float boxSize,
+                                           boolean hovered, int themeDarkBorder, int themePurpleBorder, int localAlpha) {
+       int bg = ((new java.awt.Color(28, 28, 28, 200).getRGB()) & 0x00FFFFFF) | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRect(context, boxX + 1, boxY + 1, boxX + boxSize - 1, boxY + boxSize - 1, 2, bg);
+       int borderColor = hovered
+               ? ((themePurpleBorder & 0x00FFFFFF) | (localAlpha << 24))
+               : ((themeDarkBorder & 0x00FFFFFF) | (localAlpha << 24));
+       GuiRenderUtil.drawRoundedRectOutline(context, boxX, boxY, boxX + boxSize, boxY + boxSize, 2, borderColor);
+       String plus = "+";
+       int w = client.font.width(plus);
+       int h = client.font.lineHeight;
+       int tx = (int) (boxX + (boxSize - w) * 0.5f);
+       int ty = (int) (boxY + (boxSize - h) * 0.5f);
+       context.drawString(client.font, plus, tx, ty, 0xFFFFFFFF | (localAlpha << 24), false);
+   }
+
+   public static float getFancyDmgPresetHeight(float subOptionHeight) {
+       net.minecraft.client.Minecraft client = net.minecraft.client.Minecraft.getInstance();
+       if (client != null) {
+           return com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore
+                   .computeRenderedPresetPanelHeight(subOptionHeight, client.font);
+       }
+       return com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.estimatePresetPanelHeight(subOptionHeight);
+   }
+
+   private static int blendArgb(int a, int b, float ratio) {
+       ratio = Math.max(0f, Math.min(1f, ratio));
+       int ar = (a >> 16) & 0xFF;
+       int ag = (a >> 8) & 0xFF;
+       int ab = a & 0xFF;
+       int br = (b >> 16) & 0xFF;
+       int bg = (b >> 8) & 0xFF;
+       int bb = b & 0xFF;
+       int r = (int) (ar + (br - ar) * ratio);
+       int g = (int) (ag + (bg - ag) * ratio);
+       int bl = (int) (ab + (bb - ab) * ratio);
+       return (r << 16) | (g << 8) | bl;
+   }
+
    public static float getColorPaletteHeight(float subOptionHeight) {
        return subOptionHeight * 2;
    }
@@ -879,10 +1225,13 @@ public class ValueStyleRenderer {
        context.drawString(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
 
        String selectedHex = value.getSelectedHex();
-       if (editingGradient != null && "gradient editor".equals(editingGradient.valueName)) {
+       boolean editingHex = editingGradient != null
+               && editingGradient.valueName.equals(value.getName())
+               && !editingGradient.symbolInput;
+       if (editingHex) {
            selectedHex = "#" + gradientInputText.toUpperCase(java.util.Locale.ROOT);
        }
-       GradientEditorBottomLayout bottom = computeGradientEditorBottomLayout(client, x1, y, x2, blockHeight, selectedHex, false);
+       GradientEditorBottomLayout bottom = computeGradientEditorBottomLayout(client, x1, y, x2, blockHeight, selectedHex, true);
        float mapX1 = bottom.mapX1;
        float mapY1 = bottom.mapY1;
        float mapX2 = bottom.mapX2;
@@ -934,7 +1283,6 @@ public class ValueStyleRenderer {
       drawScaledLabel(context, client, "L", box1X1 + 6, box1Y2 + 2, textColor, 0.85f);
       drawScaledLabel(context, client, "R", box1X1 + 6, box2Y1 - 8, textColor, 0.85f);
 
-       boolean editingHex = editingGradient != null && "gradient editor".equals(editingGradient.valueName);
        renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex, localAlpha,
                hoveredTooltipInfo, mouseX, mouseY, "Set the selected color to the unselected color.");
 
@@ -953,6 +1301,146 @@ public class ValueStyleRenderer {
           NickRenderUtils.endPreviewOverride();
       }
       context.drawString(client.font, seq, (int) (x1 + 10), (int) (y + blockHeight - 18), 0xFFFFFFFF, false);
+   }
+
+   public static void renderFancyDmgColorEditorValue(GuiGraphics context, Minecraft client,
+                                                     com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue value,
+                                                     Theme theme, float x1, float y, float x2, float subOptionHeight,
+                                                     float mouseX, float mouseY, int localAlpha,
+                                                     com.shyeuar.baity.gui.internal.ClickGuiState.GradientInputInfo editingGradient,
+                                                     String gradientInputText,
+                                                     ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
+       GradientEditorValue gradient = value.gradient();
+       float blockHeight = getGradientEditorHeight(subOptionHeight);
+       int bg = (new java.awt.Color(35, 35, 35, 180).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + blockHeight, 6, bg);
+
+       int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       int purple = (theme.BG_3.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       context.drawString(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
+
+       String selectedHex = gradient.getSelectedHex();
+       String symbolDisplay = value.getSymbols();
+       boolean editingHex = editingGradient != null
+               && editingGradient.valueName.equals(value.getName())
+               && !editingGradient.symbolInput;
+       boolean editingSymbol = editingGradient != null
+               && editingGradient.valueName.equals(value.getName())
+               && editingGradient.symbolInput;
+       if (editingHex) {
+           selectedHex = "#" + gradientInputText.toUpperCase(java.util.Locale.ROOT);
+       }
+       if (editingSymbol) {
+           symbolDisplay = gradientInputText;
+       }
+       String symbolForLayout = editingSymbol ? symbolDisplay + "_" : symbolDisplay;
+       GradientEditorBottomLayout bottom = computeGradientEditorBottomLayout(
+               client, x1, y, x2, blockHeight, selectedHex, true, symbolForLayout, editingSymbol);
+       float mapX1 = bottom.mapX1;
+       float mapY1 = bottom.mapY1;
+       float mapX2 = bottom.mapX2;
+       float mapY2 = bottom.mapY2;
+       drawHueSatMap(context, mapX1, mapY1, mapX2, mapY2, localAlpha);
+
+       float p1x = mapX1 + gradient.getSelectedHue() * (mapX2 - mapX1);
+       float p1y = mapY1 + (1f - gradient.getSelectedSat()) * (mapY2 - mapY1);
+       int pointFill = java.awt.Color.HSBtoRGB(gradient.getSelectedHue(), gradient.getSelectedSat(), GradientEditorValue.MAP_FIXED_VALUE) & 0xFFFFFF;
+       int selectorColor = (pointFill & 0x00FFFFFF) | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRect(context, p1x - 2, p1y - 2, p1x + 3, p1y + 3, 0, selectorColor);
+       float mapMidY = (mapY1 + mapY2) * 0.5f;
+       int pointBorderBase = p1y >= mapMidY ? 0x000000 : 0xFFFFFF;
+       int pointBorder = (pointBorderBase & 0x00FFFFFF) | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRectOutline(context, p1x - 3, p1y - 3, p1x + 4, p1y + 4, 0, pointBorder);
+
+       float sliderX1 = x2 - 48;
+       float sliderX2 = x2 - 36;
+       drawValueSlider(context, sliderX1, mapY1, sliderX2, mapY2, gradient.getSelectedHue(), gradient.getSelectedSat(), localAlpha);
+       float knobY = mapY2 - gradient.getSelectedVal() * (mapY2 - mapY1);
+       int knobColor = (new java.awt.Color(0, 0, 0, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       int knobBorder = (new java.awt.Color(255, 255, 255, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRect(context, sliderX1 - 2, knobY - 2, sliderX2 + 2, knobY + 2, 1, knobColor);
+       GuiRenderUtil.drawRoundedRectOutline(context, sliderX1 - 3, knobY - 3, sliderX2 + 3, knobY + 3, 1, knobBorder);
+
+       float box1X1 = x2 - 30;
+       float box1X2 = x2 - 12;
+       float box1Y1 = y + 24;
+       float box1Y2 = y + 42;
+       float box2Y2 = mapY2;
+       float box2Y1 = box2Y2 - 18;
+       int color1 = (0xFF000000 | gradient.getStartColor() & 0xFFFFFF);
+       int color2 = (0xFF000000 | gradient.getEndColor() & 0xFFFFFF);
+       GuiRenderUtil.drawRoundedRect(context, box1X1 + 1, box1Y1 + 1, box1X2 - 1, box1Y2 - 1, 2, color1);
+       GuiRenderUtil.drawRoundedRect(context, box1X1 + 1, box2Y1 + 1, box1X2 - 1, box2Y2 - 1, 2, color2);
+       int themeDarkBorder = new java.awt.Color(50, 50, 50, 255).getRGB();
+       int themePurpleBorder = theme.BG_3.getRGB();
+       boolean hoverL = com.shyeuar.baity.gui.render.GuiRenderUtil.isHovered(box1X1, box1Y1, box1X2, box1Y2, mouseX, mouseY);
+       boolean hoverR = com.shyeuar.baity.gui.render.GuiRenderUtil.isHovered(box1X1, box2Y1, box1X2, box2Y2, mouseX, mouseY);
+       int borderL = (gradient.getSelectedPoint() == 0 || hoverL ? themePurpleBorder : themeDarkBorder) & 0x00FFFFFF | (localAlpha << 24);
+       int borderR = (gradient.getSelectedPoint() == 1 || hoverR ? themePurpleBorder : themeDarkBorder) & 0x00FFFFFF | (localAlpha << 24);
+       GuiRenderUtil.drawRoundedRectOutline(context, box1X1, box1Y1, box1X2, box1Y2, 2, borderL);
+       GuiRenderUtil.drawRoundedRectOutline(context, box1X1, box2Y1, box1X2, box2Y2, 2, borderR);
+       if (gradient.getSelectedPoint() == 0) {
+           GuiRenderUtil.drawRoundedRectOutline(context, box1X1 - 1, box1Y1 - 1, box1X2 + 1, box1Y2 + 1, 3, borderL);
+       } else {
+           GuiRenderUtil.drawRoundedRectOutline(context, box1X1 - 1, box2Y1 - 1, box1X2 + 1, box2Y2 + 1, 3, borderR);
+       }
+       drawScaledLabel(context, client, "L", box1X1 + 6, box1Y2 + 2, textColor, 0.85f);
+       drawScaledLabel(context, client, "R", box1X1 + 6, box2Y1 - 8, textColor, 0.85f);
+
+       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex,
+               symbolDisplay, editingSymbol, localAlpha, hoveredTooltipInfo, mouseX, mouseY,
+               "Set the selected color to the unselected color.");
+
+       FancyDmgEditorBottomRowLayout row = layoutFancyDmgEditorBottomRow(client, x1, y, blockHeight, bottom.symbolInputX1);
+       boolean previewHovered = GuiRenderUtil.isHovered(row.previewX1, row.previewY1, row.previewX2, row.previewY2, mouseX, mouseY);
+       int previewBg = previewHovered
+               ? ((new java.awt.Color(60, 60, 60, 120).getRGB() & 0x00FFFFFF) | (localAlpha << 24))
+               : ((new java.awt.Color(40, 40, 40, 90).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
+       GuiRenderUtil.draw3DRect(context, row.previewX1, row.previewY1, row.previewX2, row.previewY2, previewBg, 0f);
+       int previewBorder = previewHovered ? purple : ((new java.awt.Color(90, 90, 90, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
+       GuiRenderUtil.drawRoundedRectOutline(context, row.previewX1, row.previewY1, row.previewX2, row.previewY2, 3, previewBorder);
+       net.minecraft.network.chat.Component preview = com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.buildPreviewForEditor(value);
+       int previewWidth = client.font.width(preview);
+       int previewX = (int) (row.previewX1 + (row.previewX2 - row.previewX1 - previewWidth) * 0.5f);
+       int previewY = (int) (row.previewY1 + (row.previewY2 - row.previewY1 - client.font.lineHeight) * 0.5f);
+       context.enableScissor((int) row.previewX1 + 2, (int) row.previewY1 + 1, (int) row.previewX2 - 2, (int) row.previewY2 - 1);
+       context.drawString(client.font, preview, previewX, previewY, 0xFFFFFFFF, false);
+       context.disableScissor();
+       if (previewHovered && hoveredTooltipInfo != null) {
+           hoveredTooltipInfo.tooltip = "click to change the editing preset";
+           hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal(hoveredTooltipInfo.tooltip);
+           hoveredTooltipInfo.x = (int) (mouseX + 5);
+           hoveredTooltipInfo.y = (int) (mouseY + 5);
+       }
+
+       drawEnchantToggle(context, client, row.compactX1, row.compactY1, row.compactX2, row.compactY2, value.isCompact(), mouseX, mouseY, localAlpha, purple, textColor);
+       if (GuiRenderUtil.isHovered(row.compactX1, row.compactY1, row.compactX2, row.compactY2, mouseX, mouseY) && hoveredTooltipInfo != null) {
+           hoveredTooltipInfo.tooltip = "compact";
+           hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal("compact");
+           hoveredTooltipInfo.x = (int) (mouseX + 5);
+           hoveredTooltipInfo.y = (int) (mouseY + 5);
+       }
+
+       drawEnchantToggle(context, client, row.boldX1, row.boldY1, row.boldX2, row.boldY2, value.isBold(), mouseX, mouseY, localAlpha, purple, textColor);
+       if (GuiRenderUtil.isHovered(row.boldX1, row.boldY1, row.boldX2, row.boldY2, mouseX, mouseY) && hoveredTooltipInfo != null) {
+           hoveredTooltipInfo.tooltip = "bold";
+           hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal("bold");
+           hoveredTooltipInfo.x = (int) (mouseX + 5);
+           hoveredTooltipInfo.y = (int) (mouseY + 5);
+       }
+
+       boolean deleteHovered = GuiRenderUtil.isHovered(row.deleteX1, row.deleteY1, row.deleteX2, row.deleteY2, mouseX, mouseY);
+       boolean deleteArmed = value.getDeleteArmedCustomIndex() == value.getEditingCustomIndex()
+               && com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.canDeleteCurrentEditingPreset();
+       boolean deleteEnabled = com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.canDeleteCurrentEditingPreset();
+       drawPresetDeleteButton(context, row.deleteX1, row.deleteY1, FANCY_DMG_EDITOR_TOGGLE_SIZE, deleteArmed, deleteHovered, deleteEnabled, localAlpha, purple);
+       if (deleteArmed && deleteHovered && hoveredTooltipInfo != null) {
+           hoveredTooltipInfo.tooltip = "reclick to confirm!";
+           hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal(hoveredTooltipInfo.tooltip)
+                   .withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(com.shyeuar.baity.config.DevConfig.DEV_PREFIX_COLOR));
+           hoveredTooltipInfo.x = (int) (mouseX + 5);
+           hoveredTooltipInfo.y = (int) (mouseY + 5);
+       }
    }
 
    public static void renderEnchantLoreColorEditorValue(GuiGraphics context, Minecraft client, EnchantLoreColorEditorValue value, Theme theme,
@@ -1127,10 +1615,52 @@ public class ValueStyleRenderer {
       pose.popMatrix();
    }
    
+   public static int getHoveredFancyDmgPresetHit(com.shyeuar.baity.gui.value.FancyDmgSplashPresetValue paletteValue,
+                                                 float x1, float y, float x2, float subOptionHeight,
+                                                 float mouseX, float mouseY) {
+       Minecraft client = Minecraft.getInstance();
+       if (client == null) {
+           return com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_NONE;
+       }
+       FancyDmgPresetGridLayout grid = layoutFancyDmgPresetGrid(client, x1, y, x2, subOptionHeight);
+       float boxY = grid.boxY(0);
+
+       for (int i = 0; i < paletteValue.getBuiltinCount(); i++) {
+           float boxX = grid.boxX(i);
+           if (GuiRenderUtil.isHovered(boxX, boxY, boxX + grid.boxSize, boxY + grid.boxSize, mouseX, mouseY)) {
+               return com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_BUILTIN_BASE + i;
+           }
+       }
+
+       int addIndex = paletteValue.getCustomCount();
+       int customRows = paletteValue.getCustomRowCount();
+       for (int row = 0; row < customRows; row++) {
+           float rowBoxY = grid.boxY(row + 1);
+           for (int col = 0; col < 8; col++) {
+               int slot = row * 8 + col;
+               if (slot > addIndex) {
+                   return com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_NONE;
+               }
+               float boxX = grid.boxX(col);
+               if (GuiRenderUtil.isHovered(boxX, rowBoxY, boxX + grid.boxSize, rowBoxY + grid.boxSize, mouseX, mouseY)) {
+                   if (slot == addIndex) {
+                       return com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_ADD;
+                   }
+                   return com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_CUSTOM_BASE + slot;
+               }
+           }
+       }
+       return com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_NONE;
+   }
+
    public static int getHoveredColorIndex(com.shyeuar.baity.gui.value.ColorPaletteValue paletteValue,
                                           float x1, float y, float x2, float subOptionHeight,
                                           float mouseX, float mouseY) {
-       int colorCount = paletteValue.getColorCount();
+       return getHoveredPaletteIndex(paletteValue.getColorCount(), x1, y, x2, subOptionHeight, mouseX, mouseY);
+   }
+
+   private static int getHoveredPaletteIndex(int colorCount, float x1, float y, float x2, float subOptionHeight,
+                                             float mouseX, float mouseY) {
        float colorAreaY = y + subOptionHeight;
        float colorAreaHeight = subOptionHeight - 8;
        

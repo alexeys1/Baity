@@ -565,15 +565,27 @@ public class ModuleManager {
             () -> ConfigManager.fancyDmgSplashEnabled,
             val -> ConfigManager.fancyDmgSplashEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new Option("genshin elemental reaction", "genshin elemental reaction", false, ModuleCategory.MISC),
+                new Option("sync non-critical dmg", "sync non-critical dmg", false, ModuleCategory.MISC),
                 new Option("compact damage number", "compact damage number", true, ModuleCategory.MISC),
-                new com.shyeuar.baity.gui.value.ColorPaletteValue("color palette", "color palette", ModuleCategory.MISC)
+                new Option("bold", "bold", false, ModuleCategory.MISC),
+                new Option("genshin elemental reaction", "genshin elemental reaction", false, ModuleCategory.MISC),
+                new ButtonValue(
+                    "separator",
+                    "separator",
+                    "none",
+                    "none",
+                    ModuleCategory.MISC,
+                    ButtonValue.ButtonValueType.TRIGGER,
+                    false
+                ),
+                new com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue("color editor", "color editor", ModuleCategory.MISC),
+                new com.shyeuar.baity.gui.value.FancyDmgSplashPresetValue("preset", "preset", ModuleCategory.MISC)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
-                    "genshin elemental reaction",
-                    () -> ConfigManager.fancyDmgSplashGenshinReaction,
-                    val -> ConfigManager.fancyDmgSplashGenshinReaction = (Boolean) val
+                    "sync non-critical dmg",
+                    () -> ConfigManager.fancyDmgSplashSyncNonCritical,
+                    val -> ConfigManager.fancyDmgSplashSyncNonCritical = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "compact damage number",
@@ -581,9 +593,29 @@ public class ModuleManager {
                     val -> ConfigManager.fancyDmgSplashCompactDamageNumber = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
-                    "color palette",
-                    () -> ConfigManager.fancyDmgSplashColorPalette,
-                    val -> ConfigManager.fancyDmgSplashColorPalette = ((Number) val).intValue()
+                    "bold",
+                    () -> ConfigManager.fancyDmgSplashBold,
+                    val -> ConfigManager.fancyDmgSplashBold = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "separator",
+                    () -> ConfigManager.fancyDmgSplashSeparator,
+                    val -> ConfigManager.fancyDmgSplashSeparator = (String) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "color editor",
+                    () -> com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.encodeColorEditor(),
+                    val -> com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.decodeColorEditor((String) val)
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "genshin elemental reaction",
+                    () -> ConfigManager.fancyDmgSplashGenshinReaction,
+                    val -> ConfigManager.fancyDmgSplashGenshinReaction = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "preset",
+                    () -> com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.packPaletteConfig(),
+                    val -> com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.unpackPaletteConfig(((Number) val).longValue())
                 )
             }
         );
@@ -883,6 +915,8 @@ public class ModuleManager {
         TooltipManager.registerTooltip("arabic numerals", "Replace roman number with arabic number.", 0xFFFFFF);
         TooltipManager.registerTooltip("transparentize other tags", "Remove the black background of tags.", 0xFFFFFF);
         TooltipManager.registerTooltip("NoTextShadow", "Disable all the text shadow in game.", 0xFFFFFF);
+        TooltipManager.registerTooltip("sync non-critical dmg",
+            "Apply preset colors to plain non-crit damage.", 0xFFFFFF);
     }
     
     public static List<Module> getModules() {

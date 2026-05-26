@@ -131,7 +131,10 @@ public class ClickGuiInputHandler {
                             float currentHeight = dims.subOptionHeight;
                             if (v.getStyle() == ValueStyle.COLOR_PALETTE) {
                                 currentHeight = dims.subOptionHeight * 2;
+                            } else if (v.getStyle() == ValueStyle.FANCY_DMG_PRESET) {
+                                currentHeight = com.shyeuar.baity.gui.render.ValueStyleRenderer.getFancyDmgPresetHeight(dims.subOptionHeight);
                             } else if (v.getStyle() == ValueStyle.GRADIENT_EDITOR
+                                    || v.getStyle() == ValueStyle.FANCY_DMG_COLOR_EDITOR
                                     || v.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) {
                                 currentHeight = dims.subOptionHeight * 6;
                             }
@@ -310,6 +313,21 @@ public class ClickGuiInputHandler {
             return true;
         }
         if (state.isEditingGradient()) {
+            ClickGuiState.GradientInputInfo editInfo = state.getEditingGradient();
+            if (editInfo != null && editInfo.symbolInput) {
+                if (Character.isISOControl(codePoint)) {
+                    return false;
+                }
+                String current = state.getGradientInputText();
+                String insert = new String(Character.toChars(codePoint));
+                String next = current + insert;
+                if (com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.symbolCodePointCount(next)
+                        > com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.MAX_DAMAGE_SYMBOL_CODE_POINTS) {
+                    return true;
+                }
+                state.setGradientInputText(next);
+                return true;
+            }
             String current = state.getGradientInputText();
             char ch = (char) codePoint;
             if ((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')) {
@@ -407,7 +425,10 @@ public class ClickGuiInputHandler {
         if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
             String current = state.getGradientInputText();
             if (!current.isEmpty()) {
-                state.setGradientInputText(current.substring(0, current.length() - 1));
+                int codePoints = current.codePointCount(0, current.length());
+                if (codePoints > 0) {
+                    state.setGradientInputText(current.substring(0, current.offsetByCodePoints(0, codePoints - 1)));
+                }
             }
             return true;
         }
@@ -415,23 +436,43 @@ public class ClickGuiInputHandler {
             ClickGuiState.GradientInputInfo editInfo = state.getEditingGradient();
             if (editInfo != null) {
                 String raw = state.getGradientInputText();
-                String hex = raw.trim();
-                if (hex.startsWith("#")) hex = hex.substring(1);
-                if (hex.matches("^[0-9A-Fa-f]{6}$")) {
+                if (editInfo.symbolInput) {
                     for (Module module : ModuleManager.getModules()) {
                         if (!module.getName().equals(editInfo.moduleName)) continue;
                         Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
-                        if (found instanceof EnchantLoreColorEditorValue colorEditor) {
-                            colorEditor.gradient().applyHexToSelected("#" + hex);
-                            colorEditor.persistCurrentTier();
-                            EnchantLore.invalidateCache();
+                        if (found instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor) {
+                            fancyEditor.setSymbols(raw);
+                            fancyEditor.persistToConfig();
                             if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
-                                ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), found.getValue());
+                                ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), fancyEditor.getValue());
                             }
-                        } else if (found instanceof GradientEditorValue ge) {
-                            ge.applyHexToSelected("#" + hex);
-                            if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
-                                ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), ge.getValue());
+                        }
+                    }
+                } else {
+                    String hex = raw.trim();
+                    if (hex.startsWith("#")) hex = hex.substring(1);
+                    if (hex.matches("^[0-9A-Fa-f]{6}$")) {
+                        for (Module module : ModuleManager.getModules()) {
+                            if (!module.getName().equals(editInfo.moduleName)) continue;
+                            Value found = ValueTreeUtils.findByName(module, editInfo.valueName);
+                            if (found instanceof EnchantLoreColorEditorValue colorEditor) {
+                                colorEditor.gradient().applyHexToSelected("#" + hex);
+                                colorEditor.persistCurrentTier();
+                                EnchantLore.invalidateCache();
+                                if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), found.getValue());
+                                }
+                            } else if (found instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor) {
+                                fancyEditor.gradient().applyHexToSelected("#" + hex);
+                                fancyEditor.persistToConfig();
+                                if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), fancyEditor.getValue());
+                                }
+                            } else if (found instanceof GradientEditorValue ge) {
+                                ge.applyHexToSelected("#" + hex);
+                                if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
+                                    ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), ge.getValue());
+                                }
                             }
                         }
                     }
@@ -573,7 +614,9 @@ public class ClickGuiInputHandler {
                 if (v.needsSeparatorBefore(previous)) subModY += 12;
                 float currentHeight = dims.subOptionHeight;
                 if (v.getStyle() == ValueStyle.COLOR_PALETTE) currentHeight = dims.subOptionHeight * 2;
+                else if (v.getStyle() == ValueStyle.FANCY_DMG_PRESET) currentHeight = com.shyeuar.baity.gui.render.ValueStyleRenderer.getFancyDmgPresetHeight(dims.subOptionHeight);
                 else if (v.getStyle() == ValueStyle.GRADIENT_EDITOR
+                        || v.getStyle() == ValueStyle.FANCY_DMG_COLOR_EDITOR
                         || v.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) currentHeight = dims.subOptionHeight * 6;
                 else if (v.getStyle() == ValueStyle.CROSSHAIR_PAINTER) currentHeight = dims.subOptionHeight * 8;
                 if (v == found) {
@@ -641,8 +684,12 @@ public class ClickGuiInputHandler {
             Value found = ValueTreeUtils.findByName(module, dragInfo.valueName);
             GradientEditorValue gradientValue = null;
             EnchantLoreColorEditorValue colorEditor = null;
+            com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor = null;
             if (found instanceof EnchantLoreColorEditorValue editor) {
                 colorEditor = editor;
+                gradientValue = editor.gradient();
+            } else if (found instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue editor) {
+                fancyEditor = editor;
                 gradientValue = editor.gradient();
             } else if (found instanceof GradientEditorValue ge) {
                 gradientValue = ge;
@@ -657,6 +704,9 @@ public class ClickGuiInputHandler {
                 if (colorEditor != null) {
                     colorEditor.persistCurrentTier();
                     EnchantLore.invalidateCache();
+                }
+                if (fancyEditor != null) {
+                    fancyEditor.persistToConfig();
                 }
                 if (ConfigSynchronizer.hasValueConfig(module.getName(), found.getName())) {
                     ConfigSynchronizer.handleValueUpdate(module.getName(), found.getName(), found.getValue());
@@ -1234,6 +1284,40 @@ public class ClickGuiInputHandler {
                     timer.reset();
                     return true;
                 }
+            } else if ((button == 0 || button == 1) && style == ValueStyle.FANCY_DMG_PRESET && value instanceof com.shyeuar.baity.gui.value.FancyDmgSplashPresetValue presetPalette) {
+                int hit = com.shyeuar.baity.gui.render.ValueStyleRenderer.getHoveredFancyDmgPresetHit(
+                        presetPalette, subX1, subModY, subX2, dims.subOptionHeight,
+                        coords.mouseX, coords.mouseY);
+                if (hit == com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_NONE) {
+                } else if (hit == com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_ADD) {
+                    if (button == 0) {
+                        com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.addCustomPreset();
+                        SoundUtils.playBubble();
+                        timer.reset();
+                        return true;
+                    }
+                } else if (hit >= com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_BUILTIN_BASE
+                        && hit < com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_CUSTOM_BASE) {
+                    int index = hit - com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_BUILTIN_BASE;
+                    if (button == 1) {
+                        com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.selectEditingBuiltin(index);
+                    } else {
+                        com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.toggleBuiltin(index);
+                    }
+                    SoundUtils.playBubble();
+                    timer.reset();
+                    return true;
+                } else if (hit >= com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_CUSTOM_BASE) {
+                    int index = hit - com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.HIT_CUSTOM_BASE;
+                    if (button == 1) {
+                        com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.selectEditingCustom(index);
+                    } else {
+                        com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.toggleCustom(index);
+                    }
+                    SoundUtils.playBubble();
+                    timer.reset();
+                    return true;
+                }
             } else if (button == 0 && style == ValueStyle.COLOR_PALETTE && value instanceof com.shyeuar.baity.gui.value.ColorPaletteValue) {
                 com.shyeuar.baity.gui.value.ColorPaletteValue paletteValue = (com.shyeuar.baity.gui.value.ColorPaletteValue) value;
                 
@@ -1250,6 +1334,11 @@ public class ClickGuiInputHandler {
                     timer.reset();
                     return true;
                 }
+            } else if (button == 0 && style == ValueStyle.FANCY_DMG_COLOR_EDITOR && value instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor) {
+                if (handleFancyDmgColorEditorClick(module, fancyEditor, subX1, subX2, subModY, dims, coords)) {
+                    timer.reset();
+                    return true;
+                }
             } else if (button == 0 && style == ValueStyle.ENCHANT_LORE_COLOR_EDITOR && value instanceof EnchantLoreColorEditorValue colorEditor) {
                 if (handleEnchantLoreColorEditorClick(module, colorEditor, subX1, subX2, subModY, dims, coords)) {
                     timer.reset();
@@ -1261,7 +1350,7 @@ public class ClickGuiInputHandler {
                 String hex = gradientValue.getSelectedHex();
                 com.shyeuar.baity.gui.render.ValueStyleRenderer.GradientEditorBottomLayout bottom =
                         com.shyeuar.baity.gui.render.ValueStyleRenderer.computeGradientEditorBottomLayout(
-                                client, subX1, subModY, subX2, blockHeight, hex, false);
+                                client, subX1, subModY, subX2, blockHeight, hex, true);
                 float mapX1 = bottom.mapX1;
                 float mapY1 = bottom.mapY1;
                 float mapX2 = bottom.mapX2;
@@ -1318,6 +1407,15 @@ public class ClickGuiInputHandler {
                 if (GuiRenderUtil.isHovered(bottom.syncX1, bottom.syncY1, bottom.syncX2, bottom.syncY2, coords.mouseX, coords.mouseY)) {
                     SoundUtils.playBubble();
                     gradientValue.syncColors();
+                    if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
+                        ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), gradientValue.getValue());
+                    }
+                    timer.reset();
+                    return true;
+                }
+                if (bottom.hasReset && GuiRenderUtil.isHovered(bottom.resetX1, bottom.resetY1, bottom.resetX2, bottom.resetY2, coords.mouseX, coords.mouseY)) {
+                    gradientValue.resetToDefault();
+                    SoundUtils.playBubble();
                     if (ConfigSynchronizer.hasValueConfig(module.getName(), value.getName())) {
                         ConfigSynchronizer.handleValueUpdate(module.getName(), value.getName(), gradientValue.getValue());
                     }
@@ -1422,7 +1520,9 @@ public class ClickGuiInputHandler {
             float currentHeight = dims.subOptionHeight;
             if (style == ValueStyle.COLOR_PALETTE) {
                 currentHeight = dims.subOptionHeight * 2;
-            } else if (style == ValueStyle.GRADIENT_EDITOR || style == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) {
+            } else if (style == ValueStyle.FANCY_DMG_PRESET) {
+                currentHeight = com.shyeuar.baity.gui.render.ValueStyleRenderer.getFancyDmgPresetHeight(dims.subOptionHeight);
+            } else if (style == ValueStyle.GRADIENT_EDITOR || style == ValueStyle.FANCY_DMG_COLOR_EDITOR || style == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) {
                 currentHeight = dims.subOptionHeight * 6;
             } else if (style == ValueStyle.CROSSHAIR_PAINTER) {
                 currentHeight = dims.subOptionHeight * 8;
@@ -1457,7 +1557,9 @@ public class ClickGuiInputHandler {
                 Value value = entry.value();
                 int depth = entry.depth();
                 if (value.needsSeparatorBefore(previousValue)) subModY += 12;
-                if ((value.getStyle() == ValueStyle.GRADIENT_EDITOR || value.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR)
+                if ((value.getStyle() == ValueStyle.GRADIENT_EDITOR
+                        || value.getStyle() == ValueStyle.FANCY_DMG_COLOR_EDITOR
+                        || value.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR)
                     && module.getName().equals(editInfo.moduleName)
                     && value.getName().equals(editInfo.valueName)) {
                     int subX1 = (int) (containerX1 + 4 + depth * 12);
@@ -1465,20 +1567,29 @@ public class ClickGuiInputHandler {
                     float blockHeight = dims.subOptionHeight * 6;
                     Minecraft client = Minecraft.getInstance();
                     String hex = "#FFFFFF";
-                    boolean withReset = value.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR;
+                    String symbol = "";
                     if (value instanceof GradientEditorValue gv) {
                         hex = gv.getSelectedHex();
+                    } else if (value instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor) {
+                        hex = fancyEditor.gradient().getSelectedHex();
+                        symbol = fancyEditor.getSymbols();
                     } else if (value instanceof EnchantLoreColorEditorValue el) {
                         hex = el.gradient().getSelectedHex();
                     }
                     com.shyeuar.baity.gui.render.ValueStyleRenderer.GradientEditorBottomLayout bottom =
                             com.shyeuar.baity.gui.render.ValueStyleRenderer.computeGradientEditorBottomLayout(
-                                    client, subX1, subModY, subX2, blockHeight, hex, withReset);
+                                    client, subX1, subModY, subX2, blockHeight, hex, true,
+                                    value instanceof com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue ? symbol : null);
+                    if (editInfo.symbolInput && bottom.hasSymbolInput) {
+                        return GuiRenderUtil.isHovered(bottom.symbolInputX1, bottom.symbolInputY - 12, bottom.symbolInputX2, bottom.symbolInputY + 6, coords.mouseX, coords.mouseY);
+                    }
                     return GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, coords.mouseX, coords.mouseY);
                 }
                 float currentHeight = dims.subOptionHeight;
                 if (value.getStyle() == ValueStyle.COLOR_PALETTE) currentHeight = dims.subOptionHeight * 2;
+                else if (value.getStyle() == ValueStyle.FANCY_DMG_PRESET) currentHeight = com.shyeuar.baity.gui.render.ValueStyleRenderer.getFancyDmgPresetHeight(dims.subOptionHeight);
                 else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR
+                        || value.getStyle() == ValueStyle.FANCY_DMG_COLOR_EDITOR
                         || value.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) currentHeight = dims.subOptionHeight * 6;
                 else if (value.getStyle() == ValueStyle.CROSSHAIR_PAINTER) currentHeight = dims.subOptionHeight * 8;
                 subModY += currentHeight;
@@ -1533,7 +1644,9 @@ public class ClickGuiInputHandler {
 
                 float currentHeight = dims.subOptionHeight;
                 if (value.getStyle() == ValueStyle.COLOR_PALETTE) currentHeight = dims.subOptionHeight * 2;
+                else if (value.getStyle() == ValueStyle.FANCY_DMG_PRESET) currentHeight = com.shyeuar.baity.gui.render.ValueStyleRenderer.getFancyDmgPresetHeight(dims.subOptionHeight);
                 else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR
+                        || value.getStyle() == ValueStyle.FANCY_DMG_COLOR_EDITOR
                         || value.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) currentHeight = dims.subOptionHeight * 6;
                 else if (value.getStyle() == ValueStyle.CROSSHAIR_PAINTER) currentHeight = dims.subOptionHeight * 8;
                 subModY += currentHeight;
@@ -1591,7 +1704,10 @@ public class ClickGuiInputHandler {
             float currentHeight = dims.subOptionHeight;
             if (value.getStyle() == ValueStyle.COLOR_PALETTE) {
                 currentHeight = dims.subOptionHeight * 2;
+            } else if (value.getStyle() == ValueStyle.FANCY_DMG_PRESET) {
+                currentHeight = com.shyeuar.baity.gui.render.ValueStyleRenderer.getFancyDmgPresetHeight(dims.subOptionHeight);
             } else if (value.getStyle() == ValueStyle.GRADIENT_EDITOR
+                    || value.getStyle() == ValueStyle.FANCY_DMG_COLOR_EDITOR
                     || value.getStyle() == ValueStyle.ENCHANT_LORE_COLOR_EDITOR) {
                 currentHeight = dims.subOptionHeight * 6;
             } else if (value.getStyle() == ValueStyle.CROSSHAIR_PAINTER) {
@@ -1678,6 +1794,126 @@ public class ClickGuiInputHandler {
         return true;
     }
     
+    private boolean handleFancyDmgColorEditorClick(Module module, com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue fancyEditor,
+                                                   float subX1, float subX2, float subModY,
+                                                   ClickGuiLayout.ContainerDimensions dims,
+                                                   ClickGuiLayout.ScaledCoordinates coords) {
+        GradientEditorValue gradientValue = fancyEditor.gradient();
+        Minecraft client = Minecraft.getInstance();
+        float blockHeight = dims.subOptionHeight * 6;
+        String hex = gradientValue.getSelectedHex();
+        com.shyeuar.baity.gui.render.ValueStyleRenderer.GradientEditorBottomLayout bottom =
+                com.shyeuar.baity.gui.render.ValueStyleRenderer.computeGradientEditorBottomLayout(
+                        client, subX1, subModY, subX2, blockHeight, hex, true, fancyEditor.getSymbols());
+        com.shyeuar.baity.gui.render.ValueStyleRenderer.FancyDmgEditorBottomRowLayout row =
+                com.shyeuar.baity.gui.render.ValueStyleRenderer.layoutFancyDmgEditorBottomRow(
+                        client, subX1, subModY, blockHeight, bottom.symbolInputX1);
+
+        if (GuiRenderUtil.isHovered(row.previewX1, row.previewY1, row.previewX2, row.previewY2, coords.mouseX, coords.mouseY)) {
+            com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.cycleEditingPreset();
+            SoundUtils.playBubble();
+            return true;
+        }
+
+        if (GuiRenderUtil.isHovered(row.compactX1, row.compactY1, row.compactX2, row.compactY2, coords.mouseX, coords.mouseY)) {
+            fancyEditor.toggleCompact();
+            SoundUtils.playBubble();
+            return true;
+        }
+
+        if (GuiRenderUtil.isHovered(row.boldX1, row.boldY1, row.boldX2, row.boldY2, coords.mouseX, coords.mouseY)) {
+            fancyEditor.toggleBold();
+            SoundUtils.playBubble();
+            return true;
+        }
+
+        if (GuiRenderUtil.isHovered(row.deleteX1, row.deleteY1, row.deleteX2, row.deleteY2, coords.mouseX, coords.mouseY)) {
+            if (com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.canDeleteCurrentEditingPreset()) {
+                com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.armDeleteCurrentCustom();
+                SoundUtils.playBubble();
+            }
+            return true;
+        }
+        float mapX1 = bottom.mapX1;
+        float mapY1 = bottom.mapY1;
+        float mapX2 = bottom.mapX2;
+        float mapY2 = bottom.mapY2;
+
+        if (GuiRenderUtil.isHovered(mapX1, mapY1, mapX2, mapY2, coords.mouseX, coords.mouseY)) {
+            float hue = (coords.mouseX - mapX1) / Math.max(1f, (mapX2 - mapX1));
+            float sat = 1f - (coords.mouseY - mapY1) / Math.max(1f, (mapY2 - mapY1));
+            gradientValue.setSelectedFromHueSat(hue, sat);
+            state.setDraggingGradient(new ClickGuiState.GradientDragInfo(module.getName(), fancyEditor.getName(), mapX1, mapY1, mapX2, mapY2));
+            fancyEditor.persistToConfig();
+            if (ConfigSynchronizer.hasValueConfig(module.getName(), fancyEditor.getName())) {
+                ConfigSynchronizer.handleValueUpdate(module.getName(), fancyEditor.getName(), fancyEditor.getValue());
+            }
+            return true;
+        }
+
+        float sliderX1 = subX2 - 48;
+        float sliderX2 = subX2 - 36;
+        if (GuiRenderUtil.isHovered(sliderX1, mapY1, sliderX2, mapY2, coords.mouseX, coords.mouseY)) {
+            float valNorm = 1f - (coords.mouseY - mapY1) / Math.max(1f, (mapY2 - mapY1));
+            gradientValue.setSelectedValue(valNorm);
+            state.setDraggingGradient(new ClickGuiState.GradientDragInfo(module.getName(), fancyEditor.getName(), mapX1, mapY1, mapX2, mapY2, true));
+            fancyEditor.persistToConfig();
+            if (ConfigSynchronizer.hasValueConfig(module.getName(), fancyEditor.getName())) {
+                ConfigSynchronizer.handleValueUpdate(module.getName(), fancyEditor.getName(), fancyEditor.getValue());
+            }
+            return true;
+        }
+
+        float boxX1 = subX2 - 30;
+        float boxX2 = subX2 - 12;
+        if (GuiRenderUtil.isHovered(boxX1, subModY + 24, boxX2, subModY + 42, coords.mouseX, coords.mouseY)) {
+            gradientValue.selectPoint(0);
+            SoundUtils.playBubble();
+            return true;
+        }
+        float box2Y2 = mapY2;
+        float box2Y1 = box2Y2 - 18;
+        if (GuiRenderUtil.isHovered(boxX1, box2Y1, boxX2, box2Y2, coords.mouseX, coords.mouseY)) {
+            gradientValue.selectPoint(1);
+            SoundUtils.playBubble();
+            return true;
+        }
+
+        if (bottom.hasSymbolInput && GuiRenderUtil.isHovered(bottom.symbolInputX1, bottom.symbolInputY - 12, bottom.symbolInputX2, bottom.symbolInputY + 6, coords.mouseX, coords.mouseY)) {
+            SoundUtils.playWoodenButton();
+            state.setEditingGradient(new ClickGuiState.GradientInputInfo(module.getName(), fancyEditor.getName(), 0, true));
+            state.setGradientInputText(fancyEditor.getSymbols());
+            return true;
+        }
+
+        if (GuiRenderUtil.isHovered(bottom.inputX1, bottom.inputY - 12, bottom.inputX2, bottom.inputY + 6, coords.mouseX, coords.mouseY)) {
+            SoundUtils.playWoodenButton();
+            state.setEditingGradient(new ClickGuiState.GradientInputInfo(module.getName(), fancyEditor.getName(), gradientValue.getSelectedPoint()));
+            state.setGradientInputText("");
+            return true;
+        }
+
+        if (bottom.hasReset && GuiRenderUtil.isHovered(bottom.resetX1, bottom.resetY1, bottom.resetX2, bottom.resetY2, coords.mouseX, coords.mouseY)) {
+            fancyEditor.resetToDefault();
+            SoundUtils.playBubble();
+            if (ConfigSynchronizer.hasValueConfig(module.getName(), fancyEditor.getName())) {
+                ConfigSynchronizer.handleValueUpdate(module.getName(), fancyEditor.getName(), fancyEditor.getValue());
+            }
+            return true;
+        }
+
+        if (GuiRenderUtil.isHovered(bottom.syncX1, bottom.syncY1, bottom.syncX2, bottom.syncY2, coords.mouseX, coords.mouseY)) {
+            SoundUtils.playBubble();
+            gradientValue.syncColors();
+            fancyEditor.persistToConfig();
+            if (ConfigSynchronizer.hasValueConfig(module.getName(), fancyEditor.getName())) {
+                ConfigSynchronizer.handleValueUpdate(module.getName(), fancyEditor.getName(), fancyEditor.getValue());
+            }
+            return true;
+        }
+        return false;
+    }
+
     private boolean handleEnchantLoreColorEditorClick(Module module, EnchantLoreColorEditorValue colorEditor,
                                                       float subX1, float subX2, float subModY,
                                                       ClickGuiLayout.ContainerDimensions dims,

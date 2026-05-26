@@ -74,18 +74,7 @@ public class FancyDmgSplashMixin {
         Vec3 targetPos = new Vec3(armorStand.getX(), armorStand.getY(), armorStand.getZ());
 
         Component originalText = armorStand.getCustomName();
-        boolean useCompactDamage =
-            com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(module, "compact damage number", true);
-
-        Component formattedText = originalText;
-        if (useCompactDamage) {
-            boolean isCritical = customName.contains("✧") || customName.contains("✯");
-            if (damage >= 1000 || isCritical) {
-                formattedText = FancyDmgSplash.applyCompactFormatting(originalText, damage);
-            }
-        }
-
-        FancyDmgSplash.addDamageNumber(damage, targetPos, formattedText);
+        FancyDmgSplash.addDamageNumber(damage, targetPos, originalText);
         armorStand.remove(Entity.RemovalReason.DISCARDED);
     }
 

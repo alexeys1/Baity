@@ -264,10 +264,17 @@ public class ClickGuiState {
         public final String moduleName;
         public final String valueName;
         public final int lineIndex;
+        public final boolean symbolInput;
+
         public GradientInputInfo(String moduleName, String valueName, int lineIndex) {
+            this(moduleName, valueName, lineIndex, false);
+        }
+
+        public GradientInputInfo(String moduleName, String valueName, int lineIndex, boolean symbolInput) {
             this.moduleName = moduleName;
             this.valueName = valueName;
             this.lineIndex = lineIndex;
+            this.symbolInput = symbolInput;
         }
     }
 

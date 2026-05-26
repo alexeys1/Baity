@@ -3,20 +3,15 @@ package com.shyeuar.baity.features.fancydmgsplash;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import com.shyeuar.baity.utils.ColorGradientUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.Style;
-import net.minecraft.network.chat.TextColor;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
@@ -27,8 +22,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Environment(EnvType.CLIENT)
 public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
@@ -44,176 +37,110 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
     private static final float PHASE2_DISPLAY_RATIO = 0.25f; 
     
     private static long lastWetHealCheckTime = 0;
-    private static final long WET_HEAL_CHECK_INTERVAL_MS = 500; 
-    
+    private static final long WET_HEAL_CHECK_INTERVAL_MS = 500;
+
     public static void addDamageNumber(double damage, Vec3 targetPos, Component originalText) {
-        Module m = ModuleManager.getModuleByName("FancyDmgSplash");
-        if (m == null || !m.isEnabled()) return;
+        Module moduleRef = ModuleManager.getModuleByName("FancyDmgSplash");
+        if (moduleRef == null || !moduleRef.isEnabled()) return;
         if (mc.player == null || mc.gameRenderer == null) return;
-        
+        if (originalText == null) return;
+
         float targetRandomX = (random.nextFloat() - 0.5f) * 1.8f;
         float targetRandomY = (random.nextFloat() - 0.2f) * 1.4f;
         float targetRandomZ = (random.nextFloat() - 0.5f) * 1.8f;
         Vec3 finalTargetPos = targetPos.add(targetRandomX, targetRandomY, targetRandomZ);
-        
-        int colorMask = com.shyeuar.baity.config.ConfigManager.fancyDmgSplashColorPalette;
+
+        FancyDmgSplashPresetStore.PresetData style = FancyDmgSplashPresetStore.pickRandomForDamage();
+        FancyDmgSplashSettings.DamageKind kind = FancyDmgSplashSettings.classifyDamage(originalText);
+        boolean syncEnabled = FancyDmgSplashSettings.isSyncNonCriticalEnabled();
+
+        Component formattedText;
         int color;
-        Component textToUse;
-        
-        if (colorMask != 0) {
-            color = generateDamageColor(damage);
-            textToUse = null;
+        boolean preserveComponentColors;
+
+        if (kind == FancyDmgSplashSettings.DamageKind.CRITICAL) {
+            formattedText = FancyDmgSplashSettings.formatCriticalDamage(originalText, damage, style);
+            color = style.primaryColor();
+            preserveComponentColors = true;
+        } else if (kind == FancyDmgSplashSettings.DamageKind.PLAIN_NORMAL && syncEnabled) {
+            formattedText = FancyDmgSplashSettings.formatSyncNonCrit(originalText, damage, style);
+            color = style.primaryColor();
+            preserveComponentColors = true;
+        } else if (kind == FancyDmgSplashSettings.DamageKind.PLAIN_NORMAL || kind == FancyDmgSplashSettings.DamageKind.BURN) {
+            formattedText = FancyDmgSplashSettings.formatLegacyNonCrit(originalText, damage);
+            if (formattedText == null) {
+                formattedText = originalText;
+            }
+            color = FancyDmgSplashSettings.extractColorFromText(formattedText);
+            preserveComponentColors = false;
         } else {
-            color = extractColorFromText(originalText);
-            textToUse = originalText;
+            formattedText = originalText;
+            color = FancyDmgSplashSettings.extractColorFromText(originalText);
+            preserveComponentColors = false;
         }
-        
-        damageNumbers.add(new DamageNumber(damage, finalTargetPos, finalTargetPos, textToUse, color, System.currentTimeMillis()));
-        
-        if (com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction && colorMask != 0) {
-            ElementalReactionDetector.ReactionResult reaction = ElementalReactionDetector.recordDamageAndCheckReaction(color, targetPos);
-            if (reaction != null) {
-                Vec3 reactionPos = finalTargetPos.add(0.3, 0.15, 0);
-                reactionTexts.add(new ReactionText(reaction.name, reactionPos, reaction.color, System.currentTimeMillis()));
+
+        damageNumbers.add(new DamageNumber(damage, finalTargetPos, finalTargetPos, formattedText, color,
+                System.currentTimeMillis(), preserveComponentColors));
+
+        boolean genshinReaction = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(
+                moduleRef,
+                "genshin elemental reaction",
+                com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction
+        );
+        if (genshinReaction) {
+            Integer reactionColor = resolveReactionColor(kind, style, syncEnabled);
+            if (reactionColor != null) {
+                ElementalReactionDetector.ReactionResult reaction = kind == FancyDmgSplashSettings.DamageKind.BURN
+                        ? ElementalReactionDetector.recordForcedElementDamage(reactionColor, targetPos)
+                        : ElementalReactionDetector.recordDamageAndCheckReaction(reactionColor, targetPos);
+                if (reaction != null) {
+                    Vec3 reactionPos = finalTargetPos.add(0.3, 0.15, 0);
+                    reactionTexts.add(new ReactionText(reaction.name, reactionPos, reaction.color, System.currentTimeMillis()));
+                }
             }
         }
     }
 
-    private static int extractColorFromText(Component text) {
-        if (text == null) return 0xFFFFFF;
-        
-        Style style = text.getStyle();
-        if (style != null) {
-            TextColor textColor = style.getColor();
-            if (textColor != null) {
-                return textColor.getValue();
-            }
+    private static Integer resolveReactionColor(FancyDmgSplashSettings.DamageKind kind,
+                                                FancyDmgSplashPresetStore.PresetData style,
+                                                boolean syncEnabled) {
+        if (kind == FancyDmgSplashSettings.DamageKind.BURN) {
+            return ElementalReactionDetector.PYRO;
         }
-        
-        for (Component sibling : text.getSiblings()) {
-            Style siblingStyle = sibling.getStyle();
-            if (siblingStyle != null) {
-                TextColor textColor = siblingStyle.getColor();
-                if (textColor != null) {
-                    return textColor.getValue();
-                }
+        if (kind == FancyDmgSplashSettings.DamageKind.CRITICAL) {
+            if (!FancyDmgSplashPresetStore.isReactionEligible(style)) {
+                return null;
             }
+            return FancyDmgSplashPresetStore.resolveReactionElementColor(style);
         }
-        
-        return 0xFFFFFF;
+        if (kind == FancyDmgSplashSettings.DamageKind.PLAIN_NORMAL && syncEnabled) {
+            if (!FancyDmgSplashPresetStore.isReactionEligible(style)) {
+                return null;
+            }
+            return FancyDmgSplashPresetStore.resolveReactionElementColor(style);
+        }
+        return null;
     }
-    
-    private static final Pattern DAMAGE_TEXT_PATTERN = Pattern.compile("([✧✯]?)[\\d,]+[✧✯]?([❤+⚔☄♞]?)");
-    private static final Pattern COMPACT_SUFFIX_PATTERN = Pattern.compile(".*[kKmMbBtTqQ]$");
-    
-    private static boolean hasCompactSuffix(String text) {
-        if (text == null || text.isEmpty()) return false;
-        String cleaned = text.replaceAll("[^\\d.,kKmMbBtTqQ]", "");
-        return COMPACT_SUFFIX_PATTERN.matcher(cleaned).find();
-    }
-    
+
     public static Component applyCompactFormatting(Component originalText, double damage) {
-        if (originalText == null) return null;
-        
-        String textContent = originalText.getString();
-        
-        if (hasCompactSuffix(textContent)) {
-            return originalText;
+        if (originalText == null) {
+            return null;
         }
-        
-        Matcher matcher = DAMAGE_TEXT_PATTERN.matcher(textContent);
-        if (!matcher.matches()) return originalText;
-        
-        List<Component> siblings = originalText.getSiblings();
-        if (siblings.isEmpty()) return originalText;
-        
-        boolean isCritical = !matcher.group(1).isEmpty();
-        String numericPart = textContent.replaceAll("\\D", "");
-        if (numericPart.isEmpty()) return originalText;
-        
-        long damageValue;
-        try {
-            damageValue = Long.parseLong(numericPart);
-        } catch (NumberFormatException e) {
-            return originalText;
+        FancyDmgSplashSettings.DamageKind kind = FancyDmgSplashSettings.classifyDamage(originalText);
+        if (kind == FancyDmgSplashSettings.DamageKind.CRITICAL) {
+            return FancyDmgSplashSettings.formatCriticalDamage(originalText, damage,
+                    FancyDmgSplashPresetStore.pickRandomForDamage());
         }
-        
-        TextColor originalColor = siblings.getFirst().getStyle().getColor();
-        MutableComponent result = Component.empty();
-        
-        if (isCritical) {
-            String critSymbol = matcher.group(1);
-            String displayText;
-            if (damageValue < 1000) {
-                displayText = critSymbol + String.valueOf(damageValue) + critSymbol;
-            } else {
-                String compactText = CompactDamageNumber.formatDamage(damageValue, 4);
-                displayText = critSymbol + compactText + critSymbol;
-            }
-            
-            int textLength = displayText.length();
-            int gradientStart = com.shyeuar.baity.config.ConfigManager.fancyDmgSplashCritGradientStart & 0x00FFFFFF;
-            int gradientEnd = com.shyeuar.baity.config.ConfigManager.fancyDmgSplashCritGradientEnd & 0x00FFFFFF;
-            
-            for (int i = 0; i < textLength; i++) {
-                float ratio = i / (textLength - 1.0f);
-                int color = ColorGradientUtils.blendColors(
-                    gradientStart,
-                    gradientEnd,
-                    ratio
-                );
-                result.append(Component.literal(displayText.substring(i, i + 1))
-                    .withStyle(Style.EMPTY.withColor(color)));
-            }
-            result.setStyle(originalText.getStyle());
-        } else {
-            String compactText = CompactDamageNumber.formatDamage(damageValue, 4);
-            int displayColor;
-            if (originalColor == null || originalColor == TextColor.fromLegacyFormat(ChatFormatting.GRAY)) {
-                displayColor = com.shyeuar.baity.config.ConfigManager.fancyDmgSplashNormalDamageColor & 0x00FFFFFF;
-            } else {
-                displayColor = originalColor.getValue();
-            }
-            result = Component.literal(compactText)
-                .setStyle(originalText.getStyle())
-                .withStyle(Style.EMPTY.withColor(displayColor));
+        if (kind == FancyDmgSplashSettings.DamageKind.PLAIN_NORMAL && FancyDmgSplashSettings.isSyncNonCriticalEnabled()) {
+            return FancyDmgSplashSettings.formatSyncNonCrit(originalText, damage,
+                    FancyDmgSplashPresetStore.pickRandomForDamage());
         }
-        
-        if (!matcher.group(2).isEmpty()) {
-            result.append(Component.literal(matcher.group(2))
-                .setStyle(siblings.getLast().getStyle()));
+        if (kind == FancyDmgSplashSettings.DamageKind.PLAIN_NORMAL || kind == FancyDmgSplashSettings.DamageKind.BURN) {
+            return FancyDmgSplashSettings.formatLegacyNonCrit(originalText, damage);
         }
-        
-        return result;
+        return originalText;
     }
-    
-    public static int generateDamageColor(double damage) {
-        int colorMask = com.shyeuar.baity.config.ConfigManager.fancyDmgSplashColorPalette;
-        
-        if (colorMask == 0) {
-            return 0xFFFFFF;
-        }
-        
-        java.util.List<Integer> selectedColors = new java.util.ArrayList<>();
-        int[] presetColors = com.shyeuar.baity.gui.value.ColorPaletteValue.PRESET_COLORS;
-        for (int i = 0; i < presetColors.length; i++) {
-            if ((colorMask & (1 << i)) != 0) {
-                selectedColors.add(presetColors[i]);
-            }
-        }
-        
-        if (selectedColors.isEmpty()) {
-            return 0xFFFFFF;
-        }
-        
-        return selectedColors.get(random.nextInt(selectedColors.size()));
-    }
-    
-    public static void addTestDamageNumber(Vec3 targetPos) {
-        double damage = random.nextDouble() * 1999999 + 1; 
-        addDamageNumber(damage, targetPos, null);
-    }
-    
+
     public static void addImmuneReaction(Vec3 targetPos) {
         Module m = ModuleManager.getModuleByName("FancyDmgSplash");
         if (m == null || !m.isEnabled()) return;
@@ -418,15 +345,16 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
             
             if (dn.originalText != null) {
                 styledText = dn.originalText;
-                color = dn.color;
             } else {
                 String damageText = String.valueOf((long) dn.damage);
                 styledText = Component.literal(damageText);
-                color = dn.color;
             }
+            color = dn.color;
             
             int alphaInt = (int)(alpha * 255) << 24;
-            int finalColor = (color & 0x00FFFFFF) | alphaInt;
+            int finalColor = dn.preserveComponentColors
+                    ? alphaInt | 0xFFFFFF
+                    : (color & 0x00FFFFFF) | alphaInt;
             
             Font textRenderer = mc.font;
             int textWidth = textRenderer.width(styledText);
@@ -520,17 +448,20 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         final double damage;
         final Vec3 spawnPos;   
         final Vec3 targetPos;  
-        final Component originalText; 
+        final Component originalText;
         final int color;
         final long startTime;
-        
-        DamageNumber(double damage, Vec3 spawnPos, Vec3 targetPos, Component originalText, int color, long startTime) {
+        final boolean preserveComponentColors;
+
+        DamageNumber(double damage, Vec3 spawnPos, Vec3 targetPos, Component originalText, int color, long startTime,
+                       boolean preserveComponentColors) {
             this.damage = damage;
             this.spawnPos = spawnPos;
             this.targetPos = targetPos;
             this.originalText = originalText;
             this.color = color;
             this.startTime = startTime;
+            this.preserveComponentColors = preserveComponentColors;
         }
     }
     

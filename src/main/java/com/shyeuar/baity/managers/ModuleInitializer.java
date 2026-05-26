@@ -39,6 +39,7 @@ public class ModuleInitializer {
         initializeSmolPeople();
         initializeCrosshair();
         initializeBlockAnimation();
+        initializeEnchantLore();
         initializePepCat();
         initializeReminder();
         initializePlayerESP();
@@ -88,6 +89,18 @@ public class ModuleInitializer {
             for (Value v : blockAnimation.getValues()) {
                 if ("anima mode".equals(v.getName())) {
                     v.setValue(ConfigManager.blockAnimationAnimaMode);
+                }
+            }
+        }
+    }
+
+    private static void initializeEnchantLore() {
+        Module enchantLore = ModuleManager.getModuleByName("EnchantLore");
+        if (enchantLore != null) {
+            enchantLore.setEnabled(ConfigManager.enchantLoreEnabled);
+            for (Value v : enchantLore.getValues()) {
+                if ("layout mode".equals(v.getName())) {
+                    v.setValue(ConfigManager.enchantLoreLayoutMode);
                 }
             }
         }

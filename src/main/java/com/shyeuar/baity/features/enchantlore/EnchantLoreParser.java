@@ -80,11 +80,13 @@ final class EnchantLoreParser {
         TreeSet<ParsedEnchant> ordered = new TreeSet<>();
         ParsedEnchant lastEnchant = null;
         boolean hasLore = false;
+        int maxEnchantsPerLine = 0;
         for (int i = section.start(); i <= section.end(); i++) {
             Component originalLine = lore.get(i);
             String unformattedLine = EnchantLoreRender.stripColor(originalLine.getString());
             Matcher matcher = ENCHANTMENT_PATTERN.matcher(unformattedLine);
             boolean containsEnchant = false;
+            int counter = 0;
             while (matcher.find()) {
                 Optional<EnchantDef> def = catalog().fromLore(matcher.group("enchant"));
                 if (def.isEmpty() || !isEnchantOnItem(def.get(), enchantments, attributes)) {
@@ -106,13 +108,15 @@ final class EnchantLoreParser {
                     lastEnchant = candidate;
                 }
                 containsEnchant = true;
+                counter++;
             }
+            maxEnchantsPerLine = Math.max(maxEnchantsPerLine, counter);
             if (!containsEnchant && lastEnchant != null) {
                 lastEnchant.addLore(originalLine);
                 hasLore = true;
             }
         }
-        return new CollectResult(ordered, hasLore);
+        return new CollectResult(ordered, hasLore, maxEnchantsPerLine);
     }
 
     static boolean isMiningTool(ItemStack stack) {
@@ -232,7 +236,7 @@ final class EnchantLoreParser {
     record Section(int start, int end, int maxTooltipWidth) {
     }
 
-    record CollectResult(TreeSet<ParsedEnchant> ordered, boolean hasLore) {
+    record CollectResult(TreeSet<ParsedEnchant> ordered, boolean hasLore, int maxEnchantsPerLine) {
     }
 
     static final class ParsedEnchant implements Comparable<ParsedEnchant> {

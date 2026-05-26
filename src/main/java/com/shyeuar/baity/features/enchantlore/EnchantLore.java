@@ -90,6 +90,7 @@ public final class EnchantLore {
         List<Component> insertLines = EnchantLoreRender.buildInsertLines(
                 collected.ordered(),
                 collected.hasLore(),
+                collected.maxEnchantsPerLine(),
                 section.maxTooltipWidth(),
                 nowMs
         );

@@ -339,6 +339,15 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             return;
         }
 
+        if ("EnchantLore".equals(module.getName()) && "layout mode".equals(buttonValue.getName())) {
+            String current = buttonValue.getValue() == null ? "normal" : String.valueOf(buttonValue.getValue());
+            String next = "compress".equalsIgnoreCase(current) ? "normal" : "compress";
+            buttonValue.setValue(next);
+            ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
+            com.shyeuar.baity.features.enchantlore.EnchantLore.invalidateCache();
+            return;
+        }
+
         if ("SmolPeople".equals(module.getName()) && "friends".equals(buttonValue.getName())) {
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {

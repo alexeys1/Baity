@@ -25,6 +25,7 @@ final class EnchantLoreRender {
     static List<Component> buildInsertLines(
             TreeSet<EnchantLoreParser.ParsedEnchant> ordered,
             boolean hasLore,
+            int maxEnchantsPerLine,
             int maxTooltipWidth,
             long nowMs
     ) {
@@ -36,7 +37,10 @@ final class EnchantLoreRender {
             maxTooltipWidth = Math.max(maxTooltipWidth, getRenderLength(parsed, nowMs));
         }
         if (numEnchants != 1 && !hasLore) {
-            return compress(ordered, maxTooltipWidth, nowMs);
+            if ("compress".equalsIgnoreCase(ConfigManager.enchantLoreLayoutMode)) {
+                return compress(ordered, maxTooltipWidth, nowMs);
+            }
+            return normal(ordered, maxEnchantsPerLine, nowMs);
         }
         return expand(ordered, hasLore, nowMs);
     }
@@ -85,6 +89,42 @@ final class EnchantLoreRender {
             sb.append(c);
         }
         return sb.toString().trim();
+    }
+
+    private static List<Component> normal(
+            TreeSet<EnchantLoreParser.ParsedEnchant> ordered,
+            int maxEnchantsPerLine,
+            long nowMs
+    ) {
+        if (maxEnchantsPerLine <= 0) {
+            maxEnchantsPerLine = 1;
+        }
+        Font font = Minecraft.getInstance().font;
+        int commaLength = font.width(COMMA);
+        List<Component> lines = new ArrayList<>();
+        int i = 0;
+        MutableComponent loreLine = Component.empty();
+        float lineRainbowX = 0.0f;
+        for (EnchantLoreParser.ParsedEnchant parsed : ordered) {
+            Component formatted = formatEnchant(parsed, nowMs);
+            int renderLength = font.width(formatted);
+            loreLine.append(formatted);
+            lineRainbowX += renderLength;
+            if (i % maxEnchantsPerLine < maxEnchantsPerLine - 1) {
+                appendCommaAfterEnchant(loreLine, parsed, lineRainbowX, nowMs);
+                lineRainbowX += commaLength;
+            } else {
+                lines.add(loreLine);
+                loreLine = Component.empty();
+                lineRainbowX = 0.0f;
+            }
+            i++;
+        }
+        if (font.width(loreLine) >= commaLength) {
+            trimTrailingComma(loreLine);
+            lines.add(loreLine);
+        }
+        return lines;
     }
 
     private static List<Component> compress(

@@ -441,6 +441,16 @@ public class ModuleManager {
                 "color editer", "color editer", ModuleCategory.RENDER
         );
 
+        ButtonValue enchantLoreLayoutMode = new ButtonValue(
+                "layout mode",
+                "layout mode",
+                ConfigManager.enchantLoreLayoutMode,
+                "normal",
+                ModuleCategory.RENDER,
+                ButtonValue.ButtonValueType.TRIGGER,
+                false
+        );
+
         GroupValue enchantLoreRomanNumeralsGroup = new GroupValue("roman numerals", "roman numerals", ModuleCategory.RENDER)
             .setExpanded(ConfigManager.enchantLoreRomanNumeralsGroupExpanded)
             .setSubModuleSwitchChildName("arabic numerals")
@@ -451,8 +461,16 @@ public class ModuleManager {
             "EnchantLore", "EnchantLore", ModuleCategory.RENDER,
             () -> ConfigManager.enchantLoreEnabled,
             val -> ConfigManager.enchantLoreEnabled = val,
-            new com.shyeuar.baity.gui.value.Value[]{enchantLoreColorEditor, enchantLoreRainbowGroup, enchantLoreRomanNumeralsGroup},
+            new com.shyeuar.baity.gui.value.Value[]{enchantLoreLayoutMode, enchantLoreColorEditor, enchantLoreRainbowGroup, enchantLoreRomanNumeralsGroup},
             new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "layout mode",
+                    () -> ConfigManager.enchantLoreLayoutMode,
+                    val -> {
+                        ConfigManager.enchantLoreLayoutMode = (String) val;
+                        com.shyeuar.baity.features.enchantlore.EnchantLore.invalidateCache();
+                    }
+                ),
                 new ModuleRegistry.ValueConfigInfo(
                     "color editer",
                     () -> EnchantLoreColorSettings.encode(),

@@ -176,6 +176,7 @@ public class ConfigManager {
     public static boolean enchantLoreRomanNumeralsGroupExpanded = false;
     public static boolean enchantLoreArabicNumerals = false;
     public static boolean enchantLoreDontReplaceRomanInItemName = false;
+    public static String enchantLoreLayoutMode = "normal";
     public static boolean nametagDefaultNametag = false;
     public static String baityPresenceSyncUrl = "https://baity-presence-sync.1427637445.workers.dev/users.json";
     public static boolean baityPresenceSyncEnabled = true;
@@ -586,6 +587,12 @@ public class ConfigManager {
             c -> ConfigManager.enchantLoreDontReplaceRomanInItemName,
             (c, v) -> {
                 ConfigManager.enchantLoreDontReplaceRomanInItemName = (Boolean) v;
+                com.shyeuar.baity.features.enchantlore.EnchantLore.invalidateCache();
+            });
+        registerField("EnchantLoreLayoutMode", String.class,
+            c -> ConfigManager.enchantLoreLayoutMode,
+            (c, v) -> {
+                ConfigManager.enchantLoreLayoutMode = (String) v;
                 com.shyeuar.baity.features.enchantlore.EnchantLore.invalidateCache();
             });
         registerField("BaityPresenceSyncUrl", String.class,

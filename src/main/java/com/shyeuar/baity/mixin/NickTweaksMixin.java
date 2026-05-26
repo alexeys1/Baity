@@ -82,6 +82,21 @@ public class NickTweaksMixin {
             float partialTick,
             CallbackInfo ci
         ) {
+            baity$exitGuiTextRenderScopeIfNeeded();
+        }
+
+        @Inject(method = "render", at = @At(value = "THROW"))
+        private void baity$endGuiTextRenderScopeOnThrow(
+            GuiGraphics guiGraphics,
+            int mouseX,
+            int mouseY,
+            float partialTick,
+            CallbackInfo ci
+        ) {
+            baity$exitGuiTextRenderScopeIfNeeded();
+        }
+
+        private void baity$exitGuiTextRenderScopeIfNeeded() {
             Screen self = (Screen) (Object) this;
             if (NickRenderUtils.shouldEnterGuiTextSkipScope(self)) {
                 NickRenderUtils.exitGuiTextRenderScope();

@@ -73,10 +73,30 @@ public final class NickRenderUtils {
         if (Boolean.TRUE.equals(CLICK_GUI_RENDER_SCOPE.get())) {
             return true;
         }
+        recoverGuiTextRenderScopeIfStale();
         if (GUI_TEXT_RENDER_DEPTH.get() > 0) {
             return true;
         }
         return false;
+    }
+
+    private static void recoverGuiTextRenderScopeIfStale() {
+        if (GUI_TEXT_RENDER_DEPTH.get() <= 0) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        Screen screen = mc == null ? null : mc.screen;
+        if (screen == null) {
+            GUI_TEXT_RENDER_DEPTH.remove();
+            return;
+        }
+        if (screen instanceof AbstractContainerScreen<?> || screen instanceof ChatScreen) {
+            GUI_TEXT_RENDER_DEPTH.remove();
+            return;
+        }
+        if (!shouldEnterGuiTextSkipScope(screen)) {
+            GUI_TEXT_RENDER_DEPTH.remove();
+        }
     }
 
     public static boolean shouldEnterGuiTextSkipScope(Screen screen) {

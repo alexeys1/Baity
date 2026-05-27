@@ -66,16 +66,12 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
             formattedText = FancyDmgSplashSettings.formatSyncNonCrit(originalText, damage, style);
             color = style.primaryColor();
             preserveComponentColors = true;
-        } else if (kind == FancyDmgSplashSettings.DamageKind.PLAIN_NORMAL || kind == FancyDmgSplashSettings.DamageKind.BURN) {
+        } else {
             formattedText = FancyDmgSplashSettings.formatLegacyNonCrit(originalText, damage);
             if (formattedText == null) {
                 formattedText = originalText;
             }
             color = FancyDmgSplashSettings.extractColorFromText(formattedText);
-            preserveComponentColors = false;
-        } else {
-            formattedText = originalText;
-            color = FancyDmgSplashSettings.extractColorFromText(originalText);
             preserveComponentColors = false;
         }
 
@@ -120,25 +116,6 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
             return FancyDmgSplashPresetStore.resolveReactionElementColor(style);
         }
         return null;
-    }
-
-    public static Component applyCompactFormatting(Component originalText, double damage) {
-        if (originalText == null) {
-            return null;
-        }
-        FancyDmgSplashSettings.DamageKind kind = FancyDmgSplashSettings.classifyDamage(originalText);
-        if (kind == FancyDmgSplashSettings.DamageKind.CRITICAL) {
-            return FancyDmgSplashSettings.formatCriticalDamage(originalText, damage,
-                    FancyDmgSplashPresetStore.pickRandomForDamage());
-        }
-        if (kind == FancyDmgSplashSettings.DamageKind.PLAIN_NORMAL && FancyDmgSplashSettings.isSyncNonCriticalEnabled()) {
-            return FancyDmgSplashSettings.formatSyncNonCrit(originalText, damage,
-                    FancyDmgSplashPresetStore.pickRandomForDamage());
-        }
-        if (kind == FancyDmgSplashSettings.DamageKind.PLAIN_NORMAL || kind == FancyDmgSplashSettings.DamageKind.BURN) {
-            return FancyDmgSplashSettings.formatLegacyNonCrit(originalText, damage);
-        }
-        return originalText;
     }
 
     public static void addImmuneReaction(Vec3 targetPos) {

@@ -3,7 +3,6 @@ package com.shyeuar.baity.features.fancydmgsplash;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import com.shyeuar.baity.gui.value.ButtonValue;
 import com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue;
 import com.shyeuar.baity.gui.value.Value;
 import com.shyeuar.baity.gui.sync.ConfigSynchronizer;
@@ -416,29 +415,18 @@ public final class FancyDmgSplashPresetStore {
         return picks.getLast().data;
     }
 
-    public static boolean anySelectedPresetCompact() {
-        ensureInitialized();
-        for (WeightedPick pick : buildWeightedPicks()) {
-            if (pick.data.compact) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static String aggregateNonCritSeparator() {
+    public static boolean allSelectedPresetCompact() {
         ensureInitialized();
         List<WeightedPick> picks = buildWeightedPicks();
         if (picks.isEmpty()) {
-            return "none";
+            return false;
         }
-        String mode = picks.get(0).data.separator;
-        for (int i = 1; i < picks.size(); i++) {
-            if (!mode.equals(picks.get(i).data.separator)) {
-                return "none";
+        for (WeightedPick pick : picks) {
+            if (!pick.data.compact) {
+                return false;
             }
         }
-        return mode;
+        return true;
     }
 
     public static int matchingBuiltinAppearance(PresetData data) {
@@ -560,7 +548,6 @@ public final class FancyDmgSplashPresetStore {
             ConfigManager.fancyDmgSplashDamageSymbols = data.symbols;
             ConfigManager.fancyDmgSplashBold = data.bold;
             ConfigManager.fancyDmgSplashCompactDamageNumber = data.compact;
-            ConfigManager.fancyDmgSplashSeparator = data.separator;
 
             Module module = ModuleManager.getModuleByName("FancyDmgSplash");
             if (module == null) {
@@ -575,11 +562,6 @@ public final class FancyDmgSplashPresetStore {
                     }
                     case "bold" -> value.setValue(data.bold);
                     case "compact damage number" -> value.setValue(data.compact);
-                    case "separator" -> {
-                        if (value instanceof ButtonValue button) {
-                            button.setValue(data.separator);
-                        }
-                    }
                     default -> {
                     }
                 }
@@ -596,8 +578,7 @@ public final class FancyDmgSplashPresetStore {
                 editor.gradient().getEndColor(),
                 editor.getSymbols(),
                 ModuleUtils.getOptionBoolean(ModuleManager.getModuleByName("FancyDmgSplash"), "bold", ConfigManager.fancyDmgSplashBold),
-                ModuleUtils.getOptionBoolean(ModuleManager.getModuleByName("FancyDmgSplash"), "compact damage number", ConfigManager.fancyDmgSplashCompactDamageNumber),
-                FancyDmgSplashSettings.separatorMode()
+                ModuleUtils.getOptionBoolean(ModuleManager.getModuleByName("FancyDmgSplash"), "compact damage number", ConfigManager.fancyDmgSplashCompactDamageNumber)
         );
     }
 
@@ -753,16 +734,13 @@ public final class FancyDmgSplashPresetStore {
         public final String symbols;
         public final boolean bold;
         public final boolean compact;
-        public final String separator;
 
-        public PresetData(int gradientStart, int gradientEnd, String symbols,
-                          boolean bold, boolean compact, String separator) {
+        public PresetData(int gradientStart, int gradientEnd, String symbols, boolean bold, boolean compact) {
             this.gradientStart = gradientStart & 0xFFFFFF;
             this.gradientEnd = gradientEnd & 0xFFFFFF;
             this.symbols = FancyDmgSplashSettings.clampSymbols(symbols);
             this.bold = bold;
             this.compact = compact;
-            this.separator = separator == null || separator.isEmpty() ? "none" : separator;
         }
 
         public static PresetData vanillaDefault() {
@@ -771,8 +749,7 @@ public final class FancyDmgSplashPresetStore {
                     FancyDmgSplashSettings.DEFAULT_GRADIENT_END,
                     FancyDmgSplashSettings.DEFAULT_SYMBOL,
                     false,
-                    true,
-                    "none"
+                    true
             );
         }
 
@@ -783,8 +760,7 @@ public final class FancyDmgSplashPresetStore {
                     color,
                     FancyDmgSplashSettings.PRESET_SYMBOLS[index],
                     false,
-                    false,
-                    "none"
+                    false
             );
         }
 
@@ -793,13 +769,12 @@ public final class FancyDmgSplashPresetStore {
         }
 
         public String encode() {
-            return String.format("%06X,%06X,%s,%s,%s,%s",
+            return String.format("%06X,%06X,%s,%s,%s",
                     gradientStart & 0xFFFFFF,
                     gradientEnd & 0xFFFFFF,
                     escape(symbols),
                     bold ? "1" : "0",
-                    compact ? "1" : "0",
-                    separator);
+                    compact ? "1" : "0");
         }
 
         public static PresetData decode(String raw) {
@@ -807,7 +782,7 @@ public final class FancyDmgSplashPresetStore {
                 return vanillaDefault();
             }
             String[] parts = raw.split(",", 6);
-            if (parts.length < 6) {
+            if (parts.length < 5) {
                 return vanillaDefault();
             }
             try {
@@ -818,8 +793,7 @@ public final class FancyDmgSplashPresetStore {
                         end,
                         unescape(parts[2]),
                         "1".equals(parts[3]),
-                        "1".equals(parts[4]),
-                        parts[5]
+                        "1".equals(parts[4])
                 );
             } catch (NumberFormatException ignored) {
                 return vanillaDefault();

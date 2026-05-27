@@ -90,13 +90,10 @@ public final class FancyDmgSplashSettings {
     public static String formatCompactDamage(double damage, int maxPrecision) {
         long damageLong = (long) damage;
         long adjustedDamage = damageLong;
-        int adjustedPrecision = maxPrecision;
         int currentDigits = countCompactDecimalDigits(adjustedDamage);
         if (currentDigits > maxPrecision) {
             double roundingFactor = COMPACT_TEN_POWERS[currentDigits - maxPrecision];
             adjustedDamage = (long) (Math.round((double) adjustedDamage / roundingFactor) * roundingFactor);
-        } else if (adjustedPrecision > currentDigits) {
-            adjustedPrecision = currentDigits;
         }
         if (adjustedDamage < 1_000L) {
             return String.valueOf(adjustedDamage);
@@ -229,18 +226,12 @@ public final class FancyDmgSplashSettings {
         if (originalText == null || style == null) {
             return originalText;
         }
-        String textContent = originalText.getString();
-        if (hasCompactSuffix(textContent)) {
-            return applySyncToExistingText(originalText, textContent, style);
-        }
-        Matcher matcher = DAMAGE_TEXT_PATTERN.matcher(textContent);
-        if (!matcher.matches()) {
+        NonCritFormat format = resolveNonCritFormat(originalText, damage);
+        if (format == null) {
             return originalText;
         }
-        String suffix = matcher.group(4) == null ? "" : matcher.group(4);
-        String numericDisplay = buildNonCritNumericDisplay(damage, matcher.group(2), style.separator);
-        MutableComponent result = buildPresetColoredText(numericDisplay, style.gradientStart, style.gradientEnd);
-        appendSuffix(result, originalText, suffix);
+        MutableComponent result = buildPresetColoredText(format.numericDisplay, style.gradientStart, style.gradientEnd);
+        appendSuffix(result, originalText, format.suffix);
         return result;
     }
 
@@ -248,20 +239,17 @@ public final class FancyDmgSplashSettings {
         if (originalText == null) {
             return null;
         }
-        String textContent = originalText.getString();
-        if (hasCompactSuffix(textContent)) {
-            return originalText;
-        }
-        Matcher matcher = DAMAGE_TEXT_PATTERN.matcher(textContent);
-        if (!matcher.matches()) {
+        if (hasCompactSuffix(originalText.getString())) {
             return originalText;
         }
         List<Component> siblings = originalText.getSiblings();
         if (siblings.isEmpty()) {
             return originalText;
         }
-        String suffix = matcher.group(4) == null ? "" : matcher.group(4);
-        String numericDisplay = buildNonCritNumericDisplay(damage, matcher.group(2), FancyDmgSplashPresetStore.aggregateNonCritSeparator());
+        NonCritFormat format = resolveNonCritFormat(originalText, damage);
+        if (format == null) {
+            return originalText;
+        }
         TextColor originalColor = siblings.getFirst().getStyle().getColor();
         int displayColor;
         if (originalColor == null || originalColor == TextColor.fromLegacyFormat(ChatFormatting.GRAY)) {
@@ -269,11 +257,24 @@ public final class FancyDmgSplashSettings {
         } else {
             displayColor = originalColor.getValue();
         }
-        MutableComponent result = Component.literal(numericDisplay)
+        MutableComponent result = Component.literal(format.numericDisplay)
                 .setStyle(originalText.getStyle())
                 .withStyle(Style.EMPTY.withColor(displayColor));
-        appendSuffix(result, originalText, suffix);
+        appendSuffix(result, originalText, format.suffix);
         return result;
+    }
+
+    private static NonCritFormat resolveNonCritFormat(Component originalText, double damage) {
+        String textContent = originalText.getString();
+        Matcher matcher = DAMAGE_TEXT_PATTERN.matcher(textContent);
+        if (!matcher.matches()) {
+            return null;
+        }
+        String suffix = matcher.group(4) == null ? "" : matcher.group(4);
+        String numericDisplay = hasCompactSuffix(textContent)
+                ? matcher.group(2)
+                : buildNonCritNumericDisplay(damage, matcher.group(2));
+        return new NonCritFormat(numericDisplay, suffix);
     }
 
     private static String buildCriticalNumericDisplay(double damage, String originalText, FancyDmgSplashPresetStore.PresetData style) {
@@ -285,19 +286,19 @@ public final class FancyDmgSplashSettings {
         if (numericPart.isEmpty()) {
             numericPart = String.valueOf(damageValue);
         }
-        return applySeparator(numericPart, style.separator);
+        return applySeparator(numericPart);
     }
 
-    private static String buildNonCritNumericDisplay(double damage, String matchedNumeric, String separatorMode) {
+    private static String buildNonCritNumericDisplay(double damage, String matchedNumeric) {
         long damageValue = (long) damage;
-        if (FancyDmgSplashPresetStore.anySelectedPresetCompact() && damageValue >= 1000L) {
+        if (FancyDmgSplashPresetStore.allSelectedPresetCompact() && damageValue >= 1000L) {
             return formatCompactDamage(damageValue, 4);
         }
         String digits = matchedNumeric == null ? "" : matchedNumeric.replaceAll("[^\\d]", "");
         if (digits.isEmpty()) {
             digits = String.valueOf(damageValue);
         }
-        return applySeparator(digits, separatorMode);
+        return applySeparator(digits);
     }
 
     private static Component applyCriticalToExistingText(Component originalText, String textContent, FancyDmgSplashPresetStore.PresetData style) {
@@ -313,18 +314,6 @@ public final class FancyDmgSplashSettings {
         if (style.bold) {
             result = result.copy().withStyle(result.getStyle().withBold(true));
         }
-        appendSuffix(result, originalText, suffix);
-        return result;
-    }
-
-    private static Component applySyncToExistingText(Component originalText, String textContent, FancyDmgSplashPresetStore.PresetData style) {
-        Matcher matcher = DAMAGE_TEXT_PATTERN.matcher(textContent);
-        if (!matcher.matches()) {
-            return originalText;
-        }
-        String suffix = matcher.group(4) == null ? "" : matcher.group(4);
-        String numericPart = matcher.group(2);
-        MutableComponent result = buildPresetColoredText(numericPart, style.gradientStart, style.gradientEnd);
         appendSuffix(result, originalText, suffix);
         return result;
     }
@@ -392,7 +381,7 @@ public final class FancyDmgSplashSettings {
         long previewDamage = 1_100_000L;
         String numericPart = style.compact
                 ? formatCompactDamage(previewDamage, 4)
-                : applySeparator(String.valueOf(previewDamage), style.separator);
+                : applySeparator(String.valueOf(previewDamage));
         String displayText = symbols + numericPart + symbols;
         MutableComponent result = buildPresetColoredText(displayText, style.gradientStart, style.gradientEnd);
         if (style.bold) {
@@ -485,7 +474,6 @@ public final class FancyDmgSplashSettings {
         ConfigManager.fancyDmgSplashDamageSymbols = data.symbols;
         ConfigManager.fancyDmgSplashBold = data.bold;
         ConfigManager.fancyDmgSplashCompactDamageNumber = data.compact;
-        ConfigManager.fancyDmgSplashSeparator = data.separator;
         FancyDmgSplashColorEditorValue editor = findColorEditor();
         if (editor != null) {
             editor.loadFromConfig();
@@ -517,5 +505,8 @@ public final class FancyDmgSplashSettings {
         } catch (NumberFormatException ignored) {
             return null;
         }
+    }
+
+    private record NonCritFormat(String numericDisplay, String suffix) {
     }
 }

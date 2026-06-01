@@ -64,6 +64,19 @@ public final class OldSneakingUtils {
         return appliesInCurrentView() && shouldApplyEyeHeightChange();
     }
 
+    public static boolean shouldApplyLegacyPick(Player player) {
+        return ConfigManager.oldSneakingEnabled
+            && isEligiblePlayer(player)
+            && player.isCrouching();
+    }
+
+    public static float getLegacyPickEyeHeight(Player player) {
+        if (shouldApplyLegacyPick(player)) {
+            return LEGACY_EYE_HEIGHT_MULTIPLIER * player.getScale();
+        }
+        return player.getEyeHeight();
+    }
+
     private static float getStandingEyeHeight(Player player) {
         return player.getDimensions(Pose.STANDING).eyeHeight() * player.getScale();
     }

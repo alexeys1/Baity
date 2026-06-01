@@ -27,15 +27,27 @@ public final class ClientPickUtils {
         return mc != null && mc.options.getCameraType().isFirstPerson();
     }
 
+    public static boolean shouldUseNoSwimPickAdjustments() {
+        return isFirstPerson() && NoSwimPoseUtils.shouldApplyEyeHeightChange();
+    }
+
     public static boolean shouldOverrideFirstPersonPickEye() {
         if (!isFirstPerson()) {
             return false;
         }
-        return NoSwimPoseUtils.shouldApplyEyeHeightChange() || OldSneakingUtils.shouldApplyInCurrentView();
+        return shouldUseNoSwimPickAdjustments() || OldSneakingUtils.shouldApplyInCurrentView();
+    }
+
+    public static boolean needsPickEyeOverride(Entity entity) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || entity != mc.player) {
+            return false;
+        }
+        return shouldOverrideFirstPersonPickEye();
     }
 
     public static float getVisualEyeHeight(Player player) {
-        if (NoSwimPoseUtils.shouldApplyEyeHeightChange()) {
+        if (shouldUseNoSwimPickAdjustments()) {
             return NoSwimPoseUtils.getCameraEyeHeight(player);
         }
         if (OldSneakingUtils.shouldApplyInCurrentView()) {
@@ -69,10 +81,6 @@ public final class ClientPickUtils {
             return getPhysicalEyePosition(entity, tickDelta);
         }
         return getPickEyePosition(entity, tickDelta);
-    }
-
-    public static boolean shouldApplyPhysicalReachFilter(Player player) {
-        return shouldOverrideFirstPersonPickEye();
     }
 
     public static Vec3 getCrosshairEyePosition() {

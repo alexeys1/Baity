@@ -3,10 +3,8 @@ package com.shyeuar.baity.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.shyeuar.baity.utils.ClientPickUtils;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
@@ -20,14 +18,12 @@ public class ClientPickMixin {
     public static class EntityPickEyeMixin {
 
         @Inject(method = "getEyePosition(F)Lnet/minecraft/world/phys/Vec3;", at = @At("HEAD"), cancellable = true)
-        private void baity$useCrosshairEyePosition(float tickDelta, CallbackInfoReturnable<Vec3> cir) {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player == null || (Entity) (Object) this != mc.player) {
+        private void baity$overridePickEyePosition(float tickDelta, CallbackInfoReturnable<Vec3> cir) {
+            Entity self = (Entity) (Object) this;
+            if (!ClientPickUtils.needsPickEyeOverride(self)) {
                 return;
             }
-            if (ClientPickUtils.shouldOverrideFirstPersonPickEye()) {
-                cir.setReturnValue(ClientPickUtils.getCrosshairEyePosition());
-            }
+            cir.setReturnValue(ClientPickUtils.getPickEyePosition(self, tickDelta));
         }
     }
 
@@ -80,7 +76,7 @@ public class ClientPickMixin {
             Entity camera,
             float tickDelta
         ) {
-            if (!ClientPickUtils.shouldOverrideFirstPersonPickEye()) {
+            if (!ClientPickUtils.shouldUseNoSwimPickAdjustments()) {
                 return original.call(hitResult, cameraPos, interactionRange);
             }
 
@@ -89,13 +85,6 @@ public class ClientPickMixin {
                 ClientPickUtils.getReachClampPosition(camera, tickDelta),
                 interactionRange
             );
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player == null || camera != mc.player || !(camera instanceof Player player)) {
-                return filtered;
-            }
-            if (!ClientPickUtils.shouldApplyPhysicalReachFilter(player)) {
-                return filtered;
-            }
             return ClientPickUtils.filterByPhysicalReach(filtered, camera, tickDelta, interactionRange);
         }
     }

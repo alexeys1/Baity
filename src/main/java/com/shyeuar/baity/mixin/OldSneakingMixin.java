@@ -9,6 +9,8 @@ import com.shyeuar.baity.mixin.accessor.CameraRenderStateAccessor;
 import com.shyeuar.baity.render.RenderScope;
 import com.shyeuar.baity.utils.NoSwimPoseUtils;
 import com.shyeuar.baity.utils.OldSneakingUtils;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
@@ -31,6 +33,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 public class OldSneakingMixin {
 
@@ -157,6 +160,34 @@ public class OldSneakingMixin {
             Minecraft mc = Minecraft.getInstance();
             Player player = mc.player;
             return player != null && state instanceof AvatarRenderState avatarRenderState && avatarRenderState.id == player.getId();
+        }
+    }
+
+    @Mixin(Entity.class)
+    public static abstract class OldSneakingEntityEyeHeightMixin {
+
+        @Inject(method = "getEyeHeight(Lnet/minecraft/world/entity/Pose;)F", at = @At("HEAD"), cancellable = true)
+        private void baity$modifyEyeHeightForRaycast(Pose pose, CallbackInfoReturnable<Float> cir) {
+            if (FabricLoader.getInstance().getEnvironmentType() != EnvType.CLIENT) {
+                return;
+            }
+            if (!ConfigManager.oldSneakingEnabled) {
+                return;
+            }
+
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.player == null) {
+                return;
+            }
+
+            Entity self = (Entity) (Object) this;
+            if (self != mc.player || !(self instanceof Player player)) {
+                return;
+            }
+
+            if (OldSneakingUtils.shouldApplyLegacyPick(player)) {
+                cir.setReturnValue(OldSneakingUtils.getLegacyPickEyeHeight(player));
+            }
         }
     }
 }

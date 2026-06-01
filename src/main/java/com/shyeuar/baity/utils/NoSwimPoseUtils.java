@@ -1,13 +1,11 @@
 package com.shyeuar.baity.utils;
 
-import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.render.RenderScope;
 import com.shyeuar.baity.render.interfaces.EntityRenderStateInterface;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
@@ -36,15 +34,20 @@ public final class NoSwimPoseUtils {
         GRACE
     }
 
+    private static boolean isInSwimAction(Player player) {
+        return player.getPose() == Pose.SWIMMING || player.isSwimming();
+    }
+
     private static SwimVisualPhase resolveSwimVisualPhase() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) {
             return SwimVisualPhase.NONE;
         }
 
+        Player player = mc.player;
         long now = System.currentTimeMillis();
 
-        if (mc.player.isEyeInFluid(FluidTags.WATER)) {
+        if (isInSwimAction(player)) {
             wasInWater = true;
             exitWaterTime = 0L;
             return SwimVisualPhase.ACTIVE;
@@ -52,10 +55,6 @@ public final class NoSwimPoseUtils {
 
         if (!wasInWater) {
             return SwimVisualPhase.NONE;
-        }
-
-        if (mc.player.getPose() == Pose.SWIMMING) {
-            return SwimVisualPhase.ACTIVE;
         }
 
         if (exitWaterTime == 0L) {
@@ -110,14 +109,6 @@ public final class NoSwimPoseUtils {
             return player.getEyeHeight();
         }
         if (isSwimmingPose(player)) {
-            return STANDING_EYE_HEIGHT;
-        }
-        if (ConfigManager.oldSneakingEnabled) {
-            if (OldSneakingUtils.shouldApplyInCurrentView()
-                && OldSneakingUtils.isEligiblePlayer(player)
-                && OldSneakingUtils.isPhysicallyCrouching(player)) {
-                return OldSneakingUtils.getVisualEyeHeight(player);
-            }
             return STANDING_EYE_HEIGHT;
         }
         return getWadingEyeHeight(player);

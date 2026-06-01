@@ -61,12 +61,11 @@ public final class OldSneakingUtils {
     }
 
     public static boolean appliesInCurrentView() {
-        Minecraft mc = Minecraft.getInstance();
-        return mc != null && mc.options.getCameraType().isFirstPerson();
+        return true;
     }
 
     public static boolean shouldApplyInCurrentView() {
-        return appliesInCurrentView() && shouldApplyEyeHeightChange();
+        return shouldApplyEyeHeightChange();
     }
 
     public static boolean shouldApplyLegacyPick(Player player) {

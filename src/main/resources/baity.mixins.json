@@ -32,7 +32,6 @@
     "NoSwimPoseMixin$PlayerRendererTransformMixin",
     "NoSwimPoseMixin$PlayerModelPoseMixin",
     "NoSwimPoseMixin$PlayerCameraMixin",
-    "NoSwimPoseMixin$EntitySwimAmountRenderMixin",
     "NoSwimPoseMixin$WorldSwimNametagMixin",
     "ClientPickMixin$EntityPickEyeMixin",
     "ClientPickMixin$LocalPlayerPickMixin",

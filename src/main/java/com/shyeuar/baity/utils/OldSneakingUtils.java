@@ -43,7 +43,12 @@ public final class OldSneakingUtils {
         }
 
         float progress = Mth.clamp((standingEyeHeight - currentEyeHeight) / vanillaDrop, 0.0F, 1.0F);
-        return Mth.lerp(progress, standingEyeHeight, legacyEyeHeight);
+        return getLegacyStyleEyeHeight(player, standingEyeHeight, progress);
+    }
+
+    public static float getLegacyStyleEyeHeight(Player player, float standingEyeHeight, float sneakProgress) {
+        float legacyEyeHeight = LEGACY_EYE_HEIGHT_MULTIPLIER * player.getScale();
+        return Mth.lerp(Mth.clamp(sneakProgress, 0.0F, 1.0F), standingEyeHeight, legacyEyeHeight);
     }
 
     public static boolean shouldApplyEyeHeightChange() {

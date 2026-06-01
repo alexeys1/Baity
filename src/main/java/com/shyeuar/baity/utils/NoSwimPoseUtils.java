@@ -1,11 +1,12 @@
 package com.shyeuar.baity.utils;
 
+import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import com.shyeuar.baity.render.RenderScope;
 import com.shyeuar.baity.render.interfaces.EntityRenderStateInterface;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
@@ -20,6 +21,10 @@ public final class NoSwimPoseUtils {
 
     private static boolean wasInWater = false;
     private static long exitWaterTime = 0L;
+    private static float groundedSwimSneakEyeProgress = 0.0F;
+    private static boolean poolBottomStandUpLerpActive = false;
+
+    private static final float POOL_BOTTOM_CAMERA_CONVERGE_EPSILON = 0.01F;
 
     private NoSwimPoseUtils() {}
 
@@ -32,6 +37,10 @@ public final class NoSwimPoseUtils {
         NONE,
         ACTIVE,
         GRACE
+    }
+
+    public static boolean isInWaterContext(Player player) {
+        return player.isEyeInFluid(FluidTags.WATER) || player.isInWater();
     }
 
     private static boolean isInSwimAction(Player player) {
@@ -48,12 +57,21 @@ public final class NoSwimPoseUtils {
         long now = System.currentTimeMillis();
 
         if (isInSwimAction(player)) {
-            wasInWater = true;
-            exitWaterTime = 0L;
-            return SwimVisualPhase.ACTIVE;
+            if (isInWaterContext(player)) {
+                wasInWater = true;
+                exitWaterTime = 0L;
+                return SwimVisualPhase.ACTIVE;
+            }
+            return SwimVisualPhase.NONE;
         }
 
         if (!wasInWater) {
+            return SwimVisualPhase.NONE;
+        }
+
+        if (!isInWaterContext(player)) {
+            wasInWater = false;
+            exitWaterTime = 0L;
             return SwimVisualPhase.NONE;
         }
 
@@ -96,12 +114,80 @@ public final class NoSwimPoseUtils {
         return isSwimmingPose(mc.player);
     }
 
+    public static boolean isGroundedInWater(Player player) {
+        return isInWaterContext(player) && (player.onGround() || player.horizontalCollision);
+    }
+
+    public static boolean usesGroundedPoolBottomSneakCamera(Player player) {
+        return shouldApplyEyeHeightChange()
+            && isGroundedInWater(player)
+            && (isSneaking() || groundedSwimSneakEyeProgress > 0.001F);
+    }
+
     public static boolean shouldSnapCameraEyeHeight(Player player) {
-        return shouldApplyCameraEyeHeightChange() && isSwimmingPose(player);
+        return shouldApplyCameraEyeHeightChange()
+            && isSwimmingPose(player)
+            && !usesGroundedPoolBottomSneakCamera(player)
+            && !poolBottomStandUpLerpActive;
+    }
+
+    public static boolean isPoolBottomStandUpLerpActive() {
+        return poolBottomStandUpLerpActive;
+    }
+
+    public static float getPoolBottomCameraConvergeEpsilon() {
+        return POOL_BOTTOM_CAMERA_CONVERGE_EPSILON;
+    }
+
+    public static void beginPoolBottomStandUpLerp() {
+        poolBottomStandUpLerpActive = true;
+    }
+
+    public static void completePoolBottomStandUpLerp() {
+        poolBottomStandUpLerpActive = false;
     }
 
     public static boolean isSwimmingPose(Player player) {
         return player.getPose() == Pose.SWIMMING;
+    }
+
+    public static void tickGroundedSwimCameraState(Player player) {
+        if (!shouldApplyEyeHeightChange() || !isGroundedInWater(player)) {
+            groundedSwimSneakEyeProgress = 0.0F;
+            poolBottomStandUpLerpActive = false;
+            return;
+        }
+
+        if (isSneaking()) {
+            poolBottomStandUpLerpActive = false;
+        }
+
+        float vanillaStand = player.getDimensions(Pose.STANDING).eyeHeight() * player.getScale();
+        float crouch = player.getDimensions(Pose.CROUCHING).eyeHeight() * player.getScale();
+        float span = vanillaStand - crouch;
+        if (span <= 0.001F) {
+            return;
+        }
+
+        float currentEye = player.getEyeHeight();
+        if (currentEye > crouch + 0.01F && currentEye <= vanillaStand + 0.01F) {
+            groundedSwimSneakEyeProgress = Mth.clamp((vanillaStand - currentEye) / span, 0.0F, 1.0F);
+            return;
+        }
+
+        if (!isSwimmingPose(player)) {
+            return;
+        }
+
+        float step = span / 3.0F;
+        if (isSneaking()) {
+            groundedSwimSneakEyeProgress = Mth.clamp(groundedSwimSneakEyeProgress + step / span, 0.0F, 1.0F);
+        } else {
+            if (groundedSwimSneakEyeProgress > 0.001F) {
+                poolBottomStandUpLerpActive = true;
+            }
+            groundedSwimSneakEyeProgress = Mth.clamp(groundedSwimSneakEyeProgress - step / span, 0.0F, 1.0F);
+        }
     }
 
     public static float getCameraEyeHeight(Player player) {
@@ -109,12 +195,42 @@ public final class NoSwimPoseUtils {
             return player.getEyeHeight();
         }
         if (isSwimmingPose(player)) {
+            if (usesGroundedPoolBottomSneakCamera(player)) {
+                return getGroundedPoolBottomCameraEye(player);
+            }
             return STANDING_EYE_HEIGHT;
         }
         return getWadingEyeHeight(player);
     }
 
+    private static float getPoolBottomSneakProgress(Player player) {
+        float vanillaStand = player.getDimensions(Pose.STANDING).eyeHeight() * player.getScale();
+        float crouch = player.getDimensions(Pose.CROUCHING).eyeHeight() * player.getScale();
+        float span = vanillaStand - crouch;
+        if (span <= 0.001F) {
+            return isSneaking() ? 1.0F : 0.0F;
+        }
+
+        float currentEye = player.getEyeHeight();
+        if (currentEye > crouch + 0.01F && currentEye <= vanillaStand + 0.01F) {
+            return Mth.clamp((vanillaStand - currentEye) / span, 0.0F, 1.0F);
+        }
+        return groundedSwimSneakEyeProgress;
+    }
+
+    private static float getGroundedPoolBottomCameraEye(Player player) {
+        float progress = getPoolBottomSneakProgress(player);
+        if (ConfigManager.oldSneakingEnabled && OldSneakingUtils.isEligiblePlayer(player)) {
+            return OldSneakingUtils.getLegacyStyleEyeHeight(player, STANDING_EYE_HEIGHT, progress);
+        }
+        float crouch = player.getDimensions(Pose.CROUCHING).eyeHeight() * player.getScale();
+        return Mth.lerp(progress, STANDING_EYE_HEIGHT, crouch);
+    }
+
     private static float getWadingEyeHeight(Player player) {
+        if (usesGroundedPoolBottomSneakCamera(player)) {
+            return getGroundedPoolBottomCameraEye(player);
+        }
         float standing = STANDING_EYE_HEIGHT;
         if (!isSneaking() && !player.isCrouching()) {
             return standing;
@@ -135,6 +251,15 @@ public final class NoSwimPoseUtils {
 
     public static boolean shouldApplyWorldSwimNametagOffset(Player player) {
         return shouldApplyVisualOverrides() && player != null && player.getPose() == Pose.SWIMMING;
+    }
+
+    public static float getWorldSwimSneakNametagExtraOffset(Player player) {
+        if (!isSneaking()) {
+            return 0.0F;
+        }
+        float vanillaStand = player.getDimensions(Pose.STANDING).eyeHeight() * player.getScale();
+        float crouch = player.getDimensions(Pose.CROUCHING).eyeHeight() * player.getScale();
+        return vanillaStand - crouch;
     }
 
     public static boolean isSelfPlayerById(int entityId) {
@@ -171,13 +296,6 @@ public final class NoSwimPoseUtils {
         return mc.player.getPose() == Pose.SWIMMING && !isInWaterSwimVisualContext();
     }
 
-    public static boolean shouldFreezeSwimAmount(Object entity) {
-        if (!shouldApplyVisualOverrides() || !isSelfPlayer(entity)) {
-            return false;
-        }
-        return RenderScope.isEntityRenderScope() && RenderScope.shouldApplyWorldEntityChanges();
-    }
-
     public static void clearSwimRenderState(AvatarRenderState state) {
         if (!shouldApplyVisualOverrides()) {
             return;
@@ -185,8 +303,7 @@ public final class NoSwimPoseUtils {
         state.isVisuallySwimming = false;
         state.swimAmount = 0.0F;
 
-        Minecraft mc = Minecraft.getInstance();
-        if (isSneaking() && mc.player != null && !isSwimmingPose(mc.player)) {
+        if (isSneaking()) {
             state.isCrouching = true;
         }
     }

@@ -1,7 +1,6 @@
 package com.shyeuar.baity.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -16,7 +15,6 @@ import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
@@ -79,6 +77,9 @@ public class NoSwimPoseMixin {
         @Unique
         private boolean baity$wasSwimEyeHeightOverride;
 
+        @Unique
+        private boolean baity$wasGroundedPoolBottomSneak;
+
         @ModifyExpressionValue(
             method = "setup",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;lerp(FFF)F", ordinal = 1)
@@ -111,13 +112,35 @@ public class NoSwimPoseMixin {
                 return;
             }
 
+            NoSwimPoseUtils.tickGroundedSwimCameraState(mc.player);
+
             boolean swimOverride = NoSwimPoseUtils.shouldApplyCameraEyeHeightChange();
+            boolean groundedSneak = NoSwimPoseUtils.usesGroundedPoolBottomSneakCamera(mc.player);
+            if (this.baity$wasGroundedPoolBottomSneak && !NoSwimPoseUtils.isSneaking()
+                && NoSwimPoseUtils.isGroundedInWater(mc.player)) {
+                NoSwimPoseUtils.beginPoolBottomStandUpLerp();
+            }
             if (this.baity$wasSwimEyeHeightOverride && !swimOverride) {
                 float realEyeHeight = mc.player.getEyeHeight();
                 this.eyeHeightOld = realEyeHeight;
                 this.eyeHeight = realEyeHeight;
             }
+            this.baity$wasGroundedPoolBottomSneak = groundedSneak;
             this.baity$wasSwimEyeHeightOverride = swimOverride;
+        }
+
+        @Inject(method = "tick", at = @At("TAIL"))
+        private void baity$finishPoolBottomStandUpLerp(CallbackInfo ci) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player == null || this.entity != mc.player || !NoSwimPoseUtils.isPoolBottomStandUpLerpActive()) {
+                return;
+            }
+
+            float standing = NoSwimPoseUtils.STANDING_EYE_HEIGHT;
+            float epsilon = NoSwimPoseUtils.getPoolBottomCameraConvergeEpsilon();
+            if (Math.abs(this.eyeHeight - standing) <= epsilon && Math.abs(this.eyeHeightOld - standing) <= epsilon) {
+                NoSwimPoseUtils.completePoolBottomStandUpLerp();
+            }
         }
 
         @WrapOperation(
@@ -133,18 +156,6 @@ public class NoSwimPoseMixin {
                 return;
             }
             original.call(instance, value);
-        }
-    }
-
-    @Mixin(LivingEntity.class)
-    public static class EntitySwimAmountRenderMixin {
-
-        @ModifyReturnValue(method = "getSwimAmount", at = @At("RETURN"))
-        private float baity$freezeSwimAmountDuringRender(float original) {
-            if (!NoSwimPoseUtils.shouldFreezeSwimAmount((Entity) (Object) this)) {
-                return original;
-            }
-            return 0.0F;
         }
     }
 
@@ -173,6 +184,11 @@ public class NoSwimPoseMixin {
             }
 
             matrices.translate(0.0F, NoSwimPoseUtils.WORLD_SWIM_NAMETAG_Y_OFFSET, 0.0F);
+
+            float sneakDrop = NoSwimPoseUtils.getWorldSwimSneakNametagExtraOffset(mc.player);
+            if (sneakDrop > 0.0F) {
+                matrices.translate(0.0F, -sneakDrop, 0.0F);
+            }
         }
     }
 }

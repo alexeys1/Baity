@@ -64,8 +64,6 @@
     "DroppedItem2DMixin",
     "ItemEntityRenderStateMixin",
     "OldSneakingMixin$OldSneakingCameraMixin",
-    "OldSneakingMixin$OldSneakingHumanoidModelMixin",
-    "OldSneakingMixin$OldSneakingLivingEntityRendererMixin",
     "OldSneakingMixin$OldSneakingEntityEyeHeightMixin",
     "CameraRenderStateMixin",
     "AvatarRenderStateMixin",

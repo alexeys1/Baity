@@ -59,7 +59,7 @@ public class RenderScopeMixin {
 			if (livingEntityRenderState instanceof AvatarRenderState avatarState) {
 				Minecraft mc = Minecraft.getInstance();
 				if (mc.player != null && NoSwimPoseUtils.isSelfPlayerById(avatarState.id)) {
-					if (worldContext && NoSwimPoseUtils.shouldApplyVisualOverrides()) {
+					if (worldContext && NoSwimPoseUtils.shouldForceStandingModelAppearance(avatarState)) {
 						NoSwimPoseUtils.clearSwimRenderState(avatarState);
 					} else if (!worldContext) {
 						NoSwimPoseUtils.restoreSwimRenderStateFromEntity(avatarState, mc.player);

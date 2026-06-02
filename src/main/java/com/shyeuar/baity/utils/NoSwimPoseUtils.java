@@ -18,6 +18,7 @@ public final class NoSwimPoseUtils {
     public static final float WORLD_SWIM_NAMETAG_Y_OFFSET = 1.2F;
 
     private static final long EXIT_GRACE_MS = 1000L;
+    private static final float SWIM_AMOUNT_EPSILON = 0.001F;
 
     private static boolean wasInWater = false;
     private static long exitWaterTime = 0L;
@@ -249,6 +250,41 @@ public final class NoSwimPoseUtils {
         return isFeatureActive() && isInWaterSwimVisualContext();
     }
 
+    /**
+     * Keep forcing standing model appearance while in water swim context, or while the local
+     * player (or their extracted render state) still carries swim animation fields.
+     */
+    public static boolean shouldForceStandingModelAppearance() {
+        if (!isFeatureActive()) {
+            return false;
+        }
+        if (isInWaterSwimVisualContext()) {
+            return true;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        return mc.player != null && hasResidualSwimVisual(mc.player);
+    }
+
+    public static boolean shouldForceStandingModelAppearance(AvatarRenderState state) {
+        if (shouldForceStandingModelAppearance()) {
+            return true;
+        }
+        if (state == null) {
+            return false;
+        }
+        return state.swimAmount > SWIM_AMOUNT_EPSILON || state.isVisuallySwimming;
+    }
+
+    private static boolean hasResidualSwimVisual(Player player) {
+        if (player.getPose() == Pose.SWIMMING) {
+            return true;
+        }
+        if (player.isVisuallySwimming()) {
+            return true;
+        }
+        return player.getSwimAmount(1.0F) > SWIM_AMOUNT_EPSILON;
+    }
+
     public static boolean shouldApplyWorldSwimNametagOffset(Player player) {
         return shouldApplyVisualOverrides() && player != null && player.getPose() == Pose.SWIMMING;
     }
@@ -290,14 +326,14 @@ public final class NoSwimPoseUtils {
 
     public static boolean isAbnormalDrySwimPose() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) {
+        if (mc.player == null || !isFeatureActive()) {
             return false;
         }
-        return mc.player.getPose() == Pose.SWIMMING && !isInWaterSwimVisualContext();
+        return !isInWaterSwimVisualContext() && hasResidualSwimVisual(mc.player);
     }
 
     public static void clearSwimRenderState(AvatarRenderState state) {
-        if (!shouldApplyVisualOverrides()) {
+        if (!shouldForceStandingModelAppearance(state)) {
             return;
         }
         state.isVisuallySwimming = false;

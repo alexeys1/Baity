@@ -60,7 +60,6 @@ public final class OldSneakingUtils {
             && isPhysicallyCrouching(player);
     }
 
-    /** Legacy camera eye height — all camera perspectives while sneaking. */
     public static boolean shouldApplyCameraEffects() {
         return shouldApplyEyeHeightChange();
     }

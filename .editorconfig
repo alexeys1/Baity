@@ -1,0 +1,20 @@
+# https://editorconfig.org — keeps editors aligned with .gitattributes (LF for source).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{java,json,gradle,kts,properties,md,yml,yaml,xml,accesswidener,toml,cfg,txt}]
+indent_style = space
+
+[*.bat]
+end_of_line = crlf
+
+[*.cmd]
+end_of_line = crlf
+
+[gradlew.bat]
+end_of_line = crlf

@@ -2,23 +2,23 @@ package com.shyeuar.baity.gui.render;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 @Environment(EnvType.CLIENT)
 public class GuiRenderUtil {
     
-    public static void drawRoundedRect(GuiGraphics context, float x, float y, float x2, float y2, float radius, int color) {
+    public static void drawRoundedRect(GuiGraphicsExtractor context, float x, float y, float x2, float y2, float radius, int color) {
         context.fill((int)x, (int)y, (int)x2, (int)y2, color);
     }
 
-    public static void stroke1px(GuiGraphics context, float x, float y, float x2, float y2, int color) {
+    public static void stroke1px(GuiGraphicsExtractor context, float x, float y, float x2, float y2, int color) {
         context.fill((int)x, (int)y, (int)x2, (int)(y + 1), color);
         context.fill((int)x, (int)(y2 - 1), (int)x2, (int)y2, color);
         context.fill((int)x, (int)y, (int)(x + 1), (int)y2, color);
         context.fill((int)(x2 - 1), (int)y, (int)x2, (int)y2, color);
     }
 
-    public static void divider(GuiGraphics context, float x, float y, float x2, float y2, int color) {
+    public static void divider(GuiGraphicsExtractor context, float x, float y, float x2, float y2, int color) {
         context.fill((int)x, (int)y, (int)x2, (int)y2, color);
     }
     
@@ -27,14 +27,14 @@ public class GuiRenderUtil {
         return mouseX > x && mouseY > y && mouseX < x1 && mouseY < y1;
     }
     
-    public static void drawRoundedRectOutline(GuiGraphics context, float x, float y, float x2, float y2, float radius, int color) {
+    public static void drawRoundedRectOutline(GuiGraphicsExtractor context, float x, float y, float x2, float y2, float radius, int color) {
         context.fill((int)x, (int)y, (int)x2, (int)(y + 1), color);
         context.fill((int)x, (int)(y2 - 1), (int)x2, (int)y2, color);
         context.fill((int)x, (int)y, (int)(x + 1), (int)y2, color);
         context.fill((int)(x2 - 1), (int)y, (int)x2, (int)y2, color);
     }
     
-    public static void drawCircle(GuiGraphics context, int centerX, int centerY, int radius, int color) {
+    public static void drawCircle(GuiGraphicsExtractor context, int centerX, int centerY, int radius, int color) {
         for (int y = -radius; y <= radius; y++) {
             for (int x = -radius; x <= radius; x++) {
                 if (x * x + y * y <= radius * radius) {
@@ -44,7 +44,7 @@ public class GuiRenderUtil {
         }
     }
 
-    public static void drawGradientRect(GuiGraphics context, float x, float y, float x2, float y2, 
+    public static void drawGradientRect(GuiGraphicsExtractor context, float x, float y, float x2, float y2, 
                                        int colorStart, int colorEnd, float radius) {
         int ix = (int) x;
         int iy = (int) y;
@@ -79,7 +79,7 @@ public class GuiRenderUtil {
         }
     }
 
-    public static void drawFrostedGlass(GuiGraphics context, float x, float y, float x2, float y2, int baseColor, float radius) {
+    public static void drawFrostedGlass(GuiGraphicsExtractor context, float x, float y, float x2, float y2, int baseColor, float radius) {
         drawRoundedRect(context, x, y, x2, y2, radius, baseColor);
         
         int overlay1 = ((int)(0.15f * 255) << 24) | (255 << 16) | (255 << 8) | 255;
@@ -89,7 +89,7 @@ public class GuiRenderUtil {
         drawRoundedRect(context, x, y, x2, y2, radius, overlay2);
     }
 
-    public static void draw3DRect(GuiGraphics context, float x, float y, float x2, float y2, int baseColor, float radius) {
+    public static void draw3DRect(GuiGraphicsExtractor context, float x, float y, float x2, float y2, int baseColor, float radius) {
         int ix = (int) x;
         int iy = (int) y;
         int ix2 = (int) x2;
@@ -122,7 +122,7 @@ public class GuiRenderUtil {
         context.fill(ix2 - 2, iy, ix2, iy2, shadowColor);
     }
 
-    public static void draw3DGradientRect(GuiGraphics context, float x, float y, float x2, float y2, 
+    public static void draw3DGradientRect(GuiGraphicsExtractor context, float x, float y, float x2, float y2, 
                                         int colorStart, int colorEnd, float radius) {
         int ix = (int) x;
         int iy = (int) y;

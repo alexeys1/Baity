@@ -1,10 +1,10 @@
 package com.shyeuar.baity.gui.animation;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public class ShimmerEffect {
 
-    public static void renderHoverShimmer(GuiGraphics graphics, float left, float top, float right, float bottom,
+    public static void renderHoverShimmer(GuiGraphicsExtractor graphics, float left, float top, float right, float bottom,
                                          float mouseX, float mouseY, boolean isActive, boolean isExiting,
                                          float progress, float direction, boolean isModuleEnabled) {
         if (!isActive && !isExiting && progress <= 0f) return;

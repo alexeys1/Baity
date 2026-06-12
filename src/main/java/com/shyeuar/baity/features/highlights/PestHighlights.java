@@ -1,8 +1,10 @@
 package com.shyeuar.baity.features.highlights;
 
 import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -14,8 +16,8 @@ import com.shyeuar.baity.utils.EntityDrawUtils;
 import com.shyeuar.baity.utils.LocateUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -36,7 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 @Environment(EnvType.CLIENT)
-public final class PestHighlights implements WorldRenderEvents.AfterEntities {
+public final class PestHighlights implements LevelRenderEvents.AfterSolidFeatures {
 
     private static final Minecraft MC = Minecraft.getInstance();
     private static final int PEST_COLOR_ARGB = 0xFFEE82EE;
@@ -51,8 +53,7 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
     private static final RenderPipeline BAITY_PEST_LINES = RenderPipelines.register(
             RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
                     .withLocation("pipeline/baity_pest_lines")
-                    .withDepthWrite(false)
-                    .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                    .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false, 0f, 0f))
                     .build()
     );
 
@@ -68,9 +69,8 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
             RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
                     .withLocation(Identifier.fromNamespaceAndPath("baity", "pipeline/baity_pest_fill"))
                     .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
-                    .withDepthWrite(false)
-                    .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                    .withBlend(BlendFunction.TRANSLUCENT)
+                    .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false, 0f, 0f))
+                    .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                     .withCull(false)
                     .build()
     );
@@ -149,7 +149,7 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
     }
 
     @Override
-    public void afterEntities(WorldRenderContext context) {
+    public void afterSolidFeatures(LevelRenderContext context) {
         if (!pestHighlightEnabled()) {
             return;
         }
@@ -169,28 +169,27 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
             return;
         }
 
-        Vec3 cameraPos = context.worldState().cameraRenderState.pos;
-        PoseStack matrices = context.matrices();
-        MultiBufferSource buffers = context.consumers();
+        Vec3 cameraPos = context.levelState().cameraRenderState.pos;
+        PoseStack matrices = context.poseStack();
+        MultiBufferSource buffers = context.bufferSource();
         if (matrices == null || buffers == null) {
             return;
         }
 
         float[] rgba = pestColorRgba();
-        PoseStack.Pose pose = matrices.last();
         boolean canBatchFillThenLines = buffers instanceof MultiBufferSource.BufferSource;
 
         if (canBatchFillThenLines) {
             VertexConsumer fill = buffers.getBuffer(NO_DEPTH_FILL);
             for (TaggedHull th : hulls) {
-                drawHullFaces(matrices, pose, fill, th.box(), cameraPos, rgba, FILL_FACE_ALPHA);
+                drawHullFaces(matrices, fill, th.box(), cameraPos, rgba, FILL_FACE_ALPHA);
             }
             ((MultiBufferSource.BufferSource) buffers).endBatch(NO_DEPTH_FILL);
         }
 
         VertexConsumer lines = buffers.getBuffer(NO_DEPTH_LINES);
         for (TaggedHull th : hulls) {
-            drawHullWireframe(matrices, pose, lines, th.box(), cameraPos, rgba);
+            EntityDrawUtils.drawWireBoxAtWorld(matrices, lines, th.box(), cameraPos, rgba[0], rgba[1], rgba[2], rgba[3]);
         }
 
         if (ConfigManager.highlightsPestDrawLineEnabled) {
@@ -199,19 +198,24 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
                 Vec3 eye = player.getEyePosition(partialTick);
                 Vec3 look = player.getViewVector(partialTick);
                 Vec3 rayStart = eye.add(look.scale(0.12));
-                double sx = rayStart.x - cameraPos.x;
-                double sy = rayStart.y - cameraPos.y;
-                double sz = rayStart.z - cameraPos.z;
                 for (LineEndpoint le : layout.lineEndpoints()) {
-                    Vec3 target = le.target();
-                    double tx = target.x - cameraPos.x;
-                    double ty = target.y - cameraPos.y;
-                    double tz = target.z - cameraPos.z;
-                    matrices.pushPose();
-                    EntityDrawUtils.drawLine(pose, lines, sx, sy, sz, tx, ty, tz, rgba[0], rgba[1], rgba[2], rgba[3]);
-                    matrices.popPose();
+                    EntityDrawUtils.drawLineAtWorld(
+                            matrices,
+                            lines,
+                            rayStart,
+                            le.target(),
+                            cameraPos,
+                            rgba[0],
+                            rgba[1],
+                            rgba[2],
+                            rgba[3]
+                    );
                 }
             }
+        }
+
+        if (buffers instanceof MultiBufferSource.BufferSource bufferSource) {
+            bufferSource.endBatch(NO_DEPTH_LINES);
         }
     }
 
@@ -422,7 +426,6 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
 
     private static void drawHullFaces(
             PoseStack matrices,
-            PoseStack.Pose pose,
             VertexConsumer fill,
             AABB hull,
             Vec3 cameraPos,
@@ -435,39 +438,9 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
         double x2 = hull.maxX - cameraPos.x;
         double y2 = hull.maxY - cameraPos.y;
         double z2 = hull.maxZ - cameraPos.z;
-        float r = rgba[0];
-        float g = rgba[1];
-        float b = rgba[2];
         matrices.pushPose();
-        drawFilledBoxFaces(pose, fill, x1, y1, z1, x2, y2, z2, r, g, b, alpha);
+        drawFilledBoxFaces(matrices.last(), fill, x1, y1, z1, x2, y2, z2, rgba[0], rgba[1], rgba[2], alpha);
         matrices.popPose();
-    }
-
-    private static void drawHullWireframe(
-            PoseStack matrices,
-            PoseStack.Pose pose,
-            VertexConsumer lines,
-            AABB hull,
-            Vec3 cameraPos,
-            float[] rgba
-    ) {
-        double x1 = hull.minX - cameraPos.x;
-        double y1 = hull.minY - cameraPos.y;
-        double z1 = hull.minZ - cameraPos.z;
-        double x2 = hull.maxX - cameraPos.x;
-        double y2 = hull.maxY - cameraPos.y;
-        double z2 = hull.maxZ - cameraPos.z;
-        matrices.pushPose();
-        EntityDrawUtils.drawWireCube(pose, lines, x1, y1, z1, x2, y2, z2, rgba[0], rgba[1], rgba[2], rgba[3]);
-        matrices.popPose();
-    }
-
-    private static float[] pestColorRgba() {
-        int c = PEST_COLOR_ARGB;
-        float r = ((c >> 16) & 0xFF) / 255.0f;
-        float g = ((c >> 8) & 0xFF) / 255.0f;
-        float b = (c & 0xFF) / 255.0f;
-        return new float[]{r, g, b, 0.9f};
     }
 
     private static void drawFilledBoxFaces(
@@ -496,6 +469,14 @@ public final class PestHighlights implements WorldRenderEvents.AfterEntities {
                 r, g, b, a, 0f, 0f, -1f);
         drawQuad(pose, vc, (float) x1, (float) y1, (float) z2, (float) x1, (float) y2, (float) z2, (float) x2, (float) y2, (float) z2, (float) x2, (float) y1, (float) z2,
                 r, g, b, a, 0f, 0f, 1f);
+    }
+
+    private static float[] pestColorRgba() {
+        int c = PEST_COLOR_ARGB;
+        float r = ((c >> 16) & 0xFF) / 255.0f;
+        float g = ((c >> 8) & 0xFF) / 255.0f;
+        float b = (c & 0xFF) / 255.0f;
+        return new float[]{r, g, b, 0.9f};
     }
 
     private static void drawQuad(

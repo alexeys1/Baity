@@ -378,7 +378,7 @@ public final class FancyDmgSplashSettings {
 
     public static Component formatPreviewWithPreset(FancyDmgSplashPresetStore.PresetData style) {
         String symbols = style.symbols;
-        long previewDamage = 1_100_000L;
+        long previewDamage = 1_234_567L;
         String numericPart = style.compact
                 ? formatCompactDamage(previewDamage, 4)
                 : applySeparator(String.valueOf(previewDamage));

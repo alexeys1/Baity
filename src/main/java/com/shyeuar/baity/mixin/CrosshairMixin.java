@@ -6,7 +6,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -34,24 +34,29 @@ public class CrosshairMixin {
     private static float lastObservedNowTick = -1.0f;
     private static final Identifier WHITE_1PX = Identifier.fromNamespaceAndPath("minecraft", "textures/misc/white.png");
 
-    @ModifyExpressionValue(method = "renderCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Options;getCameraType()Lnet/minecraft/client/CameraType;"))
-    private CameraType baity$forceCrosshairInThirdPersonBack(CameraType original) {
+    @ModifyExpressionValue(method = "extractCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/CameraType;isFirstPerson()Z"))
+    private boolean baity$forceCrosshairInThirdPersonBack(boolean original) {
+        if (original) {
+            return true;
+        }
         com.shyeuar.baity.gui.module.Module crosshairModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Crosshair");
         if (crosshairModule == null || !crosshairModule.isEnabled()) return original;
-        
+
         boolean thirdPersonBackCrosshairEnabled = ModuleUtils.getOptionBoolean(
             crosshairModule,
             "show third-person-back crosshair",
             false
         );
-        if (thirdPersonBackCrosshairEnabled && original == CameraType.THIRD_PERSON_BACK) {
-            return CameraType.FIRST_PERSON;
+        Minecraft mc = Minecraft.getInstance();
+        if (thirdPersonBackCrosshairEnabled && mc != null
+            && mc.options.getCameraType() == CameraType.THIRD_PERSON_BACK) {
+            return true;
         }
         return original;
     }
 
-    @Inject(method = "renderCrosshair", at = @At("HEAD"), cancellable = true)
-    private void baity$renderCustomCrosshair(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+    @Inject(method = "extractCrosshair", at = @At("HEAD"), cancellable = true)
+    private void baity$renderCustomCrosshair(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         com.shyeuar.baity.gui.module.Module crosshairModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Crosshair");
         if (crosshairModule == null || !crosshairModule.isEnabled()) return;
         if (!ModuleUtils.getOptionBoolean(crosshairModule, "custom crosshair", true)) return;
@@ -172,7 +177,7 @@ public class CrosshairMixin {
     }
 
 
-    private static void drawPaintedCrosshair(GuiGraphics g, int screenCx, int screenCy, int staticGap, int animatedGap, boolean chroma) {
+    private static void drawPaintedCrosshair(GuiGraphicsExtractor g, int screenCx, int screenCy, int staticGap, int animatedGap, boolean chroma) {
         final int size = 31;
         BitSet staticLayer = decodeLayer(ConfigManager.crosshairStaticLayer, size);
         BitSet activeLayer = decodeLayer(ConfigManager.crosshairActiveLayer, size);
@@ -184,7 +189,7 @@ public class CrosshairMixin {
         drawLayer(g, screenCx, screenCy, size, center, activeLayer, animatedGap, chroma, nowMs, false);
     }
 
-    private static void drawLayer(GuiGraphics g, int screenCx, int screenCy, int size, int center, BitSet bits,
+    private static void drawLayer(GuiGraphicsExtractor g, int screenCx, int screenCy, int size, int center, BitSet bits,
                                   int gap, boolean chroma, long nowMs, boolean isStaticLayer) {
         if (bits.isEmpty()) return;
 

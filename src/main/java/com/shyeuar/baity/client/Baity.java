@@ -9,6 +9,7 @@ import com.shyeuar.baity.managers.ModuleInitializer;
 import com.shyeuar.baity.sync.BaityPresenceSync;
 import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.items.CustomTotemItem;
+import com.shyeuar.baity.features.FancyCreeperVeil;
 import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
 import com.shyeuar.baity.features.fishing.HypixelFishingRodCatalog;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
@@ -22,8 +23,10 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.minecraft.resources.Identifier;
 import net.minecraft.client.Minecraft;
 import com.shyeuar.baity.features.radialmenu.RadialMenu;
 import com.shyeuar.baity.utils.SoundUtils;
@@ -103,15 +106,15 @@ public class Baity implements ClientModInitializer {
             com.shyeuar.baity.sync.SyncCommands.register(dispatcher)
         );
 
-        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.NametagRenderer());
-        WorldRenderEvents.AFTER_ENTITIES.register(new FancyDmgSplash());
-        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.highlights.ShulkerHighlights());
-        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.highlights.PestHighlights());
-        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.highlights.InvisibugHighlights());
+        LevelRenderEvents.END_MAIN.register(new com.shyeuar.baity.features.NametagRenderer());
+        LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(new FancyDmgSplash());
+        LevelRenderEvents.AFTER_SOLID_FEATURES.register(new com.shyeuar.baity.features.highlights.ShulkerHighlights());
+        LevelRenderEvents.AFTER_SOLID_FEATURES.register(new com.shyeuar.baity.features.highlights.PestHighlights());
+        LevelRenderEvents.AFTER_SOLID_FEATURES.register(new com.shyeuar.baity.features.highlights.InvisibugHighlights());
+
+        LevelRenderEvents.AFTER_SOLID_FEATURES.register(new FancyCreeperVeil());
         
-        WorldRenderEvents.AFTER_ENTITIES.register(new com.shyeuar.baity.features.FancyCreeperVeil());
-        
-        HudRenderCallback.EVENT.register((guiGraphics, tickDelta) -> {
+        HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT, Identifier.fromNamespaceAndPath("baity", "fish_hook_timer"), (guiGraphics, tickDelta) -> {
             var timer = com.shyeuar.baity.features.fishing.FishHookTimer.getInstance();
             if (timer.shouldRender()) timer.render(guiGraphics, 0.0f);
         });

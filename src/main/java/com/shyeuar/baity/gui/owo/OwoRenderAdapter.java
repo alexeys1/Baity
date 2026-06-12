@@ -2,20 +2,20 @@ package com.shyeuar.baity.gui.owo;
 
 import io.wispforest.owo.ui.core.Color;
 import io.wispforest.owo.ui.core.OwoUIGraphics;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
 public class OwoRenderAdapter {
     private final OwoUIGraphics owoContext;
-    private final GuiGraphics guiGraphics;
+    private final GuiGraphicsExtractor guiGraphics;
     
-    public OwoRenderAdapter(OwoUIGraphics owoContext, GuiGraphics guiGraphics) {
+    public OwoRenderAdapter(OwoUIGraphics owoContext, GuiGraphicsExtractor guiGraphics) {
         this.owoContext = owoContext;
         this.guiGraphics = guiGraphics;
     }
     
-    public static OwoRenderAdapter of(OwoUIGraphics owoContext, GuiGraphics guiGraphics) {
+    public static OwoRenderAdapter of(OwoUIGraphics owoContext, GuiGraphicsExtractor guiGraphics) {
         return new OwoRenderAdapter(owoContext, guiGraphics);
     }
     
@@ -37,11 +37,11 @@ public class OwoRenderAdapter {
     }
     
     public void drawString(net.minecraft.client.gui.Font font, String text, int x, int y, int color, boolean shadow) {
-        guiGraphics.drawString(font, text, x, y, color, shadow);
+        guiGraphics.text(font, text, x, y, color, shadow);
     }
     
     public void drawString(net.minecraft.client.gui.Font font, net.minecraft.network.chat.Component text, int x, int y, int color, boolean shadow) {
-        guiGraphics.drawString(font, text, x, y, color, shadow);
+        guiGraphics.text(font, text, x, y, color, shadow);
     }
     
     public void blit(Identifier texture, int x, int y, float u, float v, int width, int height, int textureWidth, int textureHeight, int color) {
@@ -64,7 +64,7 @@ public class OwoRenderAdapter {
         return owoContext;
     }
     
-    public GuiGraphics getGuiGraphics() {
+    public GuiGraphicsExtractor getGuiGraphics() {
         return guiGraphics;
     }
 }

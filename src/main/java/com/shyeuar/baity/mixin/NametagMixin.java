@@ -18,12 +18,12 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.feature.NameTagFeatureRenderer;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -33,6 +33,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 public class NametagMixin {
+
+    private static final String SUBMIT_NAME_DISPLAY = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V";
 
     @Mixin(EntityRenderer.class)
     public abstract static class ExtractMixin<T extends Entity, S extends EntityRenderState> {
@@ -51,7 +53,7 @@ public class NametagMixin {
     public static class SubmitMixin {
 
         @Inject(
-            method = "submitNameTag(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
+            method = SUBMIT_NAME_DISPLAY,
             at = @At("HEAD")
         )
         private void baity$beginNameTagSubmit(
@@ -59,6 +61,7 @@ public class NametagMixin {
             PoseStack matrices,
             SubmitNodeCollector queue,
             CameraRenderState cameraState,
+            int lineOffset,
             CallbackInfo ci
         ) {
             int entityId = baity$resolveEntityId(state);
@@ -68,7 +71,7 @@ public class NametagMixin {
         }
 
         @Inject(
-            method = "submitNameTag(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
+            method = SUBMIT_NAME_DISPLAY,
             at = @At("HEAD"),
             cancellable = true
         )
@@ -77,6 +80,7 @@ public class NametagMixin {
             PoseStack matrices,
             SubmitNodeCollector queue,
             CameraRenderState cameraState,
+            int lineOffset,
             CallbackInfo ci
         ) {
             if (!NametagUtils.isNametagModuleActive()) {
@@ -116,7 +120,7 @@ public class NametagMixin {
         }
 
         @ModifyVariable(
-            method = "submitNameTag(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
+            method = SUBMIT_NAME_DISPLAY,
             at = @At("STORE"),
             ordinal = 0
         )
@@ -128,7 +132,7 @@ public class NametagMixin {
         }
 
         @Inject(
-            method = "submitNameTag(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
+            method = SUBMIT_NAME_DISPLAY,
             at = @At("RETURN")
         )
         private void baity$endNameTagSubmit(CallbackInfo ci) {
@@ -199,7 +203,7 @@ public class NametagMixin {
     public static class StorageMixin {
 
         @Inject(
-            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/CameraRenderState;)V",
+            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At("HEAD")
         )
         private void baity$beginNameTagAdd(
@@ -217,7 +221,7 @@ public class NametagMixin {
         }
 
         @Inject(
-            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/CameraRenderState;)V",
+            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At("RETURN")
         )
         private void baity$endNameTagAdd(
@@ -235,7 +239,7 @@ public class NametagMixin {
         }
 
         @ModifyVariable(
-            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/CameraRenderState;)V",
+            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At("HEAD"),
             argsOnly = true
         )
@@ -247,7 +251,7 @@ public class NametagMixin {
         }
 
         @ModifyVariable(
-            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/CameraRenderState;)V",
+            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At("STORE"),
             ordinal = 0
         )
@@ -274,14 +278,14 @@ public class NametagMixin {
         }
 
         @Redirect(
-            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/CameraRenderState;)V",
+            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At(
                 value = "NEW",
                 target = "net/minecraft/client/renderer/SubmitNodeStorage$NameTagSubmit"
             )
         )
         private SubmitNodeStorage.NameTagSubmit baity$createNameTagSubmit(
-            Matrix4f pose,
+            Matrix4fc pose,
             float x,
             float y,
             Component text,

@@ -9,7 +9,7 @@ import com.shyeuar.baity.client.Baity;
 import com.shyeuar.baity.utils.MessageUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 
 import java.util.Locale;
@@ -22,21 +22,21 @@ public final class SmolFriendCommands {
 
     public static void attachSubCommands(LiteralArgumentBuilder<FabricClientCommandSource> root) {
         root.then(
-            ClientCommandManager.literal("fgui")
+            ClientCommands.literal("fgui")
                 .executes(context -> openFriendsScreen())
         );
 
         root.then(
-            ClientCommandManager.literal("fadd")
+            ClientCommands.literal("fadd")
                 .executes(context -> handleMissingName())
-                .then(ClientCommandManager.argument("name", StringArgumentType.word())
+                .then(ClientCommands.argument("name", StringArgumentType.word())
                     .executes(context -> executeAdd(StringArgumentType.getString(context, "name"))))
         );
 
         root.then(
-            ClientCommandManager.literal("fremove")
+            ClientCommands.literal("fremove")
                 .executes(context -> handleMissingName())
-                .then(ClientCommandManager.argument("name", StringArgumentType.word())
+                .then(ClientCommands.argument("name", StringArgumentType.word())
                     .suggests(SmolFriendCommands::suggestFriends)
                     .executes(context -> executeRemove(StringArgumentType.getString(context, "name"))))
         );

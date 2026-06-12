@@ -30,6 +30,7 @@ public class ImmuneReactionMixin {
                        text.contains("Not enough mana! Creeper Veil De-activated!")) {
                 ElementalReactionDetector.setWitherCloakActive(false);
                 com.shyeuar.baity.features.FancyCreeperVeil.lastDeactivate = System.currentTimeMillis();
+                com.shyeuar.baity.features.FancyCreeperVeil.lastCreeperRender = 0;
             }
         }
     }

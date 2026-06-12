@@ -1,7 +1,7 @@
 package com.shyeuar.baity.mixin;
 
 import com.shyeuar.baity.features.chat.ChatChannelSwitcher;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -24,14 +24,14 @@ public abstract class ChatChannelSwitcherMixin extends Screen {
     }
 
     @Inject(
-        method = "render",
+        method = "extractRenderState",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/components/CommandSuggestions;render(Lnet/minecraft/client/gui/GuiGraphics;II)V",
+            target = "Lnet/minecraft/client/gui/components/CommandSuggestions;extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V",
             shift = At.Shift.BEFORE
         )
     )
-    private void baity$renderChatChannelButtons(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    private void baity$renderChatChannelButtons(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         ChatChannelSwitcher.render(this, this.input, guiGraphics, mouseX, mouseY);
         ChatChannelSwitcher.tryStripAltHotkeyChar(this.input);
     }

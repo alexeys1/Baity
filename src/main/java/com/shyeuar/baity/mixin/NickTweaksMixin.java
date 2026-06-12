@@ -4,7 +4,7 @@ import com.shyeuar.baity.utils.NickRenderUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.FormattedText;
@@ -60,9 +60,9 @@ public class NickTweaksMixin {
     @Mixin(Screen.class)
     public static class ScreenGuiTextScopeMixin {
 
-        @Inject(method = "render", at = @At("HEAD"))
+        @Inject(method = "extractRenderState", at = @At("HEAD"))
         private void baity$beginGuiTextRenderScope(
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             int mouseX,
             int mouseY,
             float partialTick,
@@ -74,20 +74,9 @@ public class NickTweaksMixin {
             }
         }
 
-        @Inject(method = "render", at = @At("RETURN"))
+        @Inject(method = "extractRenderState", at = @At("RETURN"))
         private void baity$endGuiTextRenderScope(
-            GuiGraphics guiGraphics,
-            int mouseX,
-            int mouseY,
-            float partialTick,
-            CallbackInfo ci
-        ) {
-            baity$exitGuiTextRenderScopeIfNeeded();
-        }
-
-        @Inject(method = "render", at = @At(value = "THROW"))
-        private void baity$endGuiTextRenderScopeOnThrow(
-            GuiGraphics guiGraphics,
+            GuiGraphicsExtractor guiGraphics,
             int mouseX,
             int mouseY,
             float partialTick,

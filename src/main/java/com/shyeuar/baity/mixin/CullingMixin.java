@@ -1,11 +1,11 @@
 package com.shyeuar.baity.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -19,12 +19,11 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.WeatherEffectRenderer;
 import net.minecraft.client.renderer.fog.FogData;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.client.renderer.fog.environment.FogEnvironment;
-import net.minecraft.client.renderer.state.WeatherRenderState;
+import net.minecraft.client.renderer.state.level.WeatherRenderState;
 import net.minecraft.server.level.ParticleStatus;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.material.FogType;
@@ -38,11 +37,11 @@ public class CullingMixin {
         @Final
         private static List<FogEnvironment> FOG_ENVIRONMENTS;
         
-        @Inject(method = "setupFog(Lnet/minecraft/client/Camera;ILnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lorg/joml/Vector4f;",
+        @Inject(method = "setupFog(Lnet/minecraft/client/Camera;ILnet/minecraft/client/DeltaTracker;FLnet/minecraft/client/multiplayer/ClientLevel;)Lnet/minecraft/client/renderer/fog/FogData;",
                 at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/fog/FogData;renderDistanceEnd:F", shift = At.Shift.AFTER, ordinal = 0))
         private void baity$removeWaterFog(Camera camera, int viewDistance,
                 DeltaTracker tickCounter, float skyDarkness, ClientLevel world, 
-                CallbackInfoReturnable<Vector4f> cir, @Local FogData fogData) {
+                CallbackInfoReturnable<FogData> cir, @Local FogData fogData) {
             
             Module m = ModuleManager.getModuleByName("Culling");
             if (m == null || !m.isEnabled()) return;
@@ -70,12 +69,11 @@ public class CullingMixin {
     public static class RemoveRainSnowVisualMixin {
         
         @Inject(
-            method = "render(Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/client/renderer/state/WeatherRenderState;)V",
+            method = "render(Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/client/renderer/state/level/WeatherRenderState;)V",
             at = @At("HEAD"),
             cancellable = true
         )
         private void baity$skipRainSnowRender(
-                MultiBufferSource bufferSource,
                 Vec3 cameraPosition,
                 WeatherRenderState renderState,
                 CallbackInfo ci) {
@@ -107,11 +105,11 @@ public class CullingMixin {
     @Mixin(net.minecraft.client.renderer.entity.LivingEntityRenderer.class)
     public static class HideDyingMobMixin {
         
-        @Inject(method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
+        @Inject(method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
                 at = @At("HEAD"), cancellable = true)
         private void baity$hideDyingMob(net.minecraft.client.renderer.entity.state.LivingEntityRenderState state,
                 PoseStack matrices, net.minecraft.client.renderer.SubmitNodeCollector queue,
-                net.minecraft.client.renderer.state.CameraRenderState cameraState, CallbackInfo ci) {
+                net.minecraft.client.renderer.state.level.CameraRenderState cameraState, CallbackInfo ci) {
             Module m = ModuleManager.getModuleByName("Culling");
             if (m == null || !m.isEnabled()) return;
             if (!ConfigManager.cullingHideDyingMob) return;
@@ -126,7 +124,7 @@ public class CullingMixin {
     public static class NoHurtCamMixin {
         
         @Inject(method = "bobHurt", at = @At("HEAD"), cancellable = true)
-        private void baity$cancelHurtCam(PoseStack matrices, float tickProgress, CallbackInfo ci) {
+        private void baity$cancelHurtCam(CameraRenderState cameraState, PoseStack matrices, CallbackInfo ci) {
             Module m = ModuleManager.getModuleByName("NoHurtCam");
             if (m != null && m.isEnabled()) {
                 ci.cancel();

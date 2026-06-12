@@ -10,8 +10,8 @@ import com.shyeuar.baity.utils.ModuleUtils;
 import com.shyeuar.baity.utils.NickRenderUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -23,7 +23,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 @Environment(EnvType.CLIENT)
-public class NametagRenderer implements WorldRenderEvents.AfterEntities {
+public class NametagRenderer implements LevelRenderEvents.EndMain {
     private static final Minecraft mc = Minecraft.getInstance();
     
     private static long lastTimeUpdate = 0;
@@ -45,7 +45,7 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
     }
 
     @Override
-    public void afterEntities(WorldRenderContext context) {
+    public void endMain(LevelRenderContext context) {
         Module m = ModuleManager.getModuleByName("Nametag");
         if (m == null || !m.isEnabled()) {
             return; 
@@ -59,13 +59,13 @@ public class NametagRenderer implements WorldRenderEvents.AfterEntities {
         
         if (mc.level == null || mc.player == null) return;
         
-        Vec3 cameraPos = context.worldState().cameraRenderState.pos;
+        Vec3 cameraPos = context.levelState().cameraRenderState.pos;
         Camera camera = mc.gameRenderer.getMainCamera();
         float tickDelta = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         float cameraYaw = camera.yRot();
         float cameraPitch = camera.xRot();
         
-        PoseStack matrices = context.matrices();
+        PoseStack matrices = context.poseStack();
         if (matrices == null) {
             matrices = new PoseStack();
             matrices.mulPose(new org.joml.Quaternionf().rotationXYZ(

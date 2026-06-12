@@ -9,7 +9,7 @@ import io.wispforest.owo.ui.core.Positioning;
 import io.wispforest.owo.ui.core.Sizing;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.DynamicTexture;
@@ -62,7 +62,7 @@ public class RadialMenuComponent extends BaseUIComponent {
 
     private final List<Entry> entries;
     private int hoveredIndex = -1;
-    private GuiGraphics guiGraphics;
+    private GuiGraphicsExtractor guiGraphics;
 
     public RadialMenuComponent(List<Entry> entries) {
         this.entries = entries;
@@ -75,7 +75,7 @@ public class RadialMenuComponent extends BaseUIComponent {
         return hoveredIndex;
     }
 
-    public void setGuiGraphics(GuiGraphics guiGraphics) {
+    public void setGuiGraphics(GuiGraphicsExtractor guiGraphics) {
         this.guiGraphics = guiGraphics;
     }
 
@@ -182,7 +182,7 @@ public class RadialMenuComponent extends BaseUIComponent {
         return -90 - (360.0 / sectionCount) / 2;
     }
 
-    public static void drawUnicodeSymbol(GuiGraphics graphics, Font font, String symbol,
+    public static void drawUnicodeSymbol(GuiGraphicsExtractor graphics, Font font, String symbol,
                                          float centerX, float centerY, float scale) {
         var pose = graphics.pose();
         pose.pushMatrix();
@@ -190,7 +190,7 @@ public class RadialMenuComponent extends BaseUIComponent {
         pose.scale(scale, scale);
         Component text = Component.literal(symbol);
         float w = font.width(text);
-        graphics.drawString(font, text, Math.round(-w / 2f), Math.round(labelBaselineOffset(font)),
+        graphics.text(font, text, Math.round(-w / 2f), Math.round(labelBaselineOffset(font)),
                 SYMBOL_ICON_COLOR, false);
         pose.popMatrix();
     }
@@ -309,7 +309,7 @@ public class RadialMenuComponent extends BaseUIComponent {
         drawLayoutRing(context, centerX, centerY, -120, -60, 8.5, 10.5, Color.ofArgb(hubHi), Color.ofArgb(hubHi));
     }
 
-    public static void drawCenterPlayerHead(GuiGraphics graphics, int centerX, int centerY) {
+    public static void drawCenterPlayerHead(GuiGraphicsExtractor graphics, int centerX, int centerY) {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.player == null) return;
 
@@ -353,14 +353,14 @@ public class RadialMenuComponent extends BaseUIComponent {
         return base64 * textureSize / 64;
     }
 
-    public static void drawRadialLabel(GuiGraphics graphics, Font font, String text, float x, float y) {
+    public static void drawRadialLabel(GuiGraphicsExtractor graphics, Font font, String text, float x, float y) {
         if (text == null || text.isEmpty()) return;
-        graphics.drawString(font, text, Math.round(x), Math.round(y), LABEL_TEXT_COLOR, true);
+        graphics.text(font, text, Math.round(x), Math.round(y), LABEL_TEXT_COLOR, true);
     }
 
-    public static void drawLabel(GuiGraphics graphics, Font font, String text, float x, float y, int color) {
+    public static void drawLabel(GuiGraphicsExtractor graphics, Font font, String text, float x, float y, int color) {
         if (text == null || text.isEmpty()) return;
-        graphics.drawString(font, text, Math.round(x), Math.round(y), color, true);
+        graphics.text(font, text, Math.round(x), Math.round(y), color, true);
     }
 
     private static double sectorIconRadius(int innerRadius, int outerRadius) {

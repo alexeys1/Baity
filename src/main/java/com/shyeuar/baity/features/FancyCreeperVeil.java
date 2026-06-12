@@ -9,10 +9,11 @@ import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
@@ -20,7 +21,7 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 @Environment(EnvType.CLIENT)
-public class FancyCreeperVeil implements WorldRenderEvents.AfterEntities {
+public class FancyCreeperVeil implements LevelRenderEvents.AfterSolidFeatures {
     
     private static final Minecraft MC = Minecraft.getInstance();
     private static final Identifier WITHER_CLOAK_SHIELD = Identifier.fromNamespaceAndPath("baity", "textures/item/wither_cloak_shield.png");
@@ -38,7 +39,7 @@ public class FancyCreeperVeil implements WorldRenderEvents.AfterEntities {
     
     
     @Override
-    public void afterEntities(WorldRenderContext context) {
+    public void afterSolidFeatures(LevelRenderContext context) {
         Module module = ModuleManager.getModuleByName("FancyCreeperVeil");
         if (module == null || !module.isEnabled()) return;
         if (!ConfigManager.fancyCreeperVeilEnabled) return;
@@ -50,7 +51,7 @@ public class FancyCreeperVeil implements WorldRenderEvents.AfterEntities {
         if (isCloakActive) {
             long timeSinceLastCreeper = System.currentTimeMillis() - lastCreeperRender;
             if (timeSinceLastCreeper >= 2000 && lastCreeperRender > 0) {
-                isCloakActive = false;
+                ElementalReactionDetector.setWitherCloakActive(false);
                 lastDeactivate = System.currentTimeMillis();
                 lastCreeperRender = 0;
                 return;
@@ -59,13 +60,14 @@ public class FancyCreeperVeil implements WorldRenderEvents.AfterEntities {
         
         if (!isCloakActive) return;
         
-        PoseStack matrices = context.matrices();
-        MultiBufferSource buffers = context.consumers();
+        PoseStack matrices = context.poseStack();
+        MultiBufferSource buffers = context.bufferSource();
         if (matrices == null || buffers == null) return;
         
-        Vec3 cameraPos = context.worldState().cameraRenderState.pos;
+        Vec3 cameraPos = context.levelState().cameraRenderState.pos;
         float tickDelta = MC.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         Vec3 playerPos = MC.player.getPosition(tickDelta);
+        RenderType shieldType = RenderTypes.entityTranslucent(WITHER_CLOAK_SHIELD);
         
         matrices.pushPose();
         matrices.translate(playerPos.x - cameraPos.x, playerPos.y - cameraPos.y, playerPos.z - cameraPos.z);
@@ -85,16 +87,20 @@ public class FancyCreeperVeil implements WorldRenderEvents.AfterEntities {
             float yawToPlayerDeg = (float) Math.toDegrees(yawToPlayerRad);
             matrices.mulPose(Axis.YP.rotationDegrees(yawToPlayerDeg));
             
-            renderShield(matrices, buffers);
+            renderShield(matrices, buffers, shieldType);
             
             matrices.popPose();
         }
         
         matrices.popPose();
+
+        if (buffers instanceof MultiBufferSource.BufferSource bufferSource) {
+            bufferSource.endBatch(shieldType);
+        }
     }
     
-    private void renderShield(PoseStack matrices, MultiBufferSource buffers) {
-        VertexConsumer consumer = buffers.getBuffer(RenderTypes.entityTranslucent(WITHER_CLOAK_SHIELD));
+    private void renderShield(PoseStack matrices, MultiBufferSource buffers, RenderType shieldType) {
+        VertexConsumer consumer = buffers.getBuffer(shieldType);
         PoseStack.Pose pose = matrices.last();
         Matrix4f matrix = pose.pose();
         
@@ -162,6 +168,7 @@ public class FancyCreeperVeil implements WorldRenderEvents.AfterEntities {
     public static void onWorldUnload() {
         lastCreeperRender = 0;
         lastDeactivate = System.currentTimeMillis();
+        ElementalReactionDetector.setWitherCloakActive(false);
     }
   
 }

@@ -4,7 +4,7 @@ import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.theme.Theme;
 import com.shyeuar.baity.gui.internal.ClickGuiState;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public class ModuleStyleRenderer {
     
@@ -19,7 +19,7 @@ public class ModuleStyleRenderer {
         return currentState.getModuleShimmerAnimations().get(moduleName);
     }
    
-   public static void renderModule(GuiGraphics context, Minecraft client, Module module, Theme theme,
+   public static void renderModule(GuiGraphicsExtractor context, Minecraft client, Module module, Theme theme,
                                   float x1, float y, float x2, float moduleHeight,
                                   float mouseX, float mouseY,
                                   boolean isListeningForKey, String currentKeyDisplay,
@@ -60,7 +60,7 @@ public class ModuleStyleRenderer {
        if ("ClickGUI".equals(module.getName())) {
            displayName = "ClickGUI";
        }
-       context.drawString(client.font, displayName, (int)(x1 + 10), (int)(y + 8), theme.FONT_C.getRGB(), false);
+       context.text(client.font, displayName, (int)(x1 + 10), (int)(y + 8), theme.FONT_C.getRGB(), false);
 
        if (hovered) {
            String tooltip = getTooltipText.apply(module.getName());
@@ -82,7 +82,7 @@ public class ModuleStyleRenderer {
        }
        if (hasChildren && !module.getName().equals("ClickGUI")) {
            String arrow = module.isExpanded() ? "▼" : "▶";
-           context.drawString(client.font, arrow, (int)(x2 - 25), (int)(y + 8), theme.FONT_C.getRGB(), false);
+           context.text(client.font, arrow, (int)(x2 - 25), (int)(y + 8), theme.FONT_C.getRGB(), false);
        }
 
        if (module.getName().equals("ClickGUI")) {
@@ -91,7 +91,7 @@ public class ModuleStyleRenderer {
        }
    }
 
-   public static void renderKeybindBox(GuiGraphics context, Minecraft client, Theme theme,
+   public static void renderKeybindBox(GuiGraphicsExtractor context, Minecraft client, Theme theme,
                                       float containerX1, float containerY, float containerX2, float containerHeight,
                                       float mouseX, float mouseY,
                                       boolean isListening, String keyDisplay) {
@@ -99,7 +99,7 @@ public class ModuleStyleRenderer {
        renderKeybindBoxContent(context, client, theme, containerX2, containerY, containerHeight, mouseX, mouseY, isListening, keyText);
    }
 
-   public static void renderKeybindBoxContent(GuiGraphics context, Minecraft client, Theme theme,
+   public static void renderKeybindBoxContent(GuiGraphicsExtractor context, Minecraft client, Theme theme,
                                               float containerX2, float containerY, float containerHeight,
                                               float mouseX, float mouseY, boolean isListening, String displayText) {
        if (displayText == null || displayText.isEmpty()) {
@@ -127,10 +127,10 @@ public class ModuleStyleRenderer {
            String hintText = "Press Backspace to reset";
            int hintColor = 0xFFFFFF00;
            int hintX = boxX1 - client.font.width(hintText) - 8;
-           context.drawString(client.font, hintText, hintX, baseY, hintColor, false);
+           context.text(client.font, hintText, hintX, baseY, hintColor, false);
            
            net.minecraft.network.chat.Component textObj = net.minecraft.network.chat.Component.literal(displayText);
-           context.drawString(client.font, textObj, baseX, baseY, theme.FONT_C.getRGB(), false);
+           context.text(client.font, textObj, baseX, baseY, theme.FONT_C.getRGB(), false);
        } else {
            String displayPlainText = displayText.replaceAll("§[0-9a-fklmnor]", "");
 
@@ -141,11 +141,11 @@ public class ModuleStyleRenderer {
                int keyNameRGB = theme.FONT.getRGB();
 
                net.minecraft.network.chat.Component prefixText = net.minecraft.network.chat.Component.literal(prefix);
-               context.drawString(client.font, prefixText, baseX, baseY, prefixRGB, false);
+               context.text(client.font, prefixText, baseX, baseY, prefixRGB, false);
 
                int prefixWidth = client.font.width(prefix);
                net.minecraft.network.chat.Component keyTextObj = net.minecraft.network.chat.Component.literal(keyName);
-               context.drawString(client.font, keyTextObj, baseX + prefixWidth, baseY, keyNameRGB, false);
+               context.text(client.font, keyTextObj, baseX + prefixWidth, baseY, keyNameRGB, false);
            } else if (displayPlainText.startsWith("☄") || 
                        displayPlainText.toUpperCase().contains("NOTSET") || 
                        displayPlainText.toUpperCase().contains("UNKNOWN")) {
@@ -155,14 +155,14 @@ public class ModuleStyleRenderer {
                int notsetRGB = 0xFFAAAAAA;  // 灰色
 
                net.minecraft.network.chat.Component prefixText = net.minecraft.network.chat.Component.literal(prefix);
-               context.drawString(client.font, prefixText, baseX, baseY, prefixRGB, false);
+               context.text(client.font, prefixText, baseX, baseY, prefixRGB, false);
 
                int prefixWidth = client.font.width(prefix);
                net.minecraft.network.chat.Component notsetTextObj = net.minecraft.network.chat.Component.literal(notsetText);
-               context.drawString(client.font, notsetTextObj, baseX + prefixWidth, baseY, notsetRGB, false);
+               context.text(client.font, notsetTextObj, baseX + prefixWidth, baseY, notsetRGB, false);
            } else {
                net.minecraft.network.chat.Component textObj = net.minecraft.network.chat.Component.literal(displayText);
-               context.drawString(client.font, textObj, baseX, baseY, theme.FONT.getRGB(), false);
+               context.text(client.font, textObj, baseX, baseY, theme.FONT.getRGB(), false);
            }
        }
    }

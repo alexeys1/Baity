@@ -3,7 +3,6 @@ package com.shyeuar.baity.mixin;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.render.RenderScope;
 import com.shyeuar.baity.utils.NoSwimPoseUtils;
@@ -13,7 +12,7 @@ import net.minecraft.client.model.player.PlayerModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import org.objectweb.asm.Opcodes;
@@ -25,6 +24,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 public class NoSwimPoseMixin {
+
+    private static final String AVATAR_SUBMIT_NAME_DISPLAY =
+        "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V";
 
     @Mixin(AvatarRenderer.class)
     public static class PlayerRendererTransformMixin {
@@ -81,15 +83,15 @@ public class NoSwimPoseMixin {
         private boolean baity$wasGroundedPoolBottomSneak;
 
         @ModifyExpressionValue(
-            method = "setup",
+            method = "alignWithEntity",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;lerp(FFF)F", ordinal = 1)
         )
-        private float baity$modifyEyeHeightLerp(float original, @Local(argsOnly = true) Entity focusedEntity) {
+        private float baity$modifyEyeHeightLerp(float original) {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player == null || focusedEntity != mc.player) {
+            if (mc.player == null || this.entity != mc.player) {
                 return original;
             }
-            if (mc.player != null && NoSwimPoseUtils.shouldSnapCameraEyeHeight(mc.player)) {
+            if (NoSwimPoseUtils.shouldSnapCameraEyeHeight(mc.player)) {
                 return NoSwimPoseUtils.getCameraEyeHeight(mc.player);
             }
             return original;
@@ -163,7 +165,7 @@ public class NoSwimPoseMixin {
     public static class WorldSwimNametagMixin {
 
         @Inject(
-            method = "submitNameTag(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
+            method = AVATAR_SUBMIT_NAME_DISPLAY,
             at = @At("HEAD")
         )
         private void baity$liftWorldSwimNametag(

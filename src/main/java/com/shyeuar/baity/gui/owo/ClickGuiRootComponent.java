@@ -17,7 +17,7 @@ import io.wispforest.owo.ui.core.OwoUIGraphics;
 import io.wispforest.owo.ui.core.Positioning;
 import io.wispforest.owo.ui.core.Sizing;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
 
 import java.util.List;
@@ -28,7 +28,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
     
     private final ClickGuiState state;
     private final Theme theme;
-    private GuiGraphics guiGraphics;
+    private GuiGraphicsExtractor guiGraphics;
     
     private Function<String, String> getTooltipText;
     private Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors;
@@ -56,7 +56,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         this.positioning(Positioning.absolute(0, 0));
     }
     
-    public void setGuiGraphics(GuiGraphics guiGraphics) {
+    public void setGuiGraphics(GuiGraphicsExtractor guiGraphics) {
         this.guiGraphics = guiGraphics;
     }
     
@@ -244,7 +244,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             int textY = (int)categoryY;
             int color = active ? theme.FONT_C.getRGB() : theme.FONT.getRGB();
             
-            guiGraphics.drawString(client.font, label, textX, textY, color, false);
+            guiGraphics.text(client.font, label, textX, textY, color, false);
             
             categoryY += categorySpacing;
         }
@@ -308,7 +308,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         int textY = (int) (searchY + 6);
         if (focused) {
             if (empty) {
-                guiGraphics.drawString(client.font, "Search...", textX, textY, theme.FONT.getRGB(), false);
+                guiGraphics.text(client.font, "Search...", textX, textY, theme.FONT.getRGB(), false);
             }
             LineTextInput.drawTextWithBlinkCursor(
                 guiGraphics,
@@ -322,9 +322,9 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 LineTextInput.shouldBlinkCursor()
             );
         } else if (!empty) {
-            guiGraphics.drawString(client.font, searchText, textX, textY, theme.FONT_C.getRGB(), false);
+            guiGraphics.text(client.font, searchText, textX, textY, theme.FONT_C.getRGB(), false);
         } else {
-            guiGraphics.drawString(client.font, "Search...", textX, textY, theme.FONT.getRGB(), false);
+            guiGraphics.text(client.font, "Search...", textX, textY, theme.FONT.getRGB(), false);
         }
         
         float lineY = searchY + searchHeight - 1;
@@ -360,7 +360,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         int hudTextWidth = client.font.width(hudButtonText);
         int hudTextX = (int)(hudButtonX + (hudButtonWidth - hudTextWidth) / 2);
         int hudTextY = (int)(hudButtonY + (hudButtonHeight - client.font.lineHeight) / 2);
-        guiGraphics.drawString(client.font, hudButtonText, hudTextX, hudTextY, theme.FONT.getRGB(), false);
+        guiGraphics.text(client.font, hudButtonText, hudTextX, hudTextY, theme.FONT.getRGB(), false);
         
         state.setHudButtonBounds((int)hudButtonX, (int)hudButtonY, (int)hudButtonWidth, (int)hudButtonHeight);
     }
@@ -370,7 +370,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         int textWidth = client.font.width(placeholderText);
         int textX = (int)(contentX + (contentWidth - textWidth) / 2);
         int textY = (int)(modY + 50);
-        guiGraphics.drawString(client.font, placeholderText, textX, textY, theme.FONT.getRGB(), false);
+        guiGraphics.text(client.font, placeholderText, textX, textY, theme.FONT.getRGB(), false);
     }
     
     private void renderModule(OwoRenderAdapter adapter, Minecraft client, Module module,
@@ -414,7 +414,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         if ("ClickGUI".equals(module.getName())) {
             displayName = "ClickGUI";
         }
-        guiGraphics.drawString(client.font, displayName, (int)(x + 10), (int)(modY + 8), theme.FONT_C.getRGB(), false);
+        guiGraphics.text(client.font, displayName, (int)(x + 10), (int)(modY + 8), theme.FONT_C.getRGB(), false);
         
         if (hovered && !suppressTooltips && tooltipInfo != null) {
             String tooltip = getTooltipText.apply(module.getName());
@@ -436,7 +436,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         }
         if (hasChildren && !module.getName().equals("ClickGUI")) {
             String arrow = module.isExpanded() ? "▼" : "▶";
-            guiGraphics.drawString(client.font, arrow, (int)(x2 - 25), (int)(modY + 8), theme.FONT_C.getRGB(), false);
+            guiGraphics.text(client.font, arrow, (int)(x2 - 25), (int)(modY + 8), theme.FONT_C.getRGB(), false);
         }
         
         if (module.getName().equals("ClickGUI")) {
@@ -485,10 +485,10 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             String hintText = "Press Backspace to reset";
             int hintColor = 0xFFFFFF00;
             int hintX = boxX1 - client.font.width(hintText) - 8;
-            guiGraphics.drawString(client.font, hintText, hintX, baseY, hintColor, false);
+            guiGraphics.text(client.font, hintText, hintX, baseY, hintColor, false);
             
             net.minecraft.network.chat.Component textObj = net.minecraft.network.chat.Component.literal(displayText);
-            guiGraphics.drawString(client.font, textObj, baseX, baseY, theme.FONT_C.getRGB(), false);
+            guiGraphics.text(client.font, textObj, baseX, baseY, theme.FONT_C.getRGB(), false);
         } else {
             String displayPlainText = displayText.replaceAll("§[0-9a-fklmnor]", "");
             
@@ -499,11 +499,11 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 int keyNameRGB = theme.FONT.getRGB();
                 
                 net.minecraft.network.chat.Component prefixText = net.minecraft.network.chat.Component.literal(prefix);
-                guiGraphics.drawString(client.font, prefixText, baseX, baseY, prefixRGB, false);
+                guiGraphics.text(client.font, prefixText, baseX, baseY, prefixRGB, false);
                 
                 int prefixWidth = client.font.width(prefix);
                 net.minecraft.network.chat.Component keyTextObj = net.minecraft.network.chat.Component.literal(keyName);
-                guiGraphics.drawString(client.font, keyTextObj, baseX + prefixWidth, baseY, keyNameRGB, false);
+                guiGraphics.text(client.font, keyTextObj, baseX + prefixWidth, baseY, keyNameRGB, false);
             } else if (displayPlainText.startsWith("☄") || 
                        displayPlainText.toUpperCase().contains("NOTSET") || 
                        displayPlainText.toUpperCase().contains("UNKNOWN")) {
@@ -513,14 +513,14 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 int notsetRGB = 0xFFAAAAAA;
                 
                 net.minecraft.network.chat.Component prefixText = net.minecraft.network.chat.Component.literal(prefix);
-                guiGraphics.drawString(client.font, prefixText, baseX, baseY, prefixRGB, false);
+                guiGraphics.text(client.font, prefixText, baseX, baseY, prefixRGB, false);
                 
                 int prefixWidth = client.font.width(prefix);
                 net.minecraft.network.chat.Component notsetTextObj = net.minecraft.network.chat.Component.literal(notsetText);
-                guiGraphics.drawString(client.font, notsetTextObj, baseX + prefixWidth, baseY, notsetRGB, false);
+                guiGraphics.text(client.font, notsetTextObj, baseX + prefixWidth, baseY, notsetRGB, false);
             } else {
                 net.minecraft.network.chat.Component textObj = net.minecraft.network.chat.Component.literal(displayText);
-                guiGraphics.drawString(client.font, textObj, baseX, baseY, theme.FONT.getRGB(), false);
+                guiGraphics.text(client.font, textObj, baseX, baseY, theme.FONT.getRGB(), false);
             }
         }
     }
@@ -648,9 +648,9 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         var matrices = guiGraphics.pose();
         matrices.pushMatrix();
         matrices.scale(wmScale, wmScale);
-        guiGraphics.drawString(client.font, prefix,
+        guiGraphics.text(client.font, prefix,
             (int)(baseX / wmScale), (int)(baseY / wmScale), prefixTextColor, false);
-        guiGraphics.drawString(client.font, handleName,
+        guiGraphics.text(client.font, handleName,
             (int)(handleX1 / wmScale), (int)(baseY / wmScale), handleTextColor, false);
         matrices.popMatrix();
 
@@ -710,7 +710,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             float scaledTextWidth = versionScale * textWidth;
             float renderX = baseX + scaledCurrentVersionWidth - scaledTextWidth;
             
-            guiGraphics.drawString(client.font, checkingText,
+            guiGraphics.text(client.font, checkingText,
                     (int)(renderX / versionScale), (int)(baseY / versionScale),
                     0xFFFFFF00, false);
             
@@ -777,32 +777,32 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 int prefixWidth = client.font.width(prefix);
                 int versionWidth = client.font.width(latest);
                 
-                guiGraphics.drawString(client.font, prefix,
+                guiGraphics.text(client.font, prefix,
                                 (int)(renderX / versionScale), (int)(baseY / versionScale),
                                 0xFFFFFF00, false);
-                guiGraphics.drawString(client.font, latest,
+                guiGraphics.text(client.font, latest,
                                 (int)((renderX + prefixWidth * versionScale) / versionScale),
                                 (int)(baseY / versionScale),
                                 0xFF00FF00, false);
-                guiGraphics.drawString(client.font, suffix,
+                guiGraphics.text(client.font, suffix,
                                 (int)((renderX + (prefixWidth + versionWidth) * versionScale) / versionScale),
                                 (int)(baseY / versionScale),
                                 0xFFFFFF00, false);
             } else {
-                guiGraphics.drawString(client.font, displayText,
+                guiGraphics.text(client.font, displayText,
                                 (int)(renderX / versionScale), (int)(baseY / versionScale),
                                 versionColor, false);
             }
         } else if (showFeedback && isError) {
-            guiGraphics.drawString(client.font, displayText,
+            guiGraphics.text(client.font, displayText,
                             (int)(renderX / versionScale), (int)(baseY / versionScale),
                             com.shyeuar.baity.config.DevConfig.DEV_PREFIX_COLOR, false);
         } else if (showFeedback) {
-            guiGraphics.drawString(client.font, displayText,
+            guiGraphics.text(client.font, displayText,
                             (int)(renderX / versionScale), (int)(baseY / versionScale),
                             versionColor, false);
         } else {
-            guiGraphics.drawString(client.font, displayText,
+            guiGraphics.text(client.font, displayText,
                             (int)(baseX / versionScale), (int)(baseY / versionScale),
                             versionColor, false);
         }
@@ -909,9 +909,9 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         int textY = (rawTooltipHeight - rawFontHeight) / 2;
         
         if (state.getHoveredTooltipText() != null) {
-            guiGraphics.drawString(client.font, state.getHoveredTooltipText(), textX, textY, 0xFFFFFFFF, false);
+            guiGraphics.text(client.font, state.getHoveredTooltipText(), textX, textY, 0xFFFFFFFF, false);
         } else if (state.getHoveredTooltip() != null) {
-            guiGraphics.drawString(client.font, state.getHoveredTooltip(), textX, textY, theme.FONT_C.getRGB() | 0xFF000000, false);
+            guiGraphics.text(client.font, state.getHoveredTooltip(), textX, textY, theme.FONT_C.getRGB() | 0xFF000000, false);
         }
         
         guiMatrices.popMatrix();

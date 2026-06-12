@@ -59,13 +59,13 @@ public class MessageUtils {
             MutableComponent prefix = createBaityPrefix();
             MutableComponent messageText = createColoredText(message, 0xFFFFFF);
             MutableComponent fullMessage = prefix.append(messageText);
-            Minecraft.getInstance().gui.getChat().addMessage(fullMessage);
+            Minecraft.getInstance().gui.getChat().addClientSystemMessage(fullMessage);
         }
     }
     
     public static void sendCustomMessage(MutableComponent message) {
         if (Minecraft.getInstance().player != null) {
-            Minecraft.getInstance().gui.getChat().addMessage(message);
+            Minecraft.getInstance().gui.getChat().addClientSystemMessage(message);
         }
     }
 
@@ -132,8 +132,8 @@ public class MessageUtils {
         if (Minecraft.getInstance().player == null) return;
         int yellow = 0xFFFF00;
         MutableComponent line = Component.literal("--------------------------------------------------").withStyle(s -> s.withColor(yellow));
-        Minecraft.getInstance().gui.getChat().addMessage(line);
-        Minecraft.getInstance().gui.getChat().addMessage(Component.literal("检查你代理工具的 HTTP 代理端口，确保其与配置文件中的 BaityPresenceProxyPort 参数值相同。BaityPresenceProxyHost 为代理地址：代理运行在本机时一般填 127.0.0.1（或 localhost）；只有当代理运行在局域网的另一台设备上时，才需要填写那台设备的内网 IP。").withStyle(s -> s.withColor(0xFFFFFF)));
-        Minecraft.getInstance().gui.getChat().addMessage(line);
+        Minecraft.getInstance().gui.getChat().addClientSystemMessage(line);
+        Minecraft.getInstance().gui.getChat().addClientSystemMessage(Component.literal("检查你代理工具的 HTTP 代理端口，确保其与配置文件中的 BaityPresenceProxyPort 参数值相同。BaityPresenceProxyHost 为代理地址：代理运行在本机时一般填 127.0.0.1（或 localhost）；只有当代理运行在局域网的另一台设备上时，才需要填写那台设备的内网 IP。").withStyle(s -> s.withColor(0xFFFFFF)));
+        Minecraft.getInstance().gui.getChat().addClientSystemMessage(line);
     }
 }

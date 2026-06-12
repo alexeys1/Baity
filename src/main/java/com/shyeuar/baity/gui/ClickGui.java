@@ -21,7 +21,7 @@ import io.wispforest.owo.ui.core.OwoUIAdapter;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -177,13 +177,13 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     }
     
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         if (rootComponent != null) {
             rootComponent.setGuiGraphics(graphics);
         }
         
         if (graphics != null) {
-            super.render(graphics, mouseX, mouseY, delta);
+            super.extractRenderState(graphics, mouseX, mouseY, delta);
         }
     }
     
@@ -229,7 +229,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     @Override
     public boolean charTyped(CharacterEvent input) {
         int codePoint = input.codepoint();
-        if (inputHandler.handleCodePointTyped(codePoint, input.modifiers())) {
+        if (inputHandler.handleCodePointTyped(codePoint, 0)) {
             return true;
         }
         return super.charTyped(input);
@@ -304,7 +304,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         if (value instanceof String) {
             return (String) value;
         }
-        return value != null ? value.toString() : "☄ NOTSET";
+        return value != null ? value.toString() : "? NOTSET";
     }
     
     private void updateKeyDisplay() {

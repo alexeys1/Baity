@@ -822,9 +822,8 @@ public class ClickGuiInputHandler {
                 return true;
             } catch (Exception e) {
                 if (client.player != null) {
-                    client.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://github.com/raueyhs/Baity/releases/tag/baity-1.21.11-" + latest),
-                        false
+                    client.player.sendSystemMessage(
+                        net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://github.com/raueyhs/Baity/releases/tag/baity-1.21.11-" + latest)
                     );
                 }
                 return true;
@@ -889,9 +888,8 @@ public class ClickGuiInputHandler {
             } catch (Exception e) {
                 net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
                 if (mc.player != null) {
-                    mc.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://github.com/raueyhs/Baity"),
-                        false
+                    mc.player.sendSystemMessage(
+                        net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://github.com/raueyhs/Baity")
                     );
                 }
                 return true;
@@ -935,9 +933,8 @@ public class ClickGuiInputHandler {
             net.minecraft.util.Util.getPlatform().openUri(new java.net.URI("https://space.bilibili.com/522178337"));
         } catch (Exception e) {
             if (client.player != null) {
-                client.player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://space.bilibili.com/522178337"),
-                    false
+                client.player.sendSystemMessage(
+                    net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://space.bilibili.com/522178337")
                 );
             }
         }

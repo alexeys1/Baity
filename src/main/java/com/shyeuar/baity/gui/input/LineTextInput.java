@@ -4,7 +4,7 @@ import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings;
 import com.shyeuar.baity.gui.value.SliderValue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.InputQuirks;
 import org.lwjgl.glfw.GLFW;
 
@@ -191,7 +191,7 @@ public final class LineTextInput {
     }
 
     public static void drawTextWithBlinkCursor(
-        GuiGraphics context,
+        GuiGraphicsExtractor context,
         Font font,
         String text,
         Integer caretCp,
@@ -205,7 +205,7 @@ public final class LineTextInput {
             text = "";
         }
         if (!focused || !blinkOn) {
-            context.drawString(font, text, x, y, color, false);
+            context.text(font, text, x, y, color, false);
             return;
         }
         int cpCount = codePointCount(text);
@@ -213,16 +213,16 @@ public final class LineTextInput {
         int charPos = cpIndexToCharIndex(text, drawCp);
         String before = text.substring(0, charPos);
         String after = text.substring(charPos);
-        context.drawString(font, before, x, y, color, false);
+        context.text(font, before, x, y, color, false);
         int caretX = x + font.width(before);
         if (!after.isEmpty()) {
-            context.drawString(font, after, caretX, y, color, false);
+            context.text(font, after, caretX, y, color, false);
         }
         context.fill(caretX, y, caretX + 1, y + 9, color);
     }
 
     public static void drawCenteredClippedWithBlinkCursor(
-        GuiGraphics context,
+        GuiGraphicsExtractor context,
         Font font,
         String text,
         Integer caretCp,

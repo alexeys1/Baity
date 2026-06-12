@@ -194,7 +194,7 @@ public interface HudElement {
         return newDeltaY;
     }
     
-    void render(net.minecraft.client.gui.GuiGraphics guiGraphics, float partialTicks);
+    void render(net.minecraft.client.gui.GuiGraphicsExtractor guiGraphics, float partialTicks);
     
     boolean shouldRender();
 }

@@ -1,6 +1,6 @@
 package com.shyeuar.baity.mixin.accessor;
 
-import net.minecraft.client.renderer.block.model.ItemTransform;
+import net.minecraft.client.resources.model.cuboid.ItemTransform;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
@@ -15,7 +15,7 @@ public interface ItemStackRenderStateAccessor {
     
     @Mixin(ItemStackRenderState.LayerRenderState.class)
     interface LayerRenderStateAccessor {
-        @Accessor("transform")
+        @Accessor("itemTransform")
         ItemTransform baity$getTransform();
     }
 }

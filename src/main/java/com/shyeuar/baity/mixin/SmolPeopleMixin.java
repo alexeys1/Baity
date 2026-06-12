@@ -14,10 +14,9 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -28,6 +27,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 public class SmolPeopleMixin {
 
+    private static final String AVATAR_SUBMIT_NAME_DISPLAY =
+        "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V";
+
     @Mixin(AvatarRenderer.class)
     public static class SmolNameTagMixin {
 
@@ -35,7 +37,7 @@ public class SmolPeopleMixin {
         private static final float SMOL_NAMETAG_Y_OFFSET = -0.4f;
 
         @Inject(
-            method = "submitNameTag(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
+            method = AVATAR_SUBMIT_NAME_DISPLAY,
             at = @At("HEAD")
         )
         private void baity$adjustNameTagHeight(
@@ -126,18 +128,21 @@ public class SmolPeopleMixin {
         @Shadow
         private Vec3 position;
 
+        @Shadow
+        private Entity entity;
+
         @Unique
         private static final float SMOL_CAMERA_Y_OFFSET = -0.65f;
 
-        @Inject(method = "setup", at = @At("TAIL"))
-        private void baity$adjustCameraForSmolPeople(Level area, Entity focusedEntity, boolean thirdPerson, boolean inverseView, float tickDelta, CallbackInfo ci) {
+        @Inject(method = "alignWithEntity", at = @At("TAIL"))
+        private void baity$adjustCameraForSmolPeople(float tickDelta, CallbackInfo ci) {
             Module smolPeopleModule = ModuleManager.getModuleByName("SmolPeople");
             if (smolPeopleModule == null || !smolPeopleModule.isEnabled()) {
                 return;
             }
 
             Minecraft mc = Minecraft.getInstance();
-            if (mc.player == null || focusedEntity != mc.player) {
+            if (mc.player == null || this.entity != mc.player) {
                 return;
             }
             if (mc.options.getCameraType() != CameraType.THIRD_PERSON_FRONT) {

@@ -10,7 +10,7 @@ import com.shyeuar.baity.utils.SoundUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -45,12 +45,12 @@ public class SmolFriendsScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
+    public void extractBackground(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float delta) {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
-        this.renderMenuBackground(guiGraphics);
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float delta) {
+        this.extractMenuBackground(guiGraphics);
 
         Minecraft mc = Minecraft.getInstance();
         float sr = ClickGuiState.fixedScaleRatio(mc);
@@ -71,10 +71,10 @@ public class SmolFriendsScreen extends Screen {
 
         pose.popMatrix();
 
-        super.render(guiGraphics, mouseX, mouseY, delta);
+        super.extractRenderState(guiGraphics, mouseX, mouseY, delta);
     }
 
-    private void renderPanelContent(GuiGraphics guiGraphics, float mouseX, float mouseY, float delta) {
+    private void renderPanelContent(GuiGraphicsExtractor guiGraphics, float mouseX, float mouseY, float delta) {
         int panelX = 0;
         int panelY = 0;
         int panelX2 = PANEL_WIDTH;
@@ -85,7 +85,7 @@ public class SmolFriendsScreen extends Screen {
         GuiRenderUtil.stroke1px(guiGraphics, panelX, panelY, panelX2, panelY2, LinearTheme.BORDER_PRIMARY.getRGB());
         GuiRenderUtil.draw3DGradientRect(guiGraphics, panelX, panelY, panelX2, panelY + 22, LinearTheme.ACCENT_PRIMARY.getRGB(), LinearTheme.ACCENT_SECONDARY.getRGB(), 8f);
 
-        guiGraphics.drawString(this.font, "SmolPeople Friends", panelX + 10, panelY + 7, 0xFFFFFFFF, false);
+        guiGraphics.text(this.font, "SmolPeople Friends", panelX + 10, panelY + 7, 0xFFFFFFFF, false);
 
         int listLabelY = panelY + 30;
         int listTop = panelY + 42;
@@ -97,8 +97,8 @@ public class SmolFriendsScreen extends Screen {
         int friendsListX1 = lobbyListX2 + LIST_GAP;
         int friendsListX2 = panelX2 - LIST_PADDING;
 
-        guiGraphics.drawString(this.font, "Current Lobby", lobbyListX1 + 2, listLabelY, LinearTheme.TEXT_SECONDARY.getRGB(), false);
-        guiGraphics.drawString(this.font, "Friends", friendsListX1 + 2, listLabelY, LinearTheme.TEXT_SECONDARY.getRGB(), false);
+        guiGraphics.text(this.font, "Current Lobby", lobbyListX1 + 2, listLabelY, LinearTheme.TEXT_SECONDARY.getRGB(), false);
+        guiGraphics.text(this.font, "Friends", friendsListX1 + 2, listLabelY, LinearTheme.TEXT_SECONDARY.getRGB(), false);
 
         List<String> lobbyPlayers = SmolFriendManager.getCurrentLobbyPlayers();
         List<String> friends = SmolFriendManager.getFriends();
@@ -131,7 +131,7 @@ public class SmolFriendsScreen extends Screen {
         drawButton(guiGraphics, removeX1, buttonY, removeX2, buttonY + 18, "Remove", canRemove, imx, imy);
         String toggleText = ConfigManager.smolFriendsEnabled ? "FriendSmol ON" : "FriendSmol OFF";
         drawButton(guiGraphics, toggleX1, buttonY, toggleX2, buttonY + 18, toggleText, true, imx, imy);
-        guiGraphics.drawString(this.font, "Select player on the left click Add, or use /baity fadd <name>.", panelX + 12, panelY2 - 44, LinearTheme.TEXT_TERTIARY.getRGB(), false);
+        guiGraphics.text(this.font, "Select player on the left click Add, or use /baity fadd <name>.", panelX + 12, panelY2 - 44, LinearTheme.TEXT_TERTIARY.getRGB(), false);
     }
 
     @Override
@@ -297,7 +297,7 @@ public class SmolFriendsScreen extends Screen {
         return false;
     }
 
-    private void drawList(GuiGraphics guiGraphics, List<String> values,
+    private void drawList(GuiGraphicsExtractor guiGraphics, List<String> values,
                           int x1, int y1, int x2, int y2,
                           int scroll, int selected, int mouseX, int mouseY) {
         GuiRenderUtil.draw3DRect(guiGraphics, x1, y1, x2, y2, LinearTheme.BG_TERTIARY.getRGB(), 6f);
@@ -322,11 +322,11 @@ public class SmolFriendsScreen extends Screen {
             }
 
             int textColor = isSelected ? 0xFFFFFFFF : LinearTheme.TEXT_SECONDARY.getRGB();
-            guiGraphics.drawString(this.font, values.get(index), x1 + 6, rowY1 + 4, textColor, false);
+            guiGraphics.text(this.font, values.get(index), x1 + 6, rowY1 + 4, textColor, false);
         }
     }
 
-    private void drawButton(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, String text, boolean enabled, int mouseX, int mouseY) {
+    private void drawButton(GuiGraphicsExtractor guiGraphics, int x1, int y1, int x2, int y2, String text, boolean enabled, int mouseX, int mouseY) {
         boolean hovered = enabled && GuiRenderUtil.isHovered(x1, y1, x2, y2, mouseX, mouseY);
         int bgColor;
         if (!enabled) {
@@ -342,7 +342,7 @@ public class SmolFriendsScreen extends Screen {
 
         int textColor = enabled ? LinearTheme.TEXT_PRIMARY.getRGB() : LinearTheme.TEXT_TERTIARY.getRGB();
         int textX = x1 + (x2 - x1 - this.font.width(text)) / 2;
-        guiGraphics.drawString(this.font, text, textX, y1 + 5, textColor, false);
+        guiGraphics.text(this.font, text, textX, y1 + 5, textColor, false);
     }
 
     private int clampScroll(int scroll, int itemCount, int contentHeight) {

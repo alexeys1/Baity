@@ -8,9 +8,9 @@ import com.shyeuar.baity.utils.LocateUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -69,7 +69,7 @@ public class FishHookTimer implements HudElement {
         registerSounds();
         if (!clientHooksRegistered) {
             clientHooksRegistered = true;
-            ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> getInstance().resetFishingHookTimerTracking());
+            ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((client, world) -> getInstance().resetFishingHookTimerTracking());
             ClientEntityEvents.ENTITY_LOAD.register((entity, world) -> getInstance().onClientEntityLoadForFishingTimer(entity));
         }
     }
@@ -366,7 +366,7 @@ public class FishHookTimer implements HudElement {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, float partialTicks) {
+    public void render(GuiGraphicsExtractor guiGraphics, float partialTicks) {
         if (!ConfigManager.fishHookTimerEnabled || currentTick < 0) {
             return;
         }
@@ -411,7 +411,7 @@ public class FishHookTimer implements HudElement {
             matrices.translate((float) (px + w / 2.0), (float) (py + h / 2.0));
             matrices.scale(scale, scale);
             int tw = mc.font.width(txt);
-            guiGraphics.drawString(mc.font, txt, -tw / 2, -mc.font.lineHeight / 2, 0xFFFFFFFF, false);
+            guiGraphics.text(mc.font, txt, -tw / 2, -mc.font.lineHeight / 2, 0xFFFFFFFF, false);
             matrices.popMatrix();
         }
     }

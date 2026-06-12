@@ -8,7 +8,7 @@ import com.shyeuar.baity.mixin.accessor.FogRendererAccessor;
 import com.shyeuar.baity.utils.ModuleUtils;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.client.renderer.fog.environment.BlindnessFogEnvironment;
@@ -74,7 +74,7 @@ public class NodebuffMixin {
     public static class GuiMixin {
 
         @Inject(method = "renderConfusionOverlay", at = @At("HEAD"), cancellable = true)
-        private void baity$cancelNauseaOverlay(GuiGraphics guiGraphics, float intensity, CallbackInfo ci) {
+        private void baity$cancelNauseaOverlay(GuiGraphicsExtractor guiGraphics, float intensity, CallbackInfo ci) {
             if (shouldRemoveNausea()) {
                 ci.cancel();
             }

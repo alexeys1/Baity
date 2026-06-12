@@ -1,4 +1,4 @@
-classTweaker v1 named
+classTweaker v1 official
 accessible  method  net/minecraft/client/renderer/item/ItemStackRenderState firstLayer  ()Lnet/minecraft/client/renderer/item/ItemStackRenderState$LayerRenderState;
-accessible  field   net/minecraft/client/renderer/item/ItemStackRenderState$LayerRenderState    transform   Lnet/minecraft/client/renderer/block/model/ItemTransform;
+accessible  field   net/minecraft/client/renderer/item/ItemStackRenderState$LayerRenderState    itemTransform   Lnet/minecraft/client/resources/model/cuboid/ItemTransform;
 

@@ -3,7 +3,7 @@ package com.shyeuar.baity.render;
 import com.shyeuar.baity.render.interfaces.CameraRenderStateInterface;
 import com.shyeuar.baity.render.interfaces.EntityRenderStateInterface;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 
 import java.util.IdentityHashMap;
 import java.util.Map;

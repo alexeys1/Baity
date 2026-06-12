@@ -5,7 +5,7 @@ import com.shyeuar.baity.gui.theme.Theme;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -53,8 +53,8 @@ public class HudPositionEditor extends Screen {
     }
     
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        this.renderMenuBackground(guiGraphics);
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        this.extractMenuBackground(guiGraphics);
         
         int[] mousePos = HudScreenUtils.getMousePos();
         int guiMouseX = mousePos[0];
@@ -117,14 +117,14 @@ public class HudPositionEditor extends Screen {
             List<String> infoText = buildInfoText(displayElement);
             int textY = 10;
             for (String line : infoText) {
-                guiGraphics.drawString(this.font, line, 10, textY, 0xFFFFFFFF, true);
+                guiGraphics.text(this.font, line, 10, textY, 0xFFFFFFFF, true);
                 textY += 10;
             }
         } else {
-            guiGraphics.drawString(this.font, "§cHUD Position Editor", 10, 10, 0xFFFFFFFF, true);
-            guiGraphics.drawString(this.font, "§7Left-click and drag to move", 10, 20, 0xFFFFFFFF, true);
-            guiGraphics.drawString(this.font, "§7Scroll wheel to resize", 10, 30, 0xFFFFFFFF, true);
-            guiGraphics.drawString(this.font, "§7Right-click to reset position", 10, 40, 0xFFFFFFFF, true);
+            guiGraphics.text(this.font, "§cHUD Position Editor", 10, 10, 0xFFFFFFFF, true);
+            guiGraphics.text(this.font, "§7Left-click and drag to move", 10, 20, 0xFFFFFFFF, true);
+            guiGraphics.text(this.font, "§7Scroll wheel to resize", 10, 30, 0xFFFFFFFF, true);
+            guiGraphics.text(this.font, "§7Right-click to reset position", 10, 40, 0xFFFFFFFF, true);
         }
         
         matrices.popMatrix();

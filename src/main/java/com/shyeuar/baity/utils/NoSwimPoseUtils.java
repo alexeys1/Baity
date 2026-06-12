@@ -313,7 +313,7 @@ public final class NoSwimPoseUtils {
         return mc.player != null && mc.options.keyShift.isDown();
     }
 
-    public static boolean isWorldRenderContext(AvatarRenderState state) {
+    public static boolean isLevelRenderContext(AvatarRenderState state) {
         if (state instanceof EntityRenderStateInterface context) {
             return context.baity$isWorldCameraContext();
         }
@@ -321,7 +321,7 @@ public final class NoSwimPoseUtils {
     }
 
     public static boolean shouldClearSelfSwimState(AvatarRenderState state) {
-        return isSelfPlayerById(state.id) && isWorldRenderContext(state);
+        return isSelfPlayerById(state.id) && isLevelRenderContext(state);
     }
 
     public static boolean isAbnormalDrySwimPose() {

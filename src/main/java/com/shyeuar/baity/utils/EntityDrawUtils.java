@@ -2,6 +2,8 @@ package com.shyeuar.baity.utils;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 public final class EntityDrawUtils {
 
@@ -66,6 +68,65 @@ public final class EntityDrawUtils {
         drawLine(pose, lines, x2, y1, z1, x2, y2, z1, r, g, b, a);
         drawLine(pose, lines, x2, y1, z2, x2, y2, z2, r, g, b, a);
         drawLine(pose, lines, x1, y1, z2, x1, y2, z2, r, g, b, a);
+    }
+
+    public static void drawWireBoxAtWorld(
+            PoseStack matrices,
+            VertexConsumer lines,
+            AABB box,
+            Vec3 cameraPos,
+            float r,
+            float g,
+            float b,
+            float a
+    ) {
+        matrices.pushPose();
+        matrices.translate(box.minX - cameraPos.x, box.minY - cameraPos.y, box.minZ - cameraPos.z);
+        drawWireCube(
+                matrices.last(),
+                lines,
+                0,
+                0,
+                0,
+                box.getXsize(),
+                box.getYsize(),
+                box.getZsize(),
+                r,
+                g,
+                b,
+                a
+        );
+        matrices.popPose();
+    }
+
+    public static void drawLineAtWorld(
+            PoseStack matrices,
+            VertexConsumer lines,
+            Vec3 start,
+            Vec3 end,
+            Vec3 cameraPos,
+            float r,
+            float g,
+            float b,
+            float a
+    ) {
+        matrices.pushPose();
+        matrices.translate(start.x - cameraPos.x, start.y - cameraPos.y, start.z - cameraPos.z);
+        drawLine(
+                matrices.last(),
+                lines,
+                0,
+                0,
+                0,
+                end.x - start.x,
+                end.y - start.y,
+                end.z - start.z,
+                r,
+                g,
+                b,
+                a
+        );
+        matrices.popPose();
     }
 
     private EntityDrawUtils() {}

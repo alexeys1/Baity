@@ -5,8 +5,8 @@ import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Random;
 
 @Environment(EnvType.CLIENT)
-public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
+public class FancyDmgSplash implements LevelRenderEvents.AfterTranslucentFeatures {
     private static final Minecraft mc = Minecraft.getInstance();
     private static final List<DamageNumber> damageNumbers = new ArrayList<>();
     private static final List<ReactionText> reactionTexts = new ArrayList<>();
@@ -75,7 +75,7 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
             preserveComponentColors = false;
         }
 
-        damageNumbers.add(new DamageNumber(damage, finalTargetPos, finalTargetPos, formattedText, color,
+        damageNumbers.add(new DamageNumber(damage, finalTargetPos, formattedText, color,
                 System.currentTimeMillis(), preserveComponentColors));
 
         boolean genshinReaction = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(
@@ -153,21 +153,20 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
     }
     
     @Override
-    public void afterEntities(WorldRenderContext context) {
+    public void afterTranslucentFeatures(LevelRenderContext context) {
         Module m = ModuleManager.getModuleByName("FancyDmgSplash");
         if (m == null || !m.isEnabled()) return;
         if (mc.level == null || mc.player == null) return;
+
+        PoseStack matrices = context.poseStack();
+        MultiBufferSource buffers = context.bufferSource();
+        if (matrices == null || buffers == null) return;
         
         long currentTime = System.currentTimeMillis();
-        Vec3 cameraPos = context.worldState().cameraRenderState.pos;
+        Vec3 cameraPos = context.levelState().cameraRenderState.pos;
         Camera camera = mc.gameRenderer.getMainCamera();
         float cameraYaw = camera.yRot();
         float cameraPitch = camera.xRot();
-        
-        PoseStack matrices = context.matrices();
-        if (matrices == null) {
-            matrices = new PoseStack();
-        }
         
         if (currentTime - lastWetHealCheckTime >= WET_HEAL_CHECK_INTERVAL_MS) {
             lastWetHealCheckTime = currentTime;
@@ -191,11 +190,15 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         }
         
         for (DamageNumber dn : damageNumbers) {
-            renderDamageNumber(matrices, dn, cameraPos, cameraYaw, cameraPitch, currentTime);
+            renderDamageNumber(matrices, buffers, dn, cameraPos, cameraYaw, cameraPitch, currentTime);
         }
         
         for (ReactionText rt : reactionTexts) {
-            renderReactionText(matrices, rt, cameraPos, cameraYaw, cameraPitch, currentTime);
+            renderReactionText(matrices, buffers, rt, cameraPos, cameraYaw, cameraPitch, currentTime);
+        }
+
+        if (buffers instanceof MultiBufferSource.BufferSource bufferSource) {
+            bufferSource.endBatch();
         }
     }
     
@@ -245,8 +248,15 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
         }
     }
     
-    private void renderDamageNumber(PoseStack matrices, DamageNumber dn, Vec3 cameraPos, 
-                                     float cameraYaw, float cameraPitch, long currentTime) {
+    private void renderDamageNumber(
+            PoseStack matrices,
+            MultiBufferSource buffers,
+            DamageNumber dn,
+            Vec3 cameraPos,
+            float cameraYaw,
+            float cameraPitch,
+            long currentTime
+    ) {
         float totalProgress = (float)(currentTime - dn.startTime) / ANIMATION_DURATION_MS;
         totalProgress = Math.min(1.0f, Math.max(0.0f, totalProgress));
         
@@ -335,21 +345,24 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
             
             Font textRenderer = mc.font;
             int textWidth = textRenderer.width(styledText);
-            
-            MultiBufferSource.BufferSource immediate = mc.renderBuffers().bufferSource();
-            
-            textRenderer.drawInBatch(styledText, -textWidth / 2.0f, 0, finalColor, false, 
-                matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
-            
-            immediate.endBatch();
+
+            textRenderer.drawInBatch(styledText, -textWidth / 2.0f, 0, finalColor, false,
+                matrices.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
         } finally {
             matrices.popPose();
         }
     }
     
     
-    private void renderReactionText(PoseStack matrices, ReactionText rt, Vec3 cameraPos,
-                                    float cameraYaw, float cameraPitch, long currentTime) {
+    private void renderReactionText(
+            PoseStack matrices,
+            MultiBufferSource buffers,
+            ReactionText rt,
+            Vec3 cameraPos,
+            float cameraYaw,
+            float cameraPitch,
+            long currentTime
+    ) {
         float totalProgress = (float)(currentTime - rt.startTime) / ANIMATION_DURATION_MS;
         totalProgress = Math.min(1.0f, Math.max(0.0f, totalProgress));
         
@@ -408,32 +421,25 @@ public class FancyDmgSplash implements WorldRenderEvents.AfterEntities {
             
             Font textRenderer = mc.font;
             int textWidth = textRenderer.width(styledText);
-            
-            MultiBufferSource.BufferSource immediate = mc.renderBuffers().bufferSource();
-            
-            textRenderer.drawInBatch(styledText, -textWidth / 2.0f, 0, finalColor, false, 
-                matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
-            
-            immediate.endBatch();
+
+            textRenderer.drawInBatch(styledText, -textWidth / 2.0f, 0, finalColor, false,
+                matrices.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
         } finally {
             matrices.popPose();
         }
     }
     
-    @SuppressWarnings("unused")
     private static class DamageNumber {
         final double damage;
-        final Vec3 spawnPos;   
-        final Vec3 targetPos;  
+        final Vec3 targetPos;
         final Component originalText;
         final int color;
         final long startTime;
         final boolean preserveComponentColors;
 
-        DamageNumber(double damage, Vec3 spawnPos, Vec3 targetPos, Component originalText, int color, long startTime,
+        DamageNumber(double damage, Vec3 targetPos, Component originalText, int color, long startTime,
                        boolean preserveComponentColors) {
             this.damage = damage;
-            this.spawnPos = spawnPos;
             this.targetPos = targetPos;
             this.originalText = originalText;
             this.color = color;

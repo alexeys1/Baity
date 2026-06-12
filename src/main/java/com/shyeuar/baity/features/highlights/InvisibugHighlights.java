@@ -9,8 +9,8 @@ import com.shyeuar.baity.utils.EntityDrawUtils;
 import com.shyeuar.baity.utils.LocateUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.entity.LivingEntity;
@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 @Environment(EnvType.CLIENT)
-public final class InvisibugHighlights implements WorldRenderEvents.AfterEntities {
+public final class InvisibugHighlights implements LevelRenderEvents.AfterSolidFeatures {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
@@ -138,7 +138,7 @@ public final class InvisibugHighlights implements WorldRenderEvents.AfterEntitie
     }
 
     @Override
-    public void afterEntities(WorldRenderContext context) {
+    public void afterSolidFeatures(LevelRenderContext context) {
         Module module = ModuleManager.getModuleByName("Highlights");
         if (module == null || !module.isEnabled()) {
             return;
@@ -155,9 +155,9 @@ public final class InvisibugHighlights implements WorldRenderEvents.AfterEntitie
             return;
         }
 
-        Vec3 cameraPos = context.worldState().cameraRenderState.pos;
-        PoseStack matrices = context.matrices();
-        var buffers = context.consumers();
+        Vec3 cameraPos = context.levelState().cameraRenderState.pos;
+        PoseStack matrices = context.poseStack();
+        var buffers = context.bufferSource();
         if (matrices == null || buffers == null) {
             return;
         }
@@ -193,21 +193,13 @@ public final class InvisibugHighlights implements WorldRenderEvents.AfterEntitie
         }
 
         VertexConsumer lines = buffers.getBuffer(RenderTypes.lines());
-        matrices.pushPose();
-        PoseStack.Pose pose = matrices.last();
-
         for (AABB box : boxesToRender) {
-            double x1 = box.minX - cameraPos.x;
-            double y1 = box.minY - cameraPos.y;
-            double z1 = box.minZ - cameraPos.z;
-            double x2 = box.maxX - cameraPos.x;
-            double y2 = box.maxY - cameraPos.y;
-            double z2 = box.maxZ - cameraPos.z;
-
-            EntityDrawUtils.drawWireCube(pose, lines, x1, y1, z1, x2, y2, z2, R, G, B, A);
+            EntityDrawUtils.drawWireBoxAtWorld(matrices, lines, box, cameraPos, R, G, B, A);
         }
 
-        matrices.popPose();
+        if (buffers instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource) {
+            bufferSource.endBatch(RenderTypes.lines());
+        }
     }
 
 }

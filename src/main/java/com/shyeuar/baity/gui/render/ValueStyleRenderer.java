@@ -16,7 +16,7 @@ import com.shyeuar.baity.gui.value.TextLineInputValue;
 import com.shyeuar.baity.gui.value.ValueTypeRegistry;
 import com.shyeuar.baity.utils.NickRenderUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public class ValueStyleRenderer {
 
@@ -222,7 +222,7 @@ public class ValueStyleRenderer {
                deleteX1, toggleY1, deleteX2, toggleY2);
    }
 
-   private static void drawCenteredClippedText(GuiGraphics context, net.minecraft.client.gui.Font font,
+   private static void drawCenteredClippedText(GuiGraphicsExtractor context, net.minecraft.client.gui.Font font,
                                                String text, float lineX1, float lineY, float lineX2, int color) {
        LineTextInput.drawCenteredClippedWithBlinkCursor(
            context, font, text, 0, lineX1, lineY, lineX2, color, false);
@@ -279,16 +279,16 @@ public class ValueStyleRenderer {
                withReset, hasSymbolInput);
    }
 
-   private static void drawCenteredButtonLabel(GuiGraphics context, net.minecraft.client.gui.Font font,
+   private static void drawCenteredButtonLabel(GuiGraphicsExtractor context, net.minecraft.client.gui.Font font,
                                                String text, float x1, float y1, float x2, float y2, int color) {
        int w = font.width(text);
        int h = font.lineHeight;
        int x = (int) (x1 + (x2 - x1 - w) * 0.5f);
        int y = (int) (y1 + (y2 - y1 - h) * 0.5f);
-       context.drawString(font, text, x, y, color, false);
+       context.text(font, text, x, y, color, false);
    }
 
-   private static void drawThickLine(GuiGraphics context, float x0, float y0, float x1, float y1, int thickness, int color) {
+   private static void drawThickLine(GuiGraphicsExtractor context, float x0, float y0, float x1, float y1, int thickness, int color) {
        int steps = Math.max(1, (int) (Math.hypot(x1 - x0, y1 - y0) * 2f));
        for (int i = 0; i <= steps; i++) {
            float t = i / (float) steps;
@@ -299,7 +299,7 @@ public class ValueStyleRenderer {
        }
    }
 
-   private static void drawToggleCheckmark(GuiGraphics context, float x1, float y1, float x2, float y2, int color) {
+   private static void drawToggleCheckmark(GuiGraphicsExtractor context, float x1, float y1, float x2, float y2, int color) {
        float xL = x1 + 4f;
        float yL = y1 + (y2 - y1) * 0.58f;
        float xM = x1 + (x2 - x1) * 0.36f;
@@ -310,7 +310,7 @@ public class ValueStyleRenderer {
        drawThickLine(context, xM, yM, xR, yR, 2, color);
    }
 
-   private static void renderGradientEditorBottomControls(GuiGraphics context, Minecraft client, Theme theme,
+   private static void renderGradientEditorBottomControls(GuiGraphicsExtractor context, Minecraft client, Theme theme,
                                                           GradientEditorBottomLayout bottom, String selectedHex,
                                                           boolean editingHex, int localAlpha,
                                                           ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo,
@@ -320,7 +320,7 @@ public class ValueStyleRenderer {
                null, false, null, localAlpha, hoveredTooltipInfo, mouseX, mouseY, syncTooltip);
    }
 
-   private static void renderGradientEditorBottomControls(GuiGraphics context, Minecraft client, Theme theme,
+   private static void renderGradientEditorBottomControls(GuiGraphicsExtractor context, Minecraft client, Theme theme,
                                                           GradientEditorBottomLayout bottom, String selectedHex,
                                                           boolean editingHex, Integer editingHexCaretCp,
                                                           String symbolDisplay,
@@ -351,7 +351,7 @@ public class ValueStyleRenderer {
                (int) bottom.inputX1, hexTextY, inputTextColor, true,
                LineTextInput.shouldBlinkCursor());
        } else {
-           context.drawString(client.font, selectedHex, (int) bottom.inputX1, hexTextY, inputTextColor, false);
+           context.text(client.font, selectedHex, (int) bottom.inputX1, hexTextY, inputTextColor, false);
        }
        int lineColor = inputHovered || editingHex
                ? hoverYellow
@@ -379,7 +379,7 @@ public class ValueStyleRenderer {
        }
    }
    
-   public static void renderValue(GuiGraphics context, Minecraft client, Module module, Value value, Theme theme,
+   public static void renderValue(GuiGraphicsExtractor context, Minecraft client, Module module, Value value, Theme theme,
                                  float x1, float y, float x2, float subOptionHeight,
                                  float mouseX, float mouseY, int localAlpha,
                                  java.util.function.Function<String, String> getTooltipText,
@@ -438,7 +438,7 @@ public class ValueStyleRenderer {
        }
    }
 
-   public static void renderTextLineInputValue(GuiGraphics context, Minecraft client, Module module, TextLineInputValue value, Theme theme,
+   public static void renderTextLineInputValue(GuiGraphicsExtractor context, Minecraft client, Module module, TextLineInputValue value, Theme theme,
                                                float x1, float y, float x2, float subOptionHeight,
                                                float mouseX, float mouseY, int localAlpha,
                                                com.shyeuar.baity.gui.internal.ClickGuiState.TextInputInfo editingTextInput,
@@ -452,7 +452,7 @@ public class ValueStyleRenderer {
        GuiRenderUtil.draw3DRect(context, x1, y, x2, y + subOptionHeight, valueColor, 6f);
 
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       context.drawString(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
+       context.text(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
 
        float lineX1 = x1 + (x2 - x1) * 0.52f;
        float lineX2 = x2 - 10;
@@ -496,11 +496,11 @@ public class ValueStyleRenderer {
                (int) lineX1, textY, valueTextColor, true,
                LineTextInput.shouldBlinkCursor());
        } else {
-           context.drawString(client.font, preview, (int) lineX1, textY, valueTextColor, false);
+           context.text(client.font, preview, (int) lineX1, textY, valueTextColor, false);
        }
    }
 
-   public static void renderGroupValue(GuiGraphics context, Minecraft client, GroupValue groupValue, Theme theme,
+   public static void renderGroupValue(GuiGraphicsExtractor context, Minecraft client, GroupValue groupValue, Theme theme,
                                        float x1, float y, float x2, float subOptionHeight,
                                        float mouseX, float mouseY, int localAlpha,
                                        java.util.function.Function<String, String> getTooltipText,
@@ -523,15 +523,15 @@ public class ValueStyleRenderer {
       }
 
       int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-      context.drawString(client.font, groupValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
+      context.text(client.font, groupValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
 
       String arrow = groupValue.isExpanded() ? "▼" : "▶";
       int arrowColor = (theme.FONT_C.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-      context.drawString(client.font, arrow, (int)(x2 - 16), (int)(y + 6), arrowColor, false);
+      context.text(client.font, arrow, (int)(x2 - 16), (int)(y + 6), arrowColor, false);
    }
 
    
-   public static void renderDefaultValue(GuiGraphics context, Minecraft client, Module module, Value value, Theme theme,
+   public static void renderDefaultValue(GuiGraphicsExtractor context, Minecraft client, Module module, Value value, Theme theme,
                                        float x1, float y, float x2, float subOptionHeight,
                                        float mouseX, float mouseY, int localAlpha,
                                        java.util.function.Function<String, String> getTooltipText,
@@ -557,7 +557,7 @@ public class ValueStyleRenderer {
        
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        String displayText = value.getDisplayName();
-       context.drawString(client.font, displayText, (int)(x1 + 8), (int)(y + 6), textColor, false);
+       context.text(client.font, displayText, (int)(x1 + 8), (int)(y + 6), textColor, false);
        
        String status;
        int statusColor;
@@ -586,10 +586,10 @@ public class ValueStyleRenderer {
        } else if (val instanceof String) {
            statusX = (int)(x2 - 80);
        }
-       context.drawString(client.font, status, statusX, (int)(y + 6), statusColor, false);
+       context.text(client.font, status, statusX, (int)(y + 6), statusColor, false);
    }
    
-   public static void renderButtonLikeValue(GuiGraphics context, Minecraft client, Module module, ButtonValue buttonValue, Theme theme,
+   public static void renderButtonLikeValue(GuiGraphicsExtractor context, Minecraft client, Module module, ButtonValue buttonValue, Theme theme,
                                              float x1, float y, float x2, float subOptionHeight,
                                              float mouseX, float mouseY, int localAlpha,
                                              java.util.function.Function<Object, String> getDisplayTextFormatter,
@@ -614,7 +614,7 @@ public class ValueStyleRenderer {
        }
        
        int textColor = (theme.FONT_C.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       context.drawString(client.font, buttonValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
+       context.text(client.font, buttonValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
        
        boolean isListeningThis = listeningButtonValueName != null && listeningButtonValueName.equals(buttonValue.getName());
        String boxText;
@@ -628,13 +628,13 @@ public class ValueStyleRenderer {
    }
 
    
-   public static void renderSliderValue(GuiGraphics context, Minecraft client, Module module, SliderValue sliderValue, Theme theme,
+   public static void renderSliderValue(GuiGraphicsExtractor context, Minecraft client, Module module, SliderValue sliderValue, Theme theme,
                                         float x1, float y, float x2, float subOptionHeight,
                                         float mouseX, float mouseY, int localAlpha) {
        renderSliderValue(context, client, module, sliderValue, theme, x1, y, x2, subOptionHeight, mouseX, mouseY, localAlpha, null, "", 0);
    }
    
-   public static void renderSliderValue(GuiGraphics context, Minecraft client, Module module, SliderValue sliderValue, Theme theme,
+   public static void renderSliderValue(GuiGraphicsExtractor context, Minecraft client, Module module, SliderValue sliderValue, Theme theme,
                                         float x1, float y, float x2, float subOptionHeight,
                                         float mouseX, float mouseY, int localAlpha,
                                         com.shyeuar.baity.gui.internal.ClickGuiState.SliderInputInfo editingSlider,
@@ -646,7 +646,7 @@ public class ValueStyleRenderer {
        GuiRenderUtil.draw3DRect(context, x1, y, x2, y + subOptionHeight, valueColor, 6f);
        
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       context.drawString(client.font, sliderValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
+       context.text(client.font, sliderValue.getDisplayName(), (int)(x1 + 8), (int)(y + 6), textColor, false);
        
        int subX2 = (int)(x2 - 4);
        
@@ -666,7 +666,7 @@ public class ValueStyleRenderer {
        int resetTextColor = (theme.FONT_C.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        String resetText = "Reset";
        int resetTextWidth = client.font.width(resetText);
-       context.drawString(client.font, resetText, resetBoxX + (resetBoxWidth - resetTextWidth) / 2, resetBoxY + 2, resetTextColor, false);
+       context.text(client.font, resetText, resetBoxX + (resetBoxWidth - resetTextWidth) / 2, resetBoxY + 2, resetTextColor, false);
        
        boolean isEditing = editingSlider != null && 
                           editingSlider.moduleName.equals(module.getName()) && 
@@ -692,7 +692,7 @@ public class ValueStyleRenderer {
                textX, valueDisplayY, valueTextColor, true,
                LineTextInput.shouldBlinkCursor());
        } else {
-           context.drawString(client.font, valueText, textX, valueDisplayY, valueTextColor, false);
+           context.text(client.font, valueText, textX, valueDisplayY, valueTextColor, false);
        }
        
        int sliderWidth = 80;
@@ -725,7 +725,7 @@ public class ValueStyleRenderer {
        GuiRenderUtil.drawCircle(context, handleX, handleY, handleRadius, handleColor);
    }
 
-   public static void renderColorPaletteValue(GuiGraphics context, Minecraft client, Module module,
+   public static void renderColorPaletteValue(GuiGraphicsExtractor context, Minecraft client, Module module,
                                               com.shyeuar.baity.gui.value.ColorPaletteValue paletteValue, Theme theme,
                                               float x1, float y, float x2, float subOptionHeight,
                                               float mouseX, float mouseY, int localAlpha) {
@@ -738,7 +738,7 @@ public class ValueStyleRenderer {
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        String displayText = paletteValue.getDisplayName();
        float textY = y + 6;
-       context.drawString(client.font, displayText, (int)(x1 + 8), (int) textY, textColor, false);
+       context.text(client.font, displayText, (int)(x1 + 8), (int) textY, textColor, false);
        
        int colorCount = paletteValue.getColorCount();
        float colorAreaY = y + subOptionHeight; 
@@ -816,7 +816,7 @@ public class ValueStyleRenderer {
        return new FancyDmgPresetGridLayout(boxSize, spacing, x1 + 8f, y + subOptionHeight, rowStride, editFramePad);
    }
 
-   public static void renderFancyDmgPresetValue(GuiGraphics context, Minecraft client,
+   public static void renderFancyDmgPresetValue(GuiGraphicsExtractor context, Minecraft client,
                                                com.shyeuar.baity.gui.value.FancyDmgSplashPresetValue paletteValue,
                                                Theme theme, float x1, float y, float x2, float subOptionHeight,
                                                float mouseX, float mouseY, int localAlpha,
@@ -830,11 +830,11 @@ public class ValueStyleRenderer {
        GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + paletteHeight, 6, valueColor);
 
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       context.drawString(client.font, paletteValue.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
+       context.text(client.font, paletteValue.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
        String presetHint = "(Lclick to select,Rclick to edit)";
        int hintColor = (new java.awt.Color(160, 160, 160, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        int hintW = client.font.width(presetHint);
-       context.drawString(client.font, presetHint, (int) (x2 - 8 - hintW), (int) (y + 6), hintColor, false);
+       context.text(client.font, presetHint, (int) (x2 - 8 - hintW), (int) (y + 6), hintColor, false);
 
        int themeDarkBorder = new java.awt.Color(50, 50, 50, 255).getRGB();
        int themePurpleBorder = theme.BG_3.getRGB();
@@ -879,7 +879,7 @@ public class ValueStyleRenderer {
        }
    }
 
-   private static void drawPresetSwatch(GuiGraphics context, Minecraft client, float boxX, float boxY, float boxSize,
+   private static void drawPresetSwatch(GuiGraphicsExtractor context, Minecraft client, float boxX, float boxY, float boxSize,
                                         int start, int end, boolean selected, boolean editing, boolean hovered,
                                         float editFramePad, int themeDarkBorder, int themePurpleBorder, int localAlpha) {
        int inner = (int) (boxSize - 2);
@@ -913,7 +913,7 @@ public class ValueStyleRenderer {
        }
    }
 
-   private static void drawPresetDeleteButton(GuiGraphics context, float x1, float y1, float size, boolean armed,
+   private static void drawPresetDeleteButton(GuiGraphicsExtractor context, float x1, float y1, float size, boolean armed,
                                               boolean hovered, boolean enabled, int localAlpha, int purple) {
        int greyBorder = (new java.awt.Color(220, 220, 220, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        int greyBg = (new java.awt.Color(30, 30, 30, 80).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
@@ -938,14 +938,14 @@ public class ValueStyleRenderer {
        drawRadialCloseIcon(context, x1 + size * 0.5f, y1 + size * 0.5f, size, iconColor);
    }
 
-   private static void drawRadialCloseIcon(GuiGraphics context, float centerX, float centerY, float buttonSize, int color) {
+   private static void drawRadialCloseIcon(GuiGraphicsExtractor context, float centerX, float centerY, float buttonSize, int color) {
        float half = buttonSize * 0.22f;
        int stroke = Math.max(2, Math.round(buttonSize * 0.11f));
        drawThickLine(context, centerX - half, centerY - half, centerX + half, centerY + half, stroke, color);
        drawThickLine(context, centerX - half, centerY + half, centerX + half, centerY - half, stroke, color);
    }
 
-   private static void drawPresetEditingMarker(GuiGraphics context, Minecraft client, float frameX2, float frameY1,
+   private static void drawPresetEditingMarker(GuiGraphicsExtractor context, Minecraft client, float frameX2, float frameY1,
                                                float boxSize, int localAlpha) {
        String mark = "✯";
        float scale = Math.min(0.9f, boxSize / client.font.lineHeight * 0.55f);
@@ -958,7 +958,7 @@ public class ValueStyleRenderer {
        drawScaledLabel(context, client, mark, markX, markY, color, scale);
    }
 
-   private static void drawAddPresetButton(GuiGraphics context, Minecraft client, float boxX, float boxY, float boxSize,
+   private static void drawAddPresetButton(GuiGraphicsExtractor context, Minecraft client, float boxX, float boxY, float boxSize,
                                            boolean hovered, int themeDarkBorder, int themePurpleBorder, int localAlpha) {
        int bg = ((new java.awt.Color(28, 28, 28, 200).getRGB()) & 0x00FFFFFF) | (localAlpha << 24);
        GuiRenderUtil.drawRoundedRect(context, boxX + 1, boxY + 1, boxX + boxSize - 1, boxY + boxSize - 1, 2, bg);
@@ -971,7 +971,7 @@ public class ValueStyleRenderer {
        int h = client.font.lineHeight;
        int tx = (int) (boxX + (boxSize - w) * 0.5f);
        int ty = (int) (boxY + (boxSize - h) * 0.5f);
-       context.drawString(client.font, plus, tx, ty, 0xFFFFFFFF | (localAlpha << 24), false);
+       context.text(client.font, plus, tx, ty, 0xFFFFFFFF | (localAlpha << 24), false);
    }
 
    public static float getFancyDmgPresetHeight(float subOptionHeight) {
@@ -1009,7 +1009,7 @@ public class ValueStyleRenderer {
        return subOptionHeight * 8;
    }
 
-   public static void renderCrosshairPainterValue(GuiGraphics context, Minecraft client, CrosshairPainterValue value, Theme theme,
+   public static void renderCrosshairPainterValue(GuiGraphicsExtractor context, Minecraft client, CrosshairPainterValue value, Theme theme,
                                                   float x1, float y, float x2, float subOptionHeight,
                                                   float mouseX, float mouseY, int localAlpha,
                                                   ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo) {
@@ -1021,7 +1021,7 @@ public class ValueStyleRenderer {
        GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + l.blockHeight, 6, bg);
        GuiRenderUtil.drawRoundedRectOutline(context, x1, y, x2, y + l.blockHeight, 6, border);
        GuiRenderUtil.drawRoundedRectOutline(context, l.previewX1, l.previewY1, l.previewX2, l.previewY2, 0, border);
-       context.drawString(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
+       context.text(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
 
        int canvasBg = (new java.awt.Color(22, 23, 27, 210).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        GuiRenderUtil.drawRoundedRect(context, l.canvasX1, l.canvasY1, l.canvasX2, l.canvasY2, 4, canvasBg);
@@ -1073,8 +1073,8 @@ public class ValueStyleRenderer {
        GuiRenderUtil.drawRoundedRectOutline(context, l.staticBtnX1, l.staticBtnY1, l.staticBtnX2, l.staticBtnY2, 3, border);
 
        int labelColor = (theme.FONT_C.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       context.drawString(client.font, "AL", (int) (l.activeBtnX1 + (l.activeBtnX2 - l.activeBtnX1 - client.font.width("AL")) * 0.5f), (int) (l.activeBtnY1 + 4), labelColor, false);
-       context.drawString(client.font, "SL", (int) (l.staticBtnX1 + (l.staticBtnX2 - l.staticBtnX1 - client.font.width("SL")) * 0.5f), (int) (l.staticBtnY1 + 4), labelColor, false);
+       context.text(client.font, "AL", (int) (l.activeBtnX1 + (l.activeBtnX2 - l.activeBtnX1 - client.font.width("AL")) * 0.5f), (int) (l.activeBtnY1 + 4), labelColor, false);
+       context.text(client.font, "SL", (int) (l.staticBtnX1 + (l.staticBtnX2 - l.staticBtnX1 - client.font.width("SL")) * 0.5f), (int) (l.staticBtnY1 + 4), labelColor, false);
 
        if (hoveredTooltipInfo != null) {
            if (GuiRenderUtil.isHovered(l.activeBtnX1, l.activeBtnY1, l.activeBtnX2, l.activeBtnY2, mouseX, mouseY)) {
@@ -1095,12 +1095,12 @@ public class ValueStyleRenderer {
        int resetTextColor = value.isResetArmed()
            ? ((com.shyeuar.baity.config.DevConfig.DEV_PREFIX_COLOR & 0x00FFFFFF) | (localAlpha << 24))
            : textColor;
-       context.drawString(client.font, l.resetText, (int) (l.resetX1 + (l.resetX2 - l.resetX1 - client.font.width(l.resetText)) * 0.5f), (int) (l.resetY1 + 4), resetTextColor, false);
+       context.text(client.font, l.resetText, (int) (l.resetX1 + (l.resetX2 - l.resetX1 - client.font.width(l.resetText)) * 0.5f), (int) (l.resetY1 + 4), resetTextColor, false);
 
        drawPreviewCrosshair(context, l.previewX1, l.previewY1, l.previewX2 - l.previewX1, l.previewY2 - l.previewY1, value, localAlpha);
    }
 
-   private static void drawPreviewCrosshair(GuiGraphics g, float x, float y, float w, float h, CrosshairPainterValue value, int localAlpha) {
+   private static void drawPreviewCrosshair(GuiGraphicsExtractor g, float x, float y, float w, float h, CrosshairPainterValue value, int localAlpha) {
        int n = value.getSize();
        int center = n / 2;
        int pxSize = 1;
@@ -1169,7 +1169,7 @@ public class ValueStyleRenderer {
        return net.minecraft.util.Mth.hsvToRgb(hue, saturation, (float) lightness);
    }
 
-   public static void renderGradientEditorValue(GuiGraphics context, Minecraft client, GradientEditorValue value, Theme theme,
+   public static void renderGradientEditorValue(GuiGraphicsExtractor context, Minecraft client, GradientEditorValue value, Theme theme,
                                                 float x1, float y, float x2, float subOptionHeight, float mouseX, float mouseY, int localAlpha,
                                                 com.shyeuar.baity.gui.internal.ClickGuiState.GradientInputInfo editingGradient,
                                                 String gradientInputText,
@@ -1180,7 +1180,7 @@ public class ValueStyleRenderer {
        GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + blockHeight, 6, bg);
 
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       context.drawString(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
+       context.text(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
 
        String selectedHex = value.getSelectedHex();
        boolean editingHex = editingGradient != null
@@ -1258,10 +1258,10 @@ public class ValueStyleRenderer {
       } finally {
           NickRenderUtils.endPreviewOverride();
       }
-      context.drawString(client.font, seq, (int) (x1 + 10), (int) (y + blockHeight - 18), 0xFFFFFFFF, false);
+      context.text(client.font, seq, (int) (x1 + 10), (int) (y + blockHeight - 18), 0xFFFFFFFF, false);
    }
 
-   public static void renderFancyDmgColorEditorValue(GuiGraphics context, Minecraft client,
+   public static void renderFancyDmgColorEditorValue(GuiGraphicsExtractor context, Minecraft client,
                                                      com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue value,
                                                      Theme theme, float x1, float y, float x2, float subOptionHeight,
                                                      float mouseX, float mouseY, int localAlpha,
@@ -1276,7 +1276,7 @@ public class ValueStyleRenderer {
 
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        int purple = (theme.BG_3.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       context.drawString(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
+       context.text(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
 
        String selectedHex = gradient.getSelectedHex();
        String symbolDisplay = value.getSymbols();
@@ -1362,7 +1362,7 @@ public class ValueStyleRenderer {
        int previewX = (int) (row.previewX1 + (row.previewX2 - row.previewX1 - previewWidth) * 0.5f);
        int previewY = (int) (row.previewY1 + (row.previewY2 - row.previewY1 - client.font.lineHeight) * 0.5f);
        context.enableScissor((int) row.previewX1 + 2, (int) row.previewY1 + 1, (int) row.previewX2 - 2, (int) row.previewY2 - 1);
-       context.drawString(client.font, preview, previewX, previewY, 0xFFFFFFFF, false);
+       context.text(client.font, preview, previewX, previewY, 0xFFFFFFFF, false);
        context.disableScissor();
        if (previewHovered && hoveredTooltipInfo != null) {
            hoveredTooltipInfo.tooltip = "click to change the editing preset";
@@ -1401,7 +1401,7 @@ public class ValueStyleRenderer {
        }
    }
 
-   public static void renderEnchantLoreColorEditorValue(GuiGraphics context, Minecraft client, EnchantLoreColorEditorValue value, Theme theme,
+   public static void renderEnchantLoreColorEditorValue(GuiGraphicsExtractor context, Minecraft client, EnchantLoreColorEditorValue value, Theme theme,
                                                         float x1, float y, float x2, float subOptionHeight, float mouseX, float mouseY, int localAlpha,
                                                         com.shyeuar.baity.gui.internal.ClickGuiState.GradientInputInfo editingGradient,
                                                         String gradientInputText,
@@ -1414,7 +1414,7 @@ public class ValueStyleRenderer {
 
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
        int purple = (theme.BG_3.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       context.drawString(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
+       context.text(client.font, value.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
 
        String selectedHex = gradient.getSelectedHex();
        if (editingGradient != null && value.getName().equals(editingGradient.valueName)) {
@@ -1491,7 +1491,7 @@ public class ValueStyleRenderer {
        int previewWidth = client.font.width(tierPreview);
        int previewX = (int) (tierBtnX1 + (tierBtnX2 - tierBtnX1 - previewWidth) * 0.5f);
        int previewY = (int) (tierBtnY1 + (tierBtnY2 - tierBtnY1 - client.font.lineHeight) * 0.5f);
-       context.drawString(client.font, tierPreview, previewX, previewY, 0xFFFFFFFF, false);
+       context.text(client.font, tierPreview, previewX, previewY, 0xFFFFFFFF, false);
        if (tierHovered && hoveredTooltipInfo != null) {
            hoveredTooltipInfo.tooltip = "click to change the editing rarity";
            hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal(hoveredTooltipInfo.tooltip);
@@ -1525,7 +1525,7 @@ public class ValueStyleRenderer {
        }
    }
 
-   private static void drawEnchantToggle(GuiGraphics context, Minecraft client, float x1, float y1, float x2, float y2,
+   private static void drawEnchantToggle(GuiGraphicsExtractor context, Minecraft client, float x1, float y1, float x2, float y2,
                                          boolean checked, float mouseX, float mouseY, int localAlpha, int purple, int textColor) {
        boolean hovered = GuiRenderUtil.isHovered(x1, y1, x2, y2, mouseX, mouseY);
        int border = hovered || checked ? purple : ((new java.awt.Color(220, 220, 220, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24));
@@ -1541,7 +1541,7 @@ public class ValueStyleRenderer {
        }
    }
 
-   private static void drawHueSatMap(GuiGraphics context, float x1, float y1, float x2, float y2, int alpha) {
+   private static void drawHueSatMap(GuiGraphicsExtractor context, float x1, float y1, float x2, float y2, int alpha) {
        int width = Math.max(1, (int) (x2 - x1));
        int height = Math.max(1, (int) (y2 - y1));
        for (int px = 0; px < width; px += 8) {
@@ -1555,7 +1555,7 @@ public class ValueStyleRenderer {
        }
    }
 
-   private static void drawValueSlider(GuiGraphics context, float x1, float y1, float x2, float y2, float hue, float sat, int alpha) {
+   private static void drawValueSlider(GuiGraphicsExtractor context, float x1, float y1, float x2, float y2, float hue, float sat, int alpha) {
        int height = Math.max(1, (int) (y2 - y1));
        for (int py = 0; py < height; py += 4) {
            float val = 1f - py / (float) height;
@@ -1565,12 +1565,12 @@ public class ValueStyleRenderer {
        }
    }
 
-   private static void drawScaledLabel(GuiGraphics context, Minecraft client, String text, float x, float y, int color, float scale) {
+   private static void drawScaledLabel(GuiGraphicsExtractor context, Minecraft client, String text, float x, float y, int color, float scale) {
       var pose = context.pose();
       pose.pushMatrix();
       pose.translate(x, y);
       pose.scale(scale, scale);
-      context.drawString(client.font, text, 0, 0, color, false);
+      context.text(client.font, text, 0, 0, color, false);
       pose.popMatrix();
    }
    

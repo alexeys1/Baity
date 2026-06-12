@@ -20,8 +20,22 @@ public class Reminder {
     
     private static Reminder instance;
     
-    private static final ItemStack COOKIE_DISPLAY_ICON = new ItemStack(Items.COOKIE);
-    private static final ItemStack GOD_POTION_DISPLAY_ICON = new ItemStack(Items.POTION);
+    private static ItemStack cookieDisplayIcon;
+    private static ItemStack godPotionDisplayIcon;
+
+    private static ItemStack getCookieDisplayIcon() {
+        if (cookieDisplayIcon == null) {
+            cookieDisplayIcon = new ItemStack(Items.COOKIE);
+        }
+        return cookieDisplayIcon;
+    }
+
+    private static ItemStack getGodPotionDisplayIcon() {
+        if (godPotionDisplayIcon == null) {
+            godPotionDisplayIcon = new ItemStack(Items.POTION);
+        }
+        return godPotionDisplayIcon;
+    }
     
     private static final Pattern GOD_POTION_PATTERN = Pattern.compile(
         "You have a God Potion active! (\\d+) (Days?|Hours?|Minutes?|Mins?|Min) Use '/effects' to see the effects!"
@@ -181,13 +195,13 @@ public class Reminder {
     
     private void showCookieAnimation(Minecraft client, net.minecraft.client.player.LocalPlayer player) {
         if (client.level == null) return;
-        client.gameRenderer.displayItemActivation(COOKIE_DISPLAY_ICON);
+        client.gameRenderer.displayItemActivation(getCookieDisplayIcon());
         client.particleEngine.createTrackingEmitter(player, ParticleTypes.OMINOUS_SPAWNING, 10);
     }
     
     private void showGodPotionAnimation(Minecraft client, net.minecraft.client.player.LocalPlayer player) {
         if (client.level == null) return;
-        client.gameRenderer.displayItemActivation(GOD_POTION_DISPLAY_ICON);
+        client.gameRenderer.displayItemActivation(getGodPotionDisplayIcon());
         client.particleEngine.createTrackingEmitter(player, ParticleTypes.OMINOUS_SPAWNING, 10);
     }
     

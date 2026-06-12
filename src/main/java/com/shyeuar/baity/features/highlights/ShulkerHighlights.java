@@ -1,7 +1,8 @@
 package com.shyeuar.baity.features.highlights;
 
+import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.shyeuar.baity.config.ConfigManager;
@@ -11,8 +12,8 @@ import com.shyeuar.baity.utils.EntityDrawUtils;
 import com.shyeuar.baity.utils.LocateUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -26,15 +27,14 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 @Environment(EnvType.CLIENT)
-public class ShulkerHighlights implements WorldRenderEvents.AfterEntities {
+public class ShulkerHighlights implements LevelRenderEvents.AfterSolidFeatures {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
     private static final RenderPipeline BAITY_SHULKER_LINES = RenderPipelines.register(
             RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
                     .withLocation("pipeline/baity_shulker_lines")
-                    .withDepthWrite(false)
-                    .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                    .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false, 0f, 0f))
                     .build()
     );
 
@@ -47,16 +47,16 @@ public class ShulkerHighlights implements WorldRenderEvents.AfterEntities {
     );
 
     @Override
-    public void afterEntities(WorldRenderContext context) {
+    public void afterSolidFeatures(LevelRenderContext context) {
         Module module = ModuleManager.getModuleByName("Highlights");
         if (module == null || !module.isEnabled()) return;
         if (!ConfigManager.highlightsShulkerEnabled) return;
         if (MC.level == null || MC.player == null) return;
         if (!LocateUtils.isGalatea(MC)) return;
 
-        Vec3 cameraPos = context.worldState().cameraRenderState.pos;
-        PoseStack matrices = context.matrices();
-        MultiBufferSource buffers = context.consumers();
+        Vec3 cameraPos = context.levelState().cameraRenderState.pos;
+        PoseStack matrices = context.poseStack();
+        MultiBufferSource buffers = context.bufferSource();
         if (matrices == null || buffers == null) return;
 
         for (Entity entity : MC.level.entitiesForRendering()) {
@@ -65,48 +65,17 @@ public class ShulkerHighlights implements WorldRenderEvents.AfterEntities {
 
             AABB box = shulker.getBoundingBox().inflate(0.01);
 
-            double x1 = box.minX - cameraPos.x;
-            double y1 = box.minY - cameraPos.y;
-            double z1 = box.minZ - cameraPos.z;
-            double x2 = box.maxX - cameraPos.x;
-            double y2 = box.maxY - cameraPos.y;
-            double z2 = box.maxZ - cameraPos.z;
-
             float r = 0.7f;
             float g = 1.0f;
             float b = 0.0f;
             float a = 0.9f;
 
             VertexConsumer lines = buffers.getBuffer(NO_DEPTH_LINES);
+            EntityDrawUtils.drawWireBoxAtWorld(matrices, lines, box, cameraPos, r, g, b, a);
+        }
 
-            matrices.pushPose();
-            PoseStack.Pose pose = matrices.last();
-
-            EntityDrawUtils.drawLine(pose, lines, x1, y1, z1, x2, y1, z1, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x2, y1, z1, x2, y1, z2, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x2, y1, z2, x1, y1, z2, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x1, y1, z2, x1, y1, z1, r, g, b, a);
-
-            EntityDrawUtils.drawLine(pose, lines, x1, y2, z1, x2, y2, z1, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x2, y2, z1, x2, y2, z2, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x2, y2, z2, x1, y2, z2, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x1, y2, z2, x1, y2, z1, r, g, b, a);
-
-            EntityDrawUtils.drawLine(pose, lines, x1, y1, z1, x1, y2, z1, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x2, y1, z1, x2, y2, z1, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x2, y1, z2, x2, y2, z2, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x1, y1, z2, x1, y2, z2, r, g, b, a);
-
-            EntityDrawUtils.drawLine(pose, lines, x1, y1, z1, x2, y1, z1, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x2, y1, z1, x2, y1, z2, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x2, y1, z2, x1, y1, z2, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x1, y1, z2, x1, y1, z1, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x1, y2, z1, x2, y2, z1, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x2, y2, z1, x2, y2, z2, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x2, y2, z2, x1, y2, z2, r, g, b, a);
-            EntityDrawUtils.drawLine(pose, lines, x1, y2, z2, x1, y2, z1, r, g, b, a);
-
-            matrices.popPose();
+        if (buffers instanceof MultiBufferSource.BufferSource bufferSource) {
+            bufferSource.endBatch(NO_DEPTH_LINES);
         }
     }
 }

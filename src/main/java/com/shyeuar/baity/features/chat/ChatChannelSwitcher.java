@@ -12,7 +12,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -97,7 +97,7 @@ public final class ChatChannelSwitcher implements HudElement {
         }
     }
 
-    public static void render(Screen screen, EditBox chatField, GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    public static void render(Screen screen, EditBox chatField, GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         INSTANCE.renderInternal(screen, chatField, guiGraphics, mouseX, mouseY);
     }
 
@@ -109,7 +109,7 @@ public final class ChatChannelSwitcher implements HudElement {
         return INSTANCE.handleHotkeyInternal(screen, chatField, keyCode, altDown, shiftDown);
     }
 
-    private void renderInternal(Screen screen, EditBox chatField, GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderInternal(Screen screen, EditBox chatField, GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
         if (!shouldRender(screen, chatField)) {
             return;
         }
@@ -160,7 +160,7 @@ public final class ChatChannelSwitcher implements HudElement {
             matrices.pushMatrix();
             matrices.translate((float) textX, (float) textY);
             matrices.scale(textScale, textScale);
-            guiGraphics.drawString(font, button.label(), 0, 0, textColor, false);
+            guiGraphics.text(font, button.label(), 0, 0, textColor, false);
             matrices.popMatrix();
         }
 
@@ -734,7 +734,7 @@ public final class ChatChannelSwitcher implements HudElement {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, float partialTicks) {
+    public void render(GuiGraphicsExtractor guiGraphics, float partialTicks) {
     }
 
     @Override
@@ -742,7 +742,7 @@ public final class ChatChannelSwitcher implements HudElement {
         return ConfigManager.chatChannelSwitcherEnabled && Minecraft.getInstance().screen instanceof ChatScreen;
     }
 
-    private void renderTooltip(GuiGraphics guiGraphics, Font font, ChannelButton button, int originX, int originY, float scale) {
+    private void renderTooltip(GuiGraphicsExtractor guiGraphics, Font font, ChannelButton button, int originX, int originY, float scale) {
         String[] lines = HOVER_TOOLTIP_LINES;
         int textWidth = 0;
         for (String line : lines) {
@@ -780,7 +780,7 @@ public final class ChatChannelSwitcher implements HudElement {
 
         int textY = y1 + TOOLTIP_PADDING;
         for (String line : lines) {
-            guiGraphics.drawString(font, line, x1 + TOOLTIP_PADDING, textY, TEXT_COLOR, false);
+            guiGraphics.text(font, line, x1 + TOOLTIP_PADDING, textY, TEXT_COLOR, false);
             textY += font.lineHeight;
         }
     }

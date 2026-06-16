@@ -528,7 +528,7 @@ public class ModuleManager {
             }
         );
         
-        Module clickGUI = new Module("ClickGUI", "ClickGUI", ModuleCategory.UI);
+        Module clickGUI = new Module("ClickGUI", "ClickGUI", ModuleCategory.GUI);
         clickGUI.setEnabled(true);
         registerModule(clickGUI);
         ConfigSynchronizer.registerModuleConfig(
@@ -670,6 +670,52 @@ public class ModuleManager {
             "NoTextShadow", "NoTextShadow", ModuleCategory.RENDER,
             () -> ConfigManager.noTextShadowEnabled,
             val -> ConfigManager.noTextShadowEnabled = val
+        );
+
+        ModuleRegistry.registerModuleWithValues(
+            "VanillaHudHider", "VanillaHudHider", ModuleCategory.RENDER,
+            () -> ConfigManager.vanillaHudHiderEnabled,
+            val -> ConfigManager.vanillaHudHiderEnabled = val,
+            new Option[]{
+                new Option("armor bar", "armor bar", false, ModuleCategory.RENDER),
+                new Option("health bar", "health bar", false, ModuleCategory.RENDER),
+                new Option("food bar", "food bar", false, ModuleCategory.RENDER),
+                new Option("air bar", "air bar", false, ModuleCategory.RENDER),
+                new Option("mount health", "mount health", false, ModuleCategory.RENDER),
+                new Option("experience bar", "experience bar", false, ModuleCategory.RENDER)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "armor bar",
+                    () -> ConfigManager.vanillaHudHiderArmorBar,
+                    val -> ConfigManager.vanillaHudHiderArmorBar = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "health bar",
+                    () -> ConfigManager.vanillaHudHiderHealthBar,
+                    val -> ConfigManager.vanillaHudHiderHealthBar = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "food bar",
+                    () -> ConfigManager.vanillaHudHiderFoodBar,
+                    val -> ConfigManager.vanillaHudHiderFoodBar = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "air bar",
+                    () -> ConfigManager.vanillaHudHiderAirBar,
+                    val -> ConfigManager.vanillaHudHiderAirBar = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "mount health",
+                    () -> ConfigManager.vanillaHudHiderMountHealth,
+                    val -> ConfigManager.vanillaHudHiderMountHealth = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "experience bar",
+                    () -> ConfigManager.vanillaHudHiderExperienceBar,
+                    val -> ConfigManager.vanillaHudHiderExperienceBar = (Boolean) val
+                )
+            }
         );
         
         ModuleRegistry.registerModuleWithValues(
@@ -933,6 +979,11 @@ public class ModuleManager {
         TooltipManager.registerTooltip("arabic numerals", "Replace roman number with arabic number.", 0xFFFFFF);
         TooltipManager.registerTooltip("transparentize other tags", "Remove the black background of tags.", 0xFFFFFF);
         TooltipManager.registerTooltip("NoTextShadow", "Disable all the text shadow in game.", 0xFFFFFF);
+        TooltipManager.registerTooltip(
+            "VanillaHudHider",
+            "Selectively hide the original hud, such as health, satiety, etc.",
+            0xFFFFFF
+        );
         TooltipManager.registerTooltip("sync non-critical dmg",
             "Apply preset colors to plain non-crit damage.", 0xFFFFFF);
     }

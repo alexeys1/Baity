@@ -94,6 +94,14 @@ public class ConfigManager {
     public static boolean heldItemTweaksNoArmSwayEnabled = false;
     
     public static boolean noTextShadowEnabled = false;
+
+    public static boolean vanillaHudHiderEnabled = false;
+    public static boolean vanillaHudHiderArmorBar = false;
+    public static boolean vanillaHudHiderHealthBar = false;
+    public static boolean vanillaHudHiderFoodBar = false;
+    public static boolean vanillaHudHiderAirBar = false;
+    public static boolean vanillaHudHiderMountHealth = false;
+    public static boolean vanillaHudHiderExperienceBar = false;
     
     public static boolean nodebuffEnabled = false;
     public static boolean nodebuffRemoveNausea = true;
@@ -432,6 +440,27 @@ public class ConfigManager {
         registerField("NoTextShadow", Boolean.class,
             c -> ConfigManager.noTextShadowEnabled,
             (c, v) -> ConfigManager.noTextShadowEnabled = (Boolean) v);
+        registerField("VanillaHudHider", Boolean.class,
+            c -> ConfigManager.vanillaHudHiderEnabled,
+            (c, v) -> ConfigManager.vanillaHudHiderEnabled = (Boolean) v);
+        registerField("armor bar", Boolean.class,
+            c -> ConfigManager.vanillaHudHiderArmorBar,
+            (c, v) -> ConfigManager.vanillaHudHiderArmorBar = (Boolean) v);
+        registerField("health bar", Boolean.class,
+            c -> ConfigManager.vanillaHudHiderHealthBar,
+            (c, v) -> ConfigManager.vanillaHudHiderHealthBar = (Boolean) v);
+        registerField("food bar", Boolean.class,
+            c -> ConfigManager.vanillaHudHiderFoodBar,
+            (c, v) -> ConfigManager.vanillaHudHiderFoodBar = (Boolean) v);
+        registerField("air bar", Boolean.class,
+            c -> ConfigManager.vanillaHudHiderAirBar,
+            (c, v) -> ConfigManager.vanillaHudHiderAirBar = (Boolean) v);
+        registerField("mount health", Boolean.class,
+            c -> ConfigManager.vanillaHudHiderMountHealth,
+            (c, v) -> ConfigManager.vanillaHudHiderMountHealth = (Boolean) v);
+        registerField("experience bar", Boolean.class,
+            c -> ConfigManager.vanillaHudHiderExperienceBar,
+            (c, v) -> ConfigManager.vanillaHudHiderExperienceBar = (Boolean) v);
         registerField("Nodebuff", Boolean.class,
             c -> ConfigManager.nodebuffEnabled,
             (c, v) -> ConfigManager.nodebuffEnabled = (Boolean) v);

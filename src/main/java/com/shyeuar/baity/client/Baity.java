@@ -15,6 +15,7 @@ import com.shyeuar.baity.features.fishing.HypixelFishingRodCatalog;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.features.highlights.PestEntityRegistry;
 import com.shyeuar.baity.features.highlights.PestHighlights;
+import com.shyeuar.baity.features.VanillaHudHider;
 import com.shyeuar.baity.features.sounds.SoulcrySoundManager;
 import com.shyeuar.baity.features.sounds.SoundsHooks;
 import net.fabricmc.api.ClientModInitializer;
@@ -114,6 +115,8 @@ public class Baity implements ClientModInitializer {
 
         LevelRenderEvents.AFTER_SOLID_FEATURES.register(new FancyCreeperVeil());
         
+        VanillaHudHider.init();
+
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT, Identifier.fromNamespaceAndPath("baity", "fish_hook_timer"), (guiGraphics, tickDelta) -> {
             var timer = com.shyeuar.baity.features.fishing.FishHookTimer.getInstance();
             if (timer.shouldRender()) timer.render(guiGraphics, 0.0f);

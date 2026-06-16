@@ -61,6 +61,7 @@ public class Baity implements ClientModInitializer {
         ClientEntityEvents.ENTITY_LOAD.register((entity, world) -> PestEntityRegistry.onClientEntityLoad(entity));
         
         com.shyeuar.baity.features.fishing.FishHookTimer.init();
+        com.shyeuar.baity.features.fishing.ChromaFishingLine.init();
         com.shyeuar.baity.features.chat.ChatChannelSwitcher.init();
         com.shyeuar.baity.features.enchantlore.EnchantLore.init();
         

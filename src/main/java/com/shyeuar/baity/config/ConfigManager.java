@@ -170,6 +170,17 @@ public class ConfigManager {
     public static int nickTweaksGradientStartColor = 0xFFFFFF;
     public static int nickTweaksGradientEndColor = 0xFFFFFF;
 
+    public static boolean chromaFishingLineEnabled = false;
+    public static int chromaFishingLineGradientStart = 0x000000;
+    public static int chromaFishingLineGradientEnd = 0x000000;
+    public static boolean chromaFishingLineChromaEnabled = false;
+    public static double chromaFishingLineChromaLightness = 0.8;
+    public static double chromaFishingLineChromaChroma = 0.2;
+    public static double chromaFishingLineChromaSize = 3.1;
+    public static double chromaFishingLineChromaSpeed = 1.0;
+    public static boolean chromaFishingLineChromaReverseDirection = false;
+    public static boolean chromaFishingLineChromaGroupExpanded = false;
+
     public static boolean enchantLoreEnabled = false;
     public static String enchantLoreColorData = "";
     public static int[] enchantLoreTierStartColor;
@@ -579,6 +590,36 @@ public class ConfigManager {
         registerField("NickTweaksGradientEndColor", Integer.class,
             c -> ConfigManager.nickTweaksGradientEndColor,
             (c, v) -> ConfigManager.nickTweaksGradientEndColor = (Integer) v);
+        registerField("ChromaFishingLine", Boolean.class,
+            c -> ConfigManager.chromaFishingLineEnabled,
+            (c, v) -> ConfigManager.chromaFishingLineEnabled = (Boolean) v);
+        registerField("ChromaFishingLineGradientStart", Integer.class,
+            c -> ConfigManager.chromaFishingLineGradientStart,
+            (c, v) -> ConfigManager.chromaFishingLineGradientStart = (Integer) v);
+        registerField("ChromaFishingLineGradientEnd", Integer.class,
+            c -> ConfigManager.chromaFishingLineGradientEnd,
+            (c, v) -> ConfigManager.chromaFishingLineGradientEnd = (Integer) v);
+        registerField("ChromaFishingLineChromaEnabled", Boolean.class,
+            c -> ConfigManager.chromaFishingLineChromaEnabled,
+            (c, v) -> ConfigManager.chromaFishingLineChromaEnabled = (Boolean) v);
+        registerField("ChromaFishingLineChromaLightness", Double.class,
+            c -> ConfigManager.chromaFishingLineChromaLightness,
+            (c, v) -> ConfigManager.chromaFishingLineChromaLightness = (Double) v);
+        registerField("ChromaFishingLineChromaChroma", Double.class,
+            c -> ConfigManager.chromaFishingLineChromaChroma,
+            (c, v) -> ConfigManager.chromaFishingLineChromaChroma = (Double) v);
+        registerField("ChromaFishingLineChromaSize", Double.class,
+            c -> ConfigManager.chromaFishingLineChromaSize,
+            (c, v) -> ConfigManager.chromaFishingLineChromaSize = (Double) v);
+        registerField("ChromaFishingLineChromaSpeed", Double.class,
+            c -> ConfigManager.chromaFishingLineChromaSpeed,
+            (c, v) -> ConfigManager.chromaFishingLineChromaSpeed = (Double) v);
+        registerField("ChromaFishingLineChromaReverseDirection", Boolean.class,
+            c -> ConfigManager.chromaFishingLineChromaReverseDirection,
+            (c, v) -> ConfigManager.chromaFishingLineChromaReverseDirection = (Boolean) v);
+        registerField("ChromaFishingLineChromaGroupExpanded", Boolean.class,
+            c -> ConfigManager.chromaFishingLineChromaGroupExpanded,
+            (c, v) -> ConfigManager.chromaFishingLineChromaGroupExpanded = (Boolean) v);
         registerField("EnchantLore", Boolean.class,
             c -> ConfigManager.enchantLoreEnabled,
             (c, v) -> ConfigManager.enchantLoreEnabled = (Boolean) v);

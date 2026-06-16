@@ -109,7 +109,7 @@ public class Baity implements ClientModInitializer {
         LevelRenderEvents.END_MAIN.register(new com.shyeuar.baity.features.NametagRenderer());
         LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(new FancyDmgSplash());
         LevelRenderEvents.AFTER_SOLID_FEATURES.register(new com.shyeuar.baity.features.highlights.ShulkerHighlights());
-        LevelRenderEvents.AFTER_SOLID_FEATURES.register(new com.shyeuar.baity.features.highlights.PestHighlights());
+        LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(new com.shyeuar.baity.features.highlights.PestHighlights());
         LevelRenderEvents.AFTER_SOLID_FEATURES.register(new com.shyeuar.baity.features.highlights.InvisibugHighlights());
 
         LevelRenderEvents.AFTER_SOLID_FEATURES.register(new FancyCreeperVeil());

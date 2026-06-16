@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 @Environment(EnvType.CLIENT)
-public final class PestHighlights implements LevelRenderEvents.AfterSolidFeatures {
+public final class PestHighlights implements LevelRenderEvents.AfterTranslucentFeatures {
 
     private static final Minecraft MC = Minecraft.getInstance();
     private static final int PEST_COLOR_ARGB = 0xFFEE82EE;
@@ -149,7 +149,7 @@ public final class PestHighlights implements LevelRenderEvents.AfterSolidFeature
     }
 
     @Override
-    public void afterSolidFeatures(LevelRenderContext context) {
+    public void afterTranslucentFeatures(LevelRenderContext context) {
         if (!pestHighlightEnabled()) {
             return;
         }

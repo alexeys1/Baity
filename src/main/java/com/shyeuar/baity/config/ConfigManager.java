@@ -115,6 +115,7 @@ public class ConfigManager {
     public static boolean mufflerMutePortal = true;
     public static boolean mufflerMuteVampire = true;
     public static boolean mufflerMuteDrake = true;
+    public static boolean mufflerMuteWormhole = true;
     
     public static boolean highlightsEnabled = false;
     public static boolean highlightsShulkerEnabled = true;
@@ -502,6 +503,9 @@ public class ConfigManager {
         registerField("MufflerMuteDrake", Boolean.class,
             c -> ConfigManager.mufflerMuteDrake,
             (c, v) -> ConfigManager.mufflerMuteDrake = (Boolean) v);
+        registerField("MufflerMuteWormhole", Boolean.class,
+            c -> ConfigManager.mufflerMuteWormhole,
+            (c, v) -> ConfigManager.mufflerMuteWormhole = (Boolean) v);
         registerField("Highlights", Boolean.class,
             c -> ConfigManager.highlightsEnabled,
             (c, v) -> ConfigManager.highlightsEnabled = (Boolean) v);

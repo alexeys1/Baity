@@ -250,6 +250,7 @@ public class ModuleManager {
                     .addChild(new Option("mute portal", "mute portal", true, ModuleCategory.QOL))
                     .addChild(new Option("mute vampire", "mute vampire", true, ModuleCategory.QOL))
                     .addChild(new Option("mute drake", "mute drake", true, ModuleCategory.QOL))
+                    .addChild(new Option("mute wormhole", "mute wormhole", true, ModuleCategory.QOL))
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
@@ -281,6 +282,11 @@ public class ModuleManager {
                     "mute drake",
                     () -> ConfigManager.mufflerMuteDrake,
                     val -> ConfigManager.mufflerMuteDrake = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "mute wormhole",
+                    () -> ConfigManager.mufflerMuteWormhole,
+                    val -> ConfigManager.mufflerMuteWormhole = (Boolean) val
                 )
             }
         );
@@ -1075,6 +1081,7 @@ public class ModuleManager {
         );
         TooltipManager.registerTooltip("sync non-critical dmg",
             "Apply preset colors to plain non-crit damage.", 0xFFFFFF);
+        TooltipManager.registerTooltip("mute wormhole", "Only work when wearing froggles.", 0xFFFF00);
     }
     
     public static List<Module> getModules() {

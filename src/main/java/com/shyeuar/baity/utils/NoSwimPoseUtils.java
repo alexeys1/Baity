@@ -3,6 +3,7 @@ package com.shyeuar.baity.utils;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
+import com.shyeuar.baity.render.RenderScope;
 import com.shyeuar.baity.render.interfaces.EntityRenderStateInterface;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
@@ -321,7 +322,13 @@ public final class NoSwimPoseUtils {
     }
 
     public static boolean shouldClearSelfSwimState(AvatarRenderState state) {
-        return isSelfPlayerById(state.id) && isLevelRenderContext(state);
+        if (!isSelfPlayerById(state.id)) {
+            return false;
+        }
+        if (RenderScope.isPaperDollRender()) {
+            return isFeatureActive();
+        }
+        return isLevelRenderContext(state);
     }
 
     public static boolean isAbnormalDrySwimPose() {
@@ -333,6 +340,17 @@ public final class NoSwimPoseUtils {
     }
 
     public static void clearSwimRenderState(AvatarRenderState state) {
+        if (RenderScope.isPaperDollRender()) {
+            if (!isFeatureActive() || state == null) {
+                return;
+            }
+            state.isVisuallySwimming = false;
+            state.swimAmount = 0.0F;
+            if (isSneaking()) {
+                state.isCrouching = true;
+            }
+            return;
+        }
         if (!shouldForceStandingModelAppearance(state)) {
             return;
         }

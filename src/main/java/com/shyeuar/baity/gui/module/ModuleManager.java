@@ -136,6 +136,43 @@ public class ModuleManager {
             () -> ConfigManager.pepCatEnabled,
             val -> ConfigManager.pepCatEnabled = val
         );
+
+        ModuleRegistry.registerModuleWithValues(
+            "PaperDoll", "PaperDoll", ModuleCategory.MISC,
+            () -> ConfigManager.paperDollEnabled,
+            val -> ConfigManager.paperDollEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new Option("head restore", "head restore", false, ModuleCategory.MISC),
+                new com.shyeuar.baity.gui.value.SliderValue(
+                    "facing angle", "facing angle", 200.0, 0.0, 360.0, 1.0, ModuleCategory.MISC),
+                new com.shyeuar.baity.gui.value.SliderValue(
+                    "head yaw range", "head yaw range", 30.0, 0.0, 90.0, 1.0, ModuleCategory.MISC),
+                new com.shyeuar.baity.gui.value.SliderValue(
+                    "head pitch range", "head pitch range", 50.0, 0.0, 90.0, 1.0, ModuleCategory.MISC)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "head restore",
+                    () -> ConfigManager.paperDollHeadRestore,
+                    val -> ConfigManager.paperDollHeadRestore = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "facing angle",
+                    () -> (double) ConfigManager.paperDollFacingAngle,
+                    val -> ConfigManager.paperDollFacingAngle = ((Number) val).floatValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "head yaw range",
+                    () -> (double) ConfigManager.paperDollHeadYawRange,
+                    val -> ConfigManager.paperDollHeadYawRange = ((Number) val).floatValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "head pitch range",
+                    () -> (double) ConfigManager.paperDollHeadPitchRange,
+                    val -> ConfigManager.paperDollHeadPitchRange = ((Number) val).floatValue()
+                )
+            }
+        );
         
         ModuleRegistry.registerModuleWithValues(
             "SmolPeople", "SmolPeople", ModuleCategory.MISC,

@@ -63,6 +63,12 @@ public class HudPositionEditor extends Screen {
         List<HudElement> elements = manager.getElements();
         HudElement hovered = null;
         boolean alreadyHadHover = false;
+
+        for (HudElement element : elements) {
+            if (element.shouldRender()) {
+                element.render(guiGraphics, partialTicks);
+            }
+        }
         
         for (int i = elements.size() - 1; i >= 0; i--) {
             HudElement element = elements.get(i);

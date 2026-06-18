@@ -13,6 +13,7 @@ import com.shyeuar.baity.features.FancyCreeperVeil;
 import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
 import com.shyeuar.baity.features.fishing.ChromaFishingLine;
 import com.shyeuar.baity.features.fishing.FishHookTimer;
+import com.shyeuar.baity.features.paperdoll.PaperDoll;
 import com.shyeuar.baity.features.fishing.HypixelFishingRodCatalog;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.features.highlights.PestEntityRegistry;
@@ -63,6 +64,7 @@ public class Baity implements ClientModInitializer {
         ClientEntityEvents.ENTITY_LOAD.register((entity, world) -> PestEntityRegistry.onClientEntityLoad(entity));
         
         FishHookTimer.init();
+        PaperDoll.init();
         ChromaFishingLine.init();
         com.shyeuar.baity.features.chat.ChatChannelSwitcher.init();
         com.shyeuar.baity.features.enchantlore.EnchantLore.init();
@@ -104,6 +106,7 @@ public class Baity implements ClientModInitializer {
             SoundsHooks.tick(client);
             
             FishHookTimer.getInstance().tick();
+            PaperDoll.getInstance().clientTick();
         });
         
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
@@ -124,6 +127,17 @@ public class Baity implements ClientModInitializer {
             var timer = FishHookTimer.getInstance();
             if (timer.shouldRender()) timer.render(guiGraphics, 0.0f);
         });
+
+        HudElementRegistry.attachElementAfter(
+                VanillaHudElements.MISC_OVERLAYS,
+                Identifier.fromNamespaceAndPath("baity", "paper_doll"),
+                (guiGraphics, tickDelta) -> {
+                    var doll = PaperDoll.getInstance();
+                    if (doll.shouldRender()) {
+                        doll.render(guiGraphics, tickDelta.getGameTimeDeltaPartialTick(true));
+                    }
+                }
+        );
     }
     
     public static final net.minecraft.sounds.SoundEvent LAUGHTER_SOUND = registerSoundEvent("sounds.laughter");

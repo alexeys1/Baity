@@ -41,6 +41,9 @@ public class NametagMixin {
 
         @Inject(method = "extractRenderState", at = @At("TAIL"))
         private void baity$ensureOwnNameTagOnExtract(T entity, S state, float tickDelta, CallbackInfo ci) {
+            if (RenderScope.isPaperDollRender()) {
+                return;
+            }
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || entity != mc.player) {
                 return;
@@ -64,6 +67,9 @@ public class NametagMixin {
             int lineOffset,
             CallbackInfo ci
         ) {
+            if (RenderScope.isPaperDollRender()) {
+                return;
+            }
             int entityId = baity$resolveEntityId(state);
             RenderScope.enterNameTagSubmit(entityId);
             RenderScope.bindNameTagEntity(cameraState, entityId);
@@ -83,6 +89,10 @@ public class NametagMixin {
             int lineOffset,
             CallbackInfo ci
         ) {
+            if (RenderScope.isPaperDollRender()) {
+                ci.cancel();
+                return;
+            }
             if (!NametagUtils.isNametagModuleActive()) {
                 return;
             }

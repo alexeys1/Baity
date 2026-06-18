@@ -102,39 +102,6 @@ public final class LocateUtils {
         return cachedAreaIslandName;
     }
 
-    public static boolean isWormholeMuteIsland(Minecraft mc) {
-        refresh(mc);
-        if (matchesWormholeIsland(cachedTabIslandName) || matchesWormholeIsland(cachedAreaIslandName)) {
-            return true;
-        }
-        for (String line : readTabHudScanPlainLines(mc)) {
-            Matcher tabLine = TAB_AREA_LINE.matcher(line);
-            if (tabLine.matches()) {
-                String label = line.toLowerCase(Locale.ROOT);
-                if (label.startsWith("island:") && matchesWormholeIsland(tabLine.group(1))) {
-                    return true;
-                }
-            }
-        }
-        for (String line : readSidebarPlainLines(mc)) {
-            if (matchesWormholeIsland(line)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean matchesWormholeIsland(String raw) {
-        if (raw == null || raw.isEmpty()) {
-            return false;
-        }
-        String n = normalizeAreaName(raw);
-        return "Lotus Atoll".equalsIgnoreCase(n)
-                || "Crimson Isle".equalsIgnoreCase(n)
-                || n.contains("Lotus Atoll")
-                || n.contains("Crimson Isle");
-    }
-
     public static String scoreboardSubAreaName(Minecraft mc) {
         refresh(mc);
         return cachedScoreboardSubAreaName;

@@ -680,6 +680,24 @@ public class ModuleManager {
         );
 
         ModuleRegistry.registerModuleWithValues(
+            "MotionBlur", "MotionBlur", ModuleCategory.RENDER,
+            () -> ConfigManager.motionBlurEnabled,
+            val -> ConfigManager.motionBlurEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new com.shyeuar.baity.gui.value.SliderValue(
+                    "blur strength", "blur strength", 0.6, 0.0, 2.0, 0.1, ModuleCategory.RENDER
+                )
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "blur strength",
+                    () -> (double) ConfigManager.motionBlurStrength,
+                    val -> ConfigManager.motionBlurStrength = ((Number) val).floatValue()
+                )
+            }
+        );
+
+        ModuleRegistry.registerModuleWithValues(
             "VanillaHudHider", "VanillaHudHider", ModuleCategory.RENDER,
             () -> ConfigManager.vanillaHudHiderEnabled,
             val -> ConfigManager.vanillaHudHiderEnabled = val,
@@ -1081,7 +1099,6 @@ public class ModuleManager {
         );
         TooltipManager.registerTooltip("sync non-critical dmg",
             "Apply preset colors to plain non-crit damage.", 0xFFFFFF);
-        TooltipManager.registerTooltip("mute wormhole", "Only work when wearing froggles.", 0xFFFF00);
     }
     
     public static List<Module> getModules() {

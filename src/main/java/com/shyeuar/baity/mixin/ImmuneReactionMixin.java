@@ -20,18 +20,7 @@ public class ImmuneReactionMixin {
     public static class ChatDetectorMixin {
         @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;)V", at = @At("HEAD"))
         private void baity$onChatMessage(Component message, CallbackInfo ci) {
-            if (message == null) return;
-
-            String text = message.getString();
-
-            if (text.contains("Creeper Veil Activated!")) {
-                ElementalReactionDetector.setWitherCloakActive(true);
-            } else if (text.contains("Creeper Veil De-activated!") || 
-                       text.contains("Not enough mana! Creeper Veil De-activated!")) {
-                ElementalReactionDetector.setWitherCloakActive(false);
-                com.shyeuar.baity.features.FancyCreeperVeil.lastDeactivate = System.currentTimeMillis();
-                com.shyeuar.baity.features.FancyCreeperVeil.lastCreeperRender = 0;
-            }
+            ElementalReactionDetector.handleWitherCloakChat(message);
         }
     }
 

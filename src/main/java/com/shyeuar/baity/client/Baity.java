@@ -11,6 +11,8 @@ import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.items.CustomTotemItem;
 import com.shyeuar.baity.features.FancyCreeperVeil;
 import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
+import com.shyeuar.baity.features.fishing.ChromaFishingLine;
+import com.shyeuar.baity.features.fishing.FishHookTimer;
 import com.shyeuar.baity.features.fishing.HypixelFishingRodCatalog;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.features.highlights.PestEntityRegistry;
@@ -60,8 +62,8 @@ public class Baity implements ClientModInitializer {
 
         ClientEntityEvents.ENTITY_LOAD.register((entity, world) -> PestEntityRegistry.onClientEntityLoad(entity));
         
-        com.shyeuar.baity.features.fishing.FishHookTimer.init();
-        com.shyeuar.baity.features.fishing.ChromaFishingLine.init();
+        FishHookTimer.init();
+        ChromaFishingLine.init();
         com.shyeuar.baity.features.chat.ChatChannelSwitcher.init();
         com.shyeuar.baity.features.enchantlore.EnchantLore.init();
         
@@ -101,7 +103,7 @@ public class Baity implements ClientModInitializer {
             PestHighlights.tickPestCaches();
             SoundsHooks.tick(client);
             
-            com.shyeuar.baity.features.fishing.FishHookTimer.getInstance().tick();
+            FishHookTimer.getInstance().tick();
         });
         
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
@@ -114,12 +116,12 @@ public class Baity implements ClientModInitializer {
         LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(new com.shyeuar.baity.features.highlights.PestHighlights());
         LevelRenderEvents.AFTER_SOLID_FEATURES.register(new com.shyeuar.baity.features.highlights.InvisibugHighlights());
 
-        LevelRenderEvents.AFTER_SOLID_FEATURES.register(new FancyCreeperVeil());
+        LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(new FancyCreeperVeil());
         
         VanillaHudHider.init();
 
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT, Identifier.fromNamespaceAndPath("baity", "fish_hook_timer"), (guiGraphics, tickDelta) -> {
-            var timer = com.shyeuar.baity.features.fishing.FishHookTimer.getInstance();
+            var timer = FishHookTimer.getInstance();
             if (timer.shouldRender()) timer.render(guiGraphics, 0.0f);
         });
     }

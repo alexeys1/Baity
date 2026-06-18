@@ -13,7 +13,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
@@ -21,7 +20,7 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 @Environment(EnvType.CLIENT)
-public class FancyCreeperVeil implements LevelRenderEvents.AfterSolidFeatures {
+public class FancyCreeperVeil implements LevelRenderEvents.AfterTranslucentFeatures {
     
     private static final Minecraft MC = Minecraft.getInstance();
     private static final Identifier WITHER_CLOAK_SHIELD = Identifier.fromNamespaceAndPath("baity", "textures/item/wither_cloak_shield.png");
@@ -39,7 +38,7 @@ public class FancyCreeperVeil implements LevelRenderEvents.AfterSolidFeatures {
     
     
     @Override
-    public void afterSolidFeatures(LevelRenderContext context) {
+    public void afterTranslucentFeatures(LevelRenderContext context) {
         Module module = ModuleManager.getModuleByName("FancyCreeperVeil");
         if (module == null || !module.isEnabled()) return;
         if (!ConfigManager.fancyCreeperVeilEnabled) return;
@@ -51,7 +50,7 @@ public class FancyCreeperVeil implements LevelRenderEvents.AfterSolidFeatures {
         if (isCloakActive) {
             long timeSinceLastCreeper = System.currentTimeMillis() - lastCreeperRender;
             if (timeSinceLastCreeper >= 2000 && lastCreeperRender > 0) {
-                ElementalReactionDetector.setWitherCloakActive(false);
+                isCloakActive = false;
                 lastDeactivate = System.currentTimeMillis();
                 lastCreeperRender = 0;
                 return;
@@ -67,7 +66,6 @@ public class FancyCreeperVeil implements LevelRenderEvents.AfterSolidFeatures {
         Vec3 cameraPos = context.levelState().cameraRenderState.pos;
         float tickDelta = MC.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         Vec3 playerPos = MC.player.getPosition(tickDelta);
-        RenderType shieldType = RenderTypes.entityTranslucent(WITHER_CLOAK_SHIELD);
         
         matrices.pushPose();
         matrices.translate(playerPos.x - cameraPos.x, playerPos.y - cameraPos.y, playerPos.z - cameraPos.z);
@@ -87,7 +85,7 @@ public class FancyCreeperVeil implements LevelRenderEvents.AfterSolidFeatures {
             float yawToPlayerDeg = (float) Math.toDegrees(yawToPlayerRad);
             matrices.mulPose(Axis.YP.rotationDegrees(yawToPlayerDeg));
             
-            renderShield(matrices, buffers, shieldType);
+            renderShield(matrices, buffers);
             
             matrices.popPose();
         }
@@ -95,12 +93,12 @@ public class FancyCreeperVeil implements LevelRenderEvents.AfterSolidFeatures {
         matrices.popPose();
 
         if (buffers instanceof MultiBufferSource.BufferSource bufferSource) {
-            bufferSource.endBatch(shieldType);
+            bufferSource.endBatch(RenderTypes.entityTranslucent(WITHER_CLOAK_SHIELD));
         }
     }
     
-    private void renderShield(PoseStack matrices, MultiBufferSource buffers, RenderType shieldType) {
-        VertexConsumer consumer = buffers.getBuffer(shieldType);
+    private void renderShield(PoseStack matrices, MultiBufferSource buffers) {
+        VertexConsumer consumer = buffers.getBuffer(RenderTypes.entityTranslucent(WITHER_CLOAK_SHIELD));
         PoseStack.Pose pose = matrices.last();
         Matrix4f matrix = pose.pose();
         
@@ -168,7 +166,6 @@ public class FancyCreeperVeil implements LevelRenderEvents.AfterSolidFeatures {
     public static void onWorldUnload() {
         lastCreeperRender = 0;
         lastDeactivate = System.currentTimeMillis();
-        ElementalReactionDetector.setWitherCloakActive(false);
     }
   
 }

@@ -70,6 +70,7 @@
     "CameraRenderStateMixin",
     "AvatarRenderStateMixin",
     "GameRendererMixin",
+    "MotionBlurMixin$LevelRendererMixin",
     "InGameHudMixin",
     "RenderScopeMixin$LivingEntityRenderStateMixin",
     "RenderScopeMixin$LivingEntityRendererScopeMixin",
@@ -77,7 +78,10 @@
     "accessor.LivingEntityAccessor",
     "accessor.CameraAccessor",
     "accessor.AvatarRenderStateAccessor",
-    "accessor.CameraRenderStateAccessor"
+    "accessor.CameraRenderStateAccessor",
+    "accessor.PostRenderAccessors$PostChainAccessor",
+    "accessor.PostRenderAccessors$PostPassAccessor",
+    "accessor.PostRenderAccessors$ShaderManagerAccessor"
   ],
   "injectors": {
     "defaultRequire": 0

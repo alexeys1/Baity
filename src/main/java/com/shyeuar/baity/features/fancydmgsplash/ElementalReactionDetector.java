@@ -4,7 +4,9 @@ import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.value.ColorPaletteValue;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
@@ -64,6 +66,14 @@ public class ElementalReactionDetector {
     private static long lastWitherCloakImmuneTime = 0;
     private static final long WITHER_CLOAK_COOLDOWN_MS = 2500;
     private static boolean witherCloakActive = false;
+
+    static {
+        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (!overlay) {
+                handleWitherCloakChat(message);
+            }
+        });
+    }
     
     public static ReactionResult recordDamageAndCheckReaction(int color, Vec3 targetPos) {
         if (!ConfigManager.fancyDmgSplashGenshinReaction) {
@@ -458,6 +468,21 @@ public class ElementalReactionDetector {
  
     public static void setWitherCloakActive(boolean active) {
         witherCloakActive = active;
+    }
+
+    public static void handleWitherCloakChat(Component message) {
+        if (message == null) {
+            return;
+        }
+        String text = message.getString();
+        if (text.contains("Creeper Veil Activated!")) {
+            setWitherCloakActive(true);
+        } else if (text.contains("Creeper Veil De-activated!")
+                || text.contains("Not enough mana! Creeper Veil De-activated!")) {
+            setWitherCloakActive(false);
+            com.shyeuar.baity.features.FancyCreeperVeil.lastDeactivate = System.currentTimeMillis();
+            com.shyeuar.baity.features.FancyCreeperVeil.lastCreeperRender = 0;
+        }
     }
    
     public static ReactionResult checkWitherCloakImmune() {

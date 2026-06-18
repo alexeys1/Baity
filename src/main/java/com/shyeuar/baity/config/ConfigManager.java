@@ -125,6 +125,9 @@ public class ConfigManager {
     public static boolean highlightsPestGroupExpanded = false;
     
     public static boolean fancyCreeperVeilEnabled = false;
+
+    public static boolean motionBlurEnabled = false;
+    public static float motionBlurStrength = 0.6f;
     
     public static boolean droppedItemEnabled = false;
 
@@ -527,6 +530,12 @@ public class ConfigManager {
         registerField("FancyCreeperVeil", Boolean.class,
             c -> ConfigManager.fancyCreeperVeilEnabled,
             (c, v) -> ConfigManager.fancyCreeperVeilEnabled = (Boolean) v);
+        registerField("MotionBlur", Boolean.class,
+            c -> ConfigManager.motionBlurEnabled,
+            (c, v) -> ConfigManager.motionBlurEnabled = (Boolean) v);
+        registerField("MotionBlurStrength", Float.class,
+            c -> ConfigManager.motionBlurStrength,
+            (c, v) -> ConfigManager.motionBlurStrength = (Float) v);
         registerField("DroppedItem", Boolean.class,
             c -> ConfigManager.droppedItemEnabled,
             (c, v) -> ConfigManager.droppedItemEnabled = (Boolean) v);

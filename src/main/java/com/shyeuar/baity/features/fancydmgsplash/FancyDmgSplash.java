@@ -34,7 +34,10 @@ public class FancyDmgSplash implements LevelRenderEvents.AfterTranslucentFeature
     private static final float PHASE1_RATIO = 0.4f;
     private static final float BASE_SCALE = 0.0325f; 
     private static final float PHASE2_FLOAT_UP = 0.18f; 
-    private static final float PHASE2_DISPLAY_RATIO = 0.25f; 
+    private static final float PHASE2_DISPLAY_RATIO = 0.25f;
+
+    private record AnimationFrame(Vec3 pos, float alpha, float scaleAnimation) {
+    }
     
     private static long lastWetHealCheckTime = 0;
     private static final long WET_HEAL_CHECK_INTERVAL_MS = 500;
@@ -259,40 +262,11 @@ public class FancyDmgSplash implements LevelRenderEvents.AfterTranslucentFeature
     ) {
         float totalProgress = (float)(currentTime - dn.startTime) / ANIMATION_DURATION_MS;
         totalProgress = Math.min(1.0f, Math.max(0.0f, totalProgress));
-        
-        Vec3 currentPos;
-        float alpha = 1.0f;
-        float scaleAnimation = 1.0f;
-        
-        if (totalProgress < PHASE1_RATIO) {
-            float phase1Progress = totalProgress / PHASE1_RATIO;
-            
-            currentPos = dn.targetPos;
-            
-            if (phase1Progress < 0.3f) {
-                scaleAnimation = 0.5f + phase1Progress / 0.3f * 1.0f;
-            } else if (phase1Progress < 0.6f) {
-                scaleAnimation = 1.5f - (phase1Progress - 0.3f) / 0.3f * 0.5f;
-            }
-            
-            alpha = 1.0f;
-        } else {
-            float phase2Progress = (totalProgress - PHASE1_RATIO) / (1.0f - PHASE1_RATIO);
-            
-            float easedFloatProgress = 1.0f - (1.0f - phase2Progress) * (1.0f - phase2Progress);
-            float floatUp = easedFloatProgress * PHASE2_FLOAT_UP;
-            currentPos = dn.targetPos.add(0, floatUp, 0);
-            
-            if (phase2Progress < PHASE2_DISPLAY_RATIO) {
-                alpha = 1.0f;
-            } else {
-                float fadeProgress = (phase2Progress - PHASE2_DISPLAY_RATIO) / (1.0f - PHASE2_DISPLAY_RATIO);
-                float acceleratedFade = Math.min(1.0f, fadeProgress * 2.0f);
-                alpha = 1.0f - acceleratedFade * acceleratedFade;
-            }
-            
-            scaleAnimation = 1.0f;
-        }
+
+        AnimationFrame frame = computeDamageAnimationFrame(dn.targetPos, totalProgress);
+        Vec3 currentPos = frame.pos;
+        float alpha = frame.alpha;
+        float scaleAnimation = frame.scaleAnimation;
         
         double x = currentPos.x - cameraPos.x;
         double y = currentPos.y - cameraPos.y;
@@ -365,39 +339,11 @@ public class FancyDmgSplash implements LevelRenderEvents.AfterTranslucentFeature
     ) {
         float totalProgress = (float)(currentTime - rt.startTime) / ANIMATION_DURATION_MS;
         totalProgress = Math.min(1.0f, Math.max(0.0f, totalProgress));
-        
-        Vec3 currentPos;
-        float alpha = 1.0f;
-        float scaleAnimation = 1.0f;
-        
-        if (totalProgress < PHASE1_RATIO) {
-            float phase1Progress = totalProgress / PHASE1_RATIO;
-            currentPos = rt.pos;
-            
-            if (phase1Progress < 0.3f) {
-                scaleAnimation = 0.5f + phase1Progress / 0.3f * 0.8f;
-            } else if (phase1Progress < 0.6f) {
-                scaleAnimation = 1.3f - (phase1Progress - 0.3f) / 0.3f * 0.3f;
-            }
-            
-            alpha = 1.0f;
-        } else {
-            float phase2Progress = (totalProgress - PHASE1_RATIO) / (1.0f - PHASE1_RATIO);
-            
-            float easedFloatProgress = 1.0f - (1.0f - phase2Progress) * (1.0f - phase2Progress);
-            float floatUp = easedFloatProgress * PHASE2_FLOAT_UP * 0.8f;
-            currentPos = rt.pos.add(0, floatUp, 0);
-            
-            if (phase2Progress < PHASE2_DISPLAY_RATIO) {
-                alpha = 1.0f;
-            } else {
-                float fadeProgress = (phase2Progress - PHASE2_DISPLAY_RATIO) / (1.0f - PHASE2_DISPLAY_RATIO);
-                float acceleratedFade = Math.min(1.0f, fadeProgress * 2.0f);
-                alpha = 1.0f - acceleratedFade * acceleratedFade;
-            }
-            
-            scaleAnimation = 1.0f;
-        }
+
+        AnimationFrame frame = computeReactionAnimationFrame(rt.pos, totalProgress);
+        Vec3 currentPos = frame.pos;
+        float alpha = frame.alpha;
+        float scaleAnimation = frame.scaleAnimation;
         
         double x = currentPos.x - cameraPos.x;
         double y = currentPos.y - cameraPos.y;
@@ -427,6 +373,54 @@ public class FancyDmgSplash implements LevelRenderEvents.AfterTranslucentFeature
         } finally {
             matrices.popPose();
         }
+    }
+
+    private static AnimationFrame computeDamageAnimationFrame(Vec3 basePos, float totalProgress) {
+        if (!FancyDmgSplashSettings.isGenshinAnimationStyle()) {
+            return new AnimationFrame(basePos, 1.0f, 1.0f);
+        }
+        return computeGenshinAnimationFrame(basePos, totalProgress, 1.0f, 0.5f, 1.0f, 1.5f, 0.5f);
+    }
+
+    private static AnimationFrame computeReactionAnimationFrame(Vec3 basePos, float totalProgress) {
+        if (!FancyDmgSplashSettings.isGenshinAnimationStyle()) {
+            return new AnimationFrame(basePos, 1.0f, 1.0f);
+        }
+        return computeGenshinAnimationFrame(basePos, totalProgress, 0.8f, 0.5f, 0.8f, 1.3f, 0.3f);
+    }
+
+    private static AnimationFrame computeGenshinAnimationFrame(
+            Vec3 basePos,
+            float totalProgress,
+            float floatUpScale,
+            float scaleStart,
+            float scaleMidBoost,
+            float scalePeak,
+            float scaleEndReduction
+    ) {
+        if (totalProgress < PHASE1_RATIO) {
+            float phase1Progress = totalProgress / PHASE1_RATIO;
+            float scaleAnimation = 1.0f;
+            if (phase1Progress < 0.3f) {
+                scaleAnimation = scaleStart + phase1Progress / 0.3f * scaleMidBoost;
+            } else if (phase1Progress < 0.6f) {
+                scaleAnimation = scalePeak - (phase1Progress - 0.3f) / 0.3f * scaleEndReduction;
+            }
+            return new AnimationFrame(basePos, 1.0f, scaleAnimation);
+        }
+
+        float phase2Progress = (totalProgress - PHASE1_RATIO) / (1.0f - PHASE1_RATIO);
+        float easedFloatProgress = 1.0f - (1.0f - phase2Progress) * (1.0f - phase2Progress);
+        float floatUp = easedFloatProgress * PHASE2_FLOAT_UP * floatUpScale;
+        Vec3 currentPos = basePos.add(0, floatUp, 0);
+
+        float alpha = 1.0f;
+        if (phase2Progress >= PHASE2_DISPLAY_RATIO) {
+            float fadeProgress = (phase2Progress - PHASE2_DISPLAY_RATIO) / (1.0f - PHASE2_DISPLAY_RATIO);
+            float acceleratedFade = Math.min(1.0f, fadeProgress * 2.0f);
+            alpha = 1.0f - acceleratedFade * acceleratedFade;
+        }
+        return new AnimationFrame(currentPos, alpha, 1.0f);
     }
     
     private static class DamageNumber {

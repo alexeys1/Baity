@@ -1,22 +1,26 @@
 package com.shyeuar.baity.mixin;
 
 import com.shyeuar.baity.features.numinputer.NumInputer;
-import com.shyeuar.baity.mixin.accessor.AbstractSignEditScreenAccessor;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.font.TextFieldHelper;
 import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen;
+import net.minecraft.client.input.KeyEvent;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(AbstractSignEditScreen.class)
 public abstract class NumInputerMixin implements NumInputer.NumInputerSignScreenAccess {
     @Shadow
     @Nullable
     private TextFieldHelper signField;
+
+    @Shadow
+    private int line;
 
     @Inject(method = "init", at = @At("TAIL"))
     private void baity$initNumInputer(CallbackInfo ci) {
@@ -31,6 +35,20 @@ public abstract class NumInputerMixin implements NumInputer.NumInputerSignScreen
     @Inject(method = "tick", at = @At("TAIL"))
     private void baity$tickNumInputer(CallbackInfo ci) {
         NumInputer.tickMouse((AbstractSignEditScreen) (Object) this);
+    }
+
+    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
+    private void baity$altMoveSignCursor(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+        if (NumInputer.handleAltMoveKeyPress(this, event)) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    @Inject(method = "charTyped", at = @At("HEAD"), cancellable = true)
+    private void baity$suppressAltCharTyped(CallbackInfoReturnable<Boolean> cir) {
+        if (NumInputer.shouldSuppressAltCharTyped()) {
+            cir.setReturnValue(true);
+        }
     }
 
     @Inject(method = "removed", at = @At("HEAD"))
@@ -55,7 +73,19 @@ public abstract class NumInputerMixin implements NumInputer.NumInputerSignScreen
     }
 
     @Override
-    public void baity$finishSignEditing() {
-        ((AbstractSignEditScreenAccessor) this).baity$onDone();
+    public void baity$moveSignLine(int delta) {
+        if (this.signField == null) {
+            return;
+        }
+        this.line = (this.line + delta) & 3;
+        this.signField.setCursorToEnd();
+    }
+
+    @Override
+    public void baity$moveSignCursorHorizontal(int delta) {
+        if (this.signField == null) {
+            return;
+        }
+        this.signField.moveByChars(delta);
     }
 }

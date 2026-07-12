@@ -170,6 +170,11 @@ public class ModuleInitializer {
             fancyDmgSplash.setEnabled(ConfigManager.fancyDmgSplashEnabled);
             for (Value v : fancyDmgSplash.getValues()) {
                 switch (v.getName()) {
+                    case "style" -> {
+                        if (v instanceof com.shyeuar.baity.gui.value.ButtonValue button) {
+                            button.setValue(ConfigManager.fancyDmgSplashStyle);
+                        }
+                    }
                     case "sync non-critical dmg" -> v.setValue(ConfigManager.fancyDmgSplashSyncNonCritical);
                     case "genshin elemental reaction" -> v.setValue(ConfigManager.fancyDmgSplashGenshinReaction);
                     case "bold" -> v.setValue(ConfigManager.fancyDmgSplashBold);

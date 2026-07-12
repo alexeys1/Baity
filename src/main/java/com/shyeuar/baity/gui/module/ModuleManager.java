@@ -273,12 +273,6 @@ public class ModuleManager {
             () -> ConfigManager.soundsEnabled,
             val -> ConfigManager.soundsEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new ButtonValue(
-                        "custom soulcry sound", "custom soulcry sound",
-                        "Manage",
-                        ModuleCategory.QOL,
-                        ButtonValue.ButtonValueType.TRIGGER,
-                        false),
                 new GroupValue("muffler", "muffler", ModuleCategory.QOL)
                     .setSubModuleSwitchChildName("muffler enabled")
                     .addChild(new Option("muffler enabled", "enabled", false, ModuleCategory.QOL))
@@ -633,6 +627,15 @@ public class ModuleManager {
             () -> ConfigManager.fancyDmgSplashEnabled,
             val -> ConfigManager.fancyDmgSplashEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
+                new ButtonValue(
+                    "style",
+                    "style",
+                    "default",
+                    "default",
+                    ModuleCategory.MISC,
+                    ButtonValue.ButtonValueType.TRIGGER,
+                    false
+                ),
                 new Option("sync non-critical dmg", "sync non-critical dmg", false, ModuleCategory.MISC),
                 new Option("compact damage number", "compact damage number", true, ModuleCategory.MISC),
                 new Option("bold", "bold", false, ModuleCategory.MISC),
@@ -650,6 +653,11 @@ public class ModuleManager {
                 new com.shyeuar.baity.gui.value.FancyDmgSplashPresetValue("preset", "preset", ModuleCategory.MISC)
             },
             new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "style",
+                    () -> ConfigManager.fancyDmgSplashStyle,
+                    val -> ConfigManager.fancyDmgSplashStyle = (String) val
+                ),
                 new ModuleRegistry.ValueConfigInfo(
                     "sync non-critical dmg",
                     () -> ConfigManager.fancyDmgSplashSyncNonCritical,
@@ -1082,8 +1090,8 @@ public class ModuleManager {
         TooltipManager.registerTooltip("RadialMenu", "A roulette tool that invokes a shortcut command.", 0xFFFFFF);
         TooltipManager.registerTooltip(
             "NumInputer",
-            "On-screen numpad for sign editing with digits, math symbols, and k/m/b suffixes.",
-            0xFFFFFF
+            "Alt+前进/后退换行，Alt+左移/右移移字\nAlt+Move keys move cursor (up/down = line)",
+            0xFFFF00
         );
         TooltipManager.registerTooltip(
             "ChatChannelSwitcher",

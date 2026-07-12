@@ -1,6 +1,7 @@
 package com.shyeuar.baity.gui;
 
 import com.shyeuar.baity.config.ConfigManager;
+import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings;
 import com.shyeuar.baity.gui.smol.SmolFriendsScreen;
 import com.shyeuar.baity.gui.internal.ClickGuiState;
 import com.shyeuar.baity.gui.internal.ClickGuiLayout;
@@ -356,15 +357,17 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             return;
         }
 
-        if ("Sounds".equals(module.getName()) && "custom soulcry sound".equals(buttonValue.getName())) {
-            net.minecraft.util.Util.getPlatform().openUri(
-                    java.net.URI.create(com.shyeuar.baity.features.sounds.SoulcrySoundManager.DOCS_URL));
-            return;
-        }
-
         if ("FishHookTimer".equals(module.getName()) && "custom timer template".equals(buttonValue.getName())) {
             net.minecraft.util.Util.getPlatform().openUri(
                     java.net.URI.create(com.shyeuar.baity.features.fishing.FishHookTimerTemplateManager.DOCS_URL));
+            return;
+        }
+
+        if ("FancyDmgSplash".equals(module.getName()) && "style".equals(buttonValue.getName())) {
+            String current = buttonValue.getValue() == null ? "default" : String.valueOf(buttonValue.getValue());
+            String next = FancyDmgSplashSettings.cycleStyle(current);
+            buttonValue.setValue(next);
+            ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
             return;
         }
 

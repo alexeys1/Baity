@@ -295,7 +295,7 @@ public final class FancyDmgSplashPresetStore {
     public static void addCustomPreset() {
         if (customPresets.size() >= CUSTOM_MAX) {
             customPresets.remove(0);
-            ConfigManager.fancyDmgSplashCustomPresetMask = shiftMaskRight(getCustomMask());
+            ConfigManager.fancyDmgSplashCustomPresetMask = shiftMaskOnRemove(getCustomMask(), 0);
             int editing = ConfigManager.fancyDmgSplashEditingCustomIndex;
             if (editing > 0) {
                 ConfigManager.fancyDmgSplashEditingCustomIndex = editing - 1;
@@ -351,7 +351,7 @@ public final class FancyDmgSplashPresetStore {
         }
         saveEditorToCurrentTarget();
         customPresets.remove(index);
-        ConfigManager.fancyDmgSplashCustomPresetMask = removeMaskBit(getCustomMask(), index);
+        ConfigManager.fancyDmgSplashCustomPresetMask = shiftMaskOnRemove(getCustomMask(), index);
         deleteArmedCustomIndex = -1;
         if (customPresets.isEmpty()) {
             ConfigManager.fancyDmgSplashCustomPresetMask = 0;
@@ -507,7 +507,7 @@ public final class FancyDmgSplashPresetStore {
         previewingBuiltinIndex = -1;
         if (customPresets.size() >= CUSTOM_MAX) {
             customPresets.remove(0);
-            ConfigManager.fancyDmgSplashCustomPresetMask = shiftMaskRight(getCustomMask());
+            ConfigManager.fancyDmgSplashCustomPresetMask = shiftMaskOnRemove(getCustomMask(), 0);
         }
         int newIndex = customPresets.size();
         customPresets.add(data);
@@ -652,21 +652,8 @@ public final class FancyDmgSplashPresetStore {
         return picks;
     }
 
-    private static int shiftMaskRight(int mask) {
+    private static int shiftMaskOnRemove(int mask, int removedIndex) {
         int result = 0;
-        int shift = 0;
-        for (int i = 0; i < CUSTOM_MAX; i++) {
-            if ((mask & (1 << i)) != 0) {
-                result |= (1 << shift);
-                shift++;
-            }
-        }
-        return result;
-    }
-
-    private static int removeMaskBit(int mask, int removedIndex) {
-        int result = 0;
-        int shift = 0;
         for (int i = 0; i < CUSTOM_MAX; i++) {
             if ((mask & (1 << i)) == 0) {
                 continue;
@@ -674,8 +661,8 @@ public final class FancyDmgSplashPresetStore {
             if (i == removedIndex) {
                 continue;
             }
-            result |= (1 << shift);
-            shift++;
+            int newIndex = i > removedIndex ? i - 1 : i;
+            result |= (1 << newIndex);
         }
         return result;
     }

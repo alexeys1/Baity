@@ -1,10 +1,13 @@
 package com.shyeuar.baity.features.paperdoll;
 
 import com.shyeuar.baity.config.ConfigManager;
+import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.gui.hud.HudElement;
 import com.shyeuar.baity.gui.hud.HudManager;
 import com.shyeuar.baity.gui.hud.HudPositionEditor;
-import com.shyeuar.baity.mixin.accessor.LivingEntityAccessor;
+import com.shyeuar.baity.gui.hud.HudScreenUtils;
+import com.shyeuar.baity.gui.module.Module;
+import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.render.RenderScope;
 import com.shyeuar.baity.utils.NoSwimPoseUtils;
 import net.fabricmc.api.EnvType;
@@ -30,6 +33,7 @@ public final class PaperDoll implements HudElement {
     private static final int BASE_HEIGHT = 52;
     private static final float ENTITY_SCALE_PER_BOX_HEIGHT = 64.0f / 192.0f;
     private static final float ENTITY_SIZE_MULTIPLIER = 1.2f;
+    private static final float SMOL_LAYOUT_SCALE = 0.5f;
     private static final float DISPLAY_FACING_YAW = 180.0f;
     private static final float YAW_CHANGE_SPEED = 0.5f;
     private static final float YAW_RESTORE_SPEED = 20.0f;
@@ -149,12 +153,28 @@ public final class PaperDoll implements HudElement {
 
     @Override
     public int getWidth() {
-        return BASE_WIDTH;
+        return Math.max(1, Math.round(BASE_WIDTH * getLayoutScale()));
     }
 
     @Override
     public int getHeight() {
-        return BASE_HEIGHT;
+        return Math.max(1, Math.round(BASE_HEIGHT * getLayoutScale()));
+    }
+
+    private static float getLayoutScale() {
+        return isLocalPlayerSmol() ? SMOL_LAYOUT_SCALE : 1.0f;
+    }
+
+    private static boolean isLocalPlayerSmol() {
+        Module smolPeople = ModuleManager.getModuleByName("SmolPeople");
+        if (smolPeople == null || !smolPeople.isEnabled()) {
+            return false;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
+            return false;
+        }
+        return SmolFriendManager.shouldApplySmolTo(mc.player.getId());
     }
 
     @Override
@@ -194,9 +214,6 @@ public final class PaperDoll implements HudElement {
                 updateRotation(entity.getYRot(), entity.getXRot());
             }
             transformEntity(entity, partialTicks);
-            if (NoSwimPoseUtils.isFeatureActive()) {
-                clearSwimFields(entity);
-            }
 
             EntityRenderState entityState = extractRenderState(entity, partialTicks);
             if (entityState instanceof AvatarRenderState avatar && NoSwimPoseUtils.isFeatureActive()) {
@@ -223,24 +240,24 @@ public final class PaperDoll implements HudElement {
         int centerX = boxLeft + boxW / 2;
         int centerY = boxTop + boxH / 2;
 
-        int renderW = Math.round(boxW * ENTITY_SIZE_MULTIPLIER);
-        int renderH = Math.round(boxH * ENTITY_SIZE_MULTIPLIER);
-        int renderLeft = centerX - renderW / 2;
-        int renderTop = centerY - renderH / 2;
+        int screenW = HudScreenUtils.getScaledWidth();
+        int screenH = HudScreenUtils.getScaledHeight();
+        int viewportLeft = centerX - screenW / 2;
+        int viewportTop = centerY - screenH / 2;
 
         Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI).rotateY((float) Math.PI);
         rotation.rotateY((float) Math.toRadians(ConfigManager.paperDollFacingAngle));
 
         graphics.entity(
                 entityState,
-                boxH * ENTITY_SCALE_PER_BOX_HEIGHT * ENTITY_SIZE_MULTIPLIER,
+                BASE_HEIGHT * getScale() * ENTITY_SCALE_PER_BOX_HEIGHT * ENTITY_SIZE_MULTIPLIER,
                 offset,
                 rotation,
                 null,
-                renderLeft,
-                renderTop,
-                renderLeft + renderW,
-                renderTop + renderH
+                viewportLeft,
+                viewportTop,
+                viewportLeft + screenW,
+                viewportTop + screenH
         );
     }
 
@@ -306,13 +323,11 @@ public final class PaperDoll implements HudElement {
 
     private static float getPaperDollOffsetY(LivingEntity entity) {
         float standingHeight = entity.getDimensions(Pose.STANDING).height() * entity.getScale();
-        return standingHeight * 0.5f + 0.0625f;
-    }
-
-    private static void clearSwimFields(LivingEntity entity) {
-        LivingEntityAccessor accessor = (LivingEntityAccessor) entity;
-        accessor.baity$setSwimAmountField(0.0f);
-        accessor.baity$setSwimAmountOField(0.0f);
+        float offset = standingHeight * 0.5f + 0.0625f;
+        if (isLocalPlayerSmol()) {
+            offset *= SMOL_LAYOUT_SCALE;
+        }
+        return offset;
     }
 
     private EntityRenderState extractRenderState(Entity entity, float partialTicks) {
@@ -336,15 +351,12 @@ public final class PaperDoll implements HudElement {
         private float yHeadRotO;
         private float xRot;
         private float xRotO;
-        private float swimAmount;
-        private float swimAmountO;
 
         private EntityPoseBackup(LivingEntity entity) {
             this.entity = entity;
         }
 
         static EntityPoseBackup capture(LivingEntity entity) {
-            LivingEntityAccessor accessor = (LivingEntityAccessor) entity;
             EntityPoseBackup backup = new EntityPoseBackup(entity);
             backup.pose = entity.getPose();
             backup.yRot = entity.getYRot();
@@ -355,13 +367,10 @@ public final class PaperDoll implements HudElement {
             backup.yHeadRotO = entity.yHeadRotO;
             backup.xRot = entity.getXRot();
             backup.xRotO = entity.xRotO;
-            backup.swimAmount = accessor.baity$getSwimAmountField();
-            backup.swimAmountO = accessor.baity$getSwimAmountOField();
             return backup;
         }
 
         void restore() {
-            LivingEntityAccessor accessor = (LivingEntityAccessor) entity;
             entity.setPose(pose);
             entity.setYRot(yRot);
             entity.yRotO = yRotO;
@@ -371,8 +380,6 @@ public final class PaperDoll implements HudElement {
             entity.yHeadRotO = yHeadRotO;
             entity.setXRot(xRot);
             entity.xRotO = xRotO;
-            accessor.baity$setSwimAmountField(swimAmount);
-            accessor.baity$setSwimAmountOField(swimAmountO);
         }
     }
 }

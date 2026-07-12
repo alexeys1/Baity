@@ -833,11 +833,20 @@ public class ValueStyleRenderer {
        GuiRenderUtil.drawRoundedRect(context, x1, y, x2, y + paletteHeight, 6, valueColor);
 
        int textColor = (theme.FONT.getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       context.text(client.font, paletteValue.getDisplayName(), (int) (x1 + 8), (int) (y + 6), textColor, false);
-       String presetHint = "(Lclick to select,Rclick to edit)";
-       int hintColor = (new java.awt.Color(160, 160, 160, 255).getRGB() & 0x00FFFFFF) | (localAlpha << 24);
-       int hintW = client.font.width(presetHint);
-       context.text(client.font, presetHint, (int) (x2 - 8 - hintW), (int) (y + 6), hintColor, false);
+       String label = paletteValue.getDisplayName();
+       int labelX = (int) (x1 + 8);
+       int labelY = (int) (y + 6);
+       int labelW = client.font.width(label);
+       int labelH = client.font.lineHeight;
+       context.text(client.font, label, labelX, labelY, textColor, false);
+       if (GuiRenderUtil.isHovered(labelX, labelY, labelX + labelW, labelY + labelH, mouseX, mouseY)
+               && hoveredTooltipInfo != null) {
+           hoveredTooltipInfo.tooltip = "LClick to apply,RClick to edit.";
+           hoveredTooltipInfo.tooltipText = net.minecraft.network.chat.Component.literal(hoveredTooltipInfo.tooltip)
+                   .withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0xFFFF00));
+           hoveredTooltipInfo.x = (int) (mouseX + 5);
+           hoveredTooltipInfo.y = (int) (mouseY + 5);
+       }
 
        int themeDarkBorder = new java.awt.Color(50, 50, 50, 255).getRGB();
        int themePurpleBorder = theme.BG_3.getRGB();

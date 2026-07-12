@@ -1025,14 +1025,7 @@ public class ClickGuiInputHandler {
     
     private List<Module> getFilteredModules() {
         String searchText = state.getSearchInput().getText().toLowerCase().trim();
-        
-        if (searchText.isEmpty()) {
-            return ModuleManager.getModulesByCategory(state.getSelectedCategory());
-        }
-        
-        return ModuleManager.getModules().stream()
-                .filter(module -> module.getName().toLowerCase().contains(searchText))
-                .collect(java.util.stream.Collectors.toList());
+        return ClickGuiSearchUtils.filterModules(searchText, state.getSelectedCategory());
     }
     
     private boolean handleModuleClick(Module module, float modY, 

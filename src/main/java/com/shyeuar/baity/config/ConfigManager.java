@@ -77,6 +77,7 @@ public class ConfigManager {
     public static String fancyDmgSplashDamageSymbols = "✧";
     public static boolean fancyDmgSplashBold = false;
     public static String fancyDmgSplashSeparator = "none";
+    public static String fancyDmgSplashStyle = "default";
     
     public static boolean noSwimPoseEnabled = false; 
     
@@ -429,6 +430,9 @@ public class ConfigManager {
         registerField("FancyDmgSplashSeparator", String.class,
             c -> ConfigManager.fancyDmgSplashSeparator,
             (c, v) -> ConfigManager.fancyDmgSplashSeparator = (String) v);
+        registerField("FancyDmgSplashStyle", String.class,
+            c -> ConfigManager.fancyDmgSplashStyle,
+            (c, v) -> ConfigManager.fancyDmgSplashStyle = (String) v);
         registerField("FancyDmgSplashColorEditor", String.class,
             c -> com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.encodeColorEditor(),
             (c, v) -> com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.decodeColorEditor((String) v));

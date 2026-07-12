@@ -14,13 +14,12 @@ import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
 import com.shyeuar.baity.features.fishing.ChromaFishingLine;
 import com.shyeuar.baity.features.fishing.FishHookTimer;
 import com.shyeuar.baity.features.paperdoll.PaperDoll;
+import com.shyeuar.baity.features.blockanimation.BlockAnimationSwordCatalog;
 import com.shyeuar.baity.features.fishing.HypixelFishingRodCatalog;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.features.highlights.PestEntityRegistry;
 import com.shyeuar.baity.features.highlights.PestHighlights;
 import com.shyeuar.baity.features.VanillaHudHider;
-import com.shyeuar.baity.features.sounds.SoulcrySoundManager;
-import com.shyeuar.baity.features.sounds.SoundsHooks;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -48,6 +47,7 @@ public class Baity implements ClientModInitializer {
     @SuppressWarnings("deprecation")
     public void onInitializeClient() {
         com.shyeuar.baity.config.BaityConfigDir.init();
+        BlockAnimationSwordCatalog.init();
         Objects.requireNonNull(CustomTotemItem.CUSTOM_TOTEM);
         
         ConfigManager.loadConfig();
@@ -56,8 +56,6 @@ public class Baity implements ClientModInitializer {
         if (ModuleManager.getModules().isEmpty()) {
             ModuleManager.init();
         }
-        SoulcrySoundManager.init();
-        
         ModuleInitializer.initializeModules();
         BaityPresenceSync.init();
 
@@ -103,7 +101,6 @@ public class Baity implements ClientModInitializer {
             RadialMenu.tick(client);
             BaityPresenceSync.tick();
             PestHighlights.tickPestCaches();
-            SoundsHooks.tick(client);
             
             FishHookTimer.getInstance().tick();
             PaperDoll.getInstance().clientTick();

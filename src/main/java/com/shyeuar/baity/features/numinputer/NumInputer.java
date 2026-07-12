@@ -10,7 +10,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.Options;
 import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen;
+import net.minecraft.client.input.KeyEvent;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -21,10 +23,10 @@ public final class NumInputer {
     private static final int KEY_SIZE = 22;
     private static final int KEY_GAP = 5;
     private static final int SECTION_GAP = 9;
+    private static final int SIDE_COL_GAP = 4;
     private static final int PANEL_PADDING = 8;
     private static final double ANCHOR_X_RATIO = 0.75;
     private static final double ANCHOR_Y_RATIO = 0.5;
-    private static final String ENTER_LABEL = "\u23CE";
     private static final String BACKSPACE_LABEL = "\u232B";
 
     private static final int PANEL_BG = LinearTheme.BG_SECONDARY.getRGB();
@@ -51,6 +53,51 @@ public final class NumInputer {
         INSTANCE.leftMouseWasDown = false;
     }
 
+    public static boolean handleAltMoveKeyPress(NumInputerSignScreenAccess access, KeyEvent event) {
+        if (!ConfigManager.numInputerEnabled) {
+            return false;
+        }
+        if ((event.modifiers() & GLFW.GLFW_MOD_ALT) == 0) {
+            return false;
+        }
+
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.options == null) {
+            return false;
+        }
+
+        Options options = client.options;
+
+        if (options.keyUp.matches(event)) {
+            access.baity$moveSignLine(-1);
+            return true;
+        }
+        if (options.keyDown.matches(event)) {
+            access.baity$moveSignLine(1);
+            return true;
+        }
+        if (options.keyLeft.matches(event)) {
+            access.baity$moveSignCursorHorizontal(-1);
+            return true;
+        }
+        if (options.keyRight.matches(event)) {
+            access.baity$moveSignCursorHorizontal(1);
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean shouldSuppressAltCharTyped() {
+        if (!ConfigManager.numInputerEnabled) {
+            return false;
+        }
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.getWindow() == null) {
+            return false;
+        }
+        return isAltDown(client.getWindow().handle());
+    }
+
     public static void render(AbstractSignEditScreen screen, GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         INSTANCE.renderInternal(screen, graphics, mouseX, mouseY);
     }
@@ -66,7 +113,7 @@ public final class NumInputer {
         }
 
         int mainWidth = KEY_SIZE * 3 + KEY_GAP * 2;
-        int contentWidth = mainWidth + SECTION_GAP + KEY_SIZE;
+        int contentWidth = mainWidth + SIDE_COL_GAP + KEY_SIZE;
         int panelWidth = PANEL_PADDING * 2 + contentWidth;
         int panelHeight = PANEL_PADDING * 2 + KEY_SIZE * 5 + KEY_GAP * 3 + SECTION_GAP;
 
@@ -75,12 +122,13 @@ public final class NumInputer {
 
         int contentX = panelX + PANEL_PADDING;
         int contentY = panelY + PANEL_PADDING;
-        int sideColX = contentX + mainWidth + SECTION_GAP;
+        int sideColX = contentX + mainWidth + SIDE_COL_GAP;
 
         List<KeyButton> keys = new ArrayList<>();
 
         int operatorY = contentY;
-        addOperatorRow(keys, contentX, mainWidth, sideColX, operatorY);
+        addEqualSpacedRow(keys, contentX, operatorY, '+', '-', '*');
+        addSideKey(keys, sideColX, operatorY, '/');
 
         int numberY = operatorY + KEY_SIZE + SECTION_GAP;
         addEqualSpacedRow(keys, contentX, numberY, '7', '8', '9');
@@ -102,23 +150,11 @@ public final class NumInputer {
             row4Y,
             KEY_SIZE,
             KEY_SIZE,
-            ENTER_LABEL,
-            KeyAction.ENTER
+            BACKSPACE_LABEL,
+            KeyAction.BACKSPACE
         ));
 
         layout = new Layout(panelX, panelY, panelX + panelWidth, panelY + panelHeight, keys, screen.width, screen.height);
-    }
-
-    private static void addOperatorRow(List<KeyButton> keys, int contentX, int mainWidth, int sideColX, int y) {
-        char[] operators = {'+', '-', '*', '/'};
-        int opSize = (mainWidth - KEY_GAP * (operators.length - 1)) / operators.length;
-        float opYOffset = (KEY_SIZE - opSize) * 0.5f;
-        float x = contentX;
-        for (char op : operators) {
-            keys.add(KeyButton.rect(x, y + opYOffset, opSize, opSize, op));
-            x += opSize + KEY_GAP;
-        }
-        keys.add(KeyButton.action(sideColX, y, KEY_SIZE, KEY_SIZE, BACKSPACE_LABEL, KeyAction.BACKSPACE));
     }
 
     private static void addEqualSpacedRow(List<KeyButton> keys, int x, int y, char... labels) {
@@ -162,7 +198,7 @@ public final class NumInputer {
     private static void drawKeyLabel(GuiGraphicsExtractor graphics, Font font, KeyButton key) {
         float boxW = key.x2 - key.x1;
         float boxH = key.y2 - key.y1;
-        if (key.action == KeyAction.BACKSPACE || key.action == KeyAction.ENTER) {
+        if (key.action == KeyAction.BACKSPACE) {
             float scale = Math.min(boxW / Math.max(1, font.width(key.label)), boxH / Math.max(1, font.lineHeight)) * 0.82f;
             scale = Math.max(scale, 1.0f);
             float scaledW = font.width(key.label) * scale;
@@ -205,6 +241,11 @@ public final class NumInputer {
         leftMouseWasDown = down;
     }
 
+    private static boolean isAltDown(long window) {
+        return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_ALT) == GLFW.GLFW_PRESS
+            || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_ALT) == GLFW.GLFW_PRESS;
+    }
+
     private void handleClick(AbstractSignEditScreen screen, double mouseX, double mouseY) {
         NumInputerSignScreenAccess access = (NumInputerSignScreenAccess) screen;
 
@@ -212,10 +253,7 @@ public final class NumInputer {
             if (!GuiRenderUtil.isHovered(key.x1, key.y1, key.x2, key.y2, (float) mouseX, (float) mouseY)) {
                 continue;
             }
-            if (key.action == KeyAction.ENTER) {
-                SoundUtils.playBubble();
-                access.baity$finishSignEditing();
-            } else if (key.action == KeyAction.BACKSPACE) {
+            if (key.action == KeyAction.BACKSPACE) {
                 SoundUtils.playWoodenButton();
                 access.baity$backspaceFromSign();
             } else if (key.insertChar != 0) {
@@ -232,7 +270,6 @@ public final class NumInputer {
 
     private enum KeyAction {
         CHAR,
-        ENTER,
         BACKSPACE
     }
 
@@ -251,6 +288,8 @@ public final class NumInputer {
 
         void baity$backspaceFromSign();
 
-        void baity$finishSignEditing();
+        void baity$moveSignLine(int delta);
+
+        void baity$moveSignCursorHorizontal(int delta);
     }
 }

@@ -68,7 +68,7 @@ public final class BlockAnimationRenderer {
         if (blockingHand != interactionHand) return RenderResult.PASS;
 
         ItemStack renderStack = itemStack;
-        if (renderStack.isEmpty() || !BlockAnimationUtils.isSword(renderStack.getItem())) {
+        if (renderStack.isEmpty() || !BlockAnimationUtils.isBlockSword(renderStack)) {
             renderStack = player.getItemInHand(interactionHand);
         }
         if (renderStack.isEmpty() || renderStack.has(net.minecraft.core.component.DataComponents.MAP_ID)) {

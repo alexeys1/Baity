@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
+import com.shyeuar.baity.features.blockanimation.BlockAnimationSwordCatalog;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
@@ -59,7 +60,7 @@ public final class BlockAnimationUtils {
         ItemUseAnimation anim = stack.getUseAnimation();
         return anim == ItemUseAnimation.EAT || anim == ItemUseAnimation.DRINK;
     }
-
+ 
     public static boolean isPlayerRightClicking() {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.options == null) return false;
@@ -75,8 +76,8 @@ public final class BlockAnimationUtils {
 
         ItemStack mainHand = player.getMainHandItem();
         ItemStack offHand = player.getOffhandItem();
-        boolean mainSword = isSword(mainHand.getItem());
-        boolean offSword = isSword(offHand.getItem());
+        boolean mainSword = isBlockSword(mainHand);
+        boolean offSword = isBlockSword(offHand);
 
         if (mainSword && canActivateBlocking(player, offHand)) {
             return InteractionHand.MAIN_HAND;
@@ -101,6 +102,16 @@ public final class BlockAnimationUtils {
                item == Items.DIAMOND_SWORD ||
                item == Items.NETHERITE_SWORD ||
                item == Items.COPPER_SWORD;
+    }
+
+    public static boolean isBlockSword(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return false;
+        }
+        if (isSword(stack.getItem())) {
+            return true;
+        }
+        return BlockAnimationSwordCatalog.matches(stack);
     }
 
     public static boolean canActivateBlocking(Player player, ItemStack offHand) {

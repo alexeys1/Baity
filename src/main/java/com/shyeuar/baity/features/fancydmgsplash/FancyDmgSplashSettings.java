@@ -23,6 +23,8 @@ import java.util.regex.Pattern;
 @Environment(EnvType.CLIENT)
 public final class FancyDmgSplashSettings {
     public static final String DEFAULT_SYMBOL = "✧";
+    public static final String STYLE_DEFAULT = "default";
+    public static final String STYLE_GENSHIN = "genshin";
     public static final int MAX_DAMAGE_SYMBOL_CODE_POINTS = 1;
     public static final int DEFAULT_GRADIENT_START = 0xFFFF55;
     public static final int DEFAULT_GRADIENT_END = 0xFF5555;
@@ -48,6 +50,17 @@ public final class FancyDmgSplashSettings {
     };
 
     private FancyDmgSplashSettings() {
+    }
+
+    public static boolean isGenshinAnimationStyle() {
+        return STYLE_GENSHIN.equalsIgnoreCase(ConfigManager.fancyDmgSplashStyle);
+    }
+
+    public static String cycleStyle(String current) {
+        if (STYLE_DEFAULT.equalsIgnoreCase(current)) {
+            return STYLE_GENSHIN;
+        }
+        return STYLE_DEFAULT;
     }
 
     public static int symbolCodePointCount(String symbols) {

@@ -1,8 +1,9 @@
 package com.shyeuar.baity.gui.owo;
 
 import com.shyeuar.baity.gui.input.LineTextInput;
-import com.shyeuar.baity.gui.internal.ClickGuiState;
 import com.shyeuar.baity.gui.internal.ClickGuiLayout;
+import com.shyeuar.baity.gui.internal.ClickGuiSearchUtils;
+import com.shyeuar.baity.gui.internal.ClickGuiState;
 import com.shyeuar.baity.gui.theme.Theme;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
@@ -185,14 +186,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             return cachedFilteredModules;
         }
         
-        List<Module> modules;
-        if (searchText.isEmpty()) {
-            modules = ModuleManager.getModulesByCategory(selectedCategory);
-        } else {
-            modules = ModuleManager.getModules().stream()
-                    .filter(module -> module.getName().toLowerCase().contains(searchText))
-                    .collect(java.util.stream.Collectors.toList());
-        }
+        List<Module> modules = ClickGuiSearchUtils.filterModules(searchText, selectedCategory);
         
         cachedFilteredModules = modules;
         cachedSearchText = searchText;
@@ -862,28 +856,44 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         float tooltipScaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
         float tipScale = 0.75f * tooltipScaleRatio;
         int offsetFromCursor = (int)(3 * tooltipScaleRatio);
-        
-        int rawTextWidth;
-        if (state.getHoveredTooltipText() != null) {
-            rawTextWidth = client.font.width(state.getHoveredTooltipText());
+
+        net.minecraft.network.chat.Component coloredText = state.getHoveredTooltipText();
+        String plainText;
+        if (coloredText != null) {
+            plainText = coloredText.getString();
+        } else if (state.getHoveredTooltip() != null) {
+            plainText = state.getHoveredTooltip();
         } else {
-            rawTextWidth = client.font.width(state.getHoveredTooltip());
+            return;
         }
-        
+
+        String[] lines = plainText.split("\n", -1);
+        if (lines.length == 0) {
+            return;
+        }
+
         int bgPadding = 10;
         int rawFontHeight = 9;
+        int lineSpacing = 2;
+        int contentHeight = lines.length * rawFontHeight + Math.max(0, lines.length - 1) * lineSpacing;
+
+        int rawTextWidth = 0;
+        for (String line : lines) {
+            rawTextWidth = Math.max(rawTextWidth, client.font.width(line));
+        }
+
         int rawTooltipWidth = rawTextWidth + bgPadding;
-        int rawTooltipHeight = rawFontHeight + 8;
-        
+        int rawTooltipHeight = contentHeight + 8;
+
         int scaledTooltipWidth = (int)(rawTooltipWidth * tipScale);
         int scaledTooltipHeight = (int)(rawTooltipHeight * tipScale);
-        
+
         int screenWidth = client.getWindow().getGuiScaledWidth();
         int screenHeight = client.getWindow().getGuiScaledHeight();
-        
+
         int finalTooltipX = (int)mouseX + offsetFromCursor;
         int finalTooltipY = (int)mouseY - offsetFromCursor - scaledTooltipHeight;
-        
+
         if (finalTooltipX + scaledTooltipWidth > screenWidth) {
             finalTooltipX = (int)mouseX - scaledTooltipWidth - offsetFromCursor;
         }
@@ -896,25 +906,33 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         if (finalTooltipX < 2) {
             finalTooltipX = 2;
         }
-        
+
         var guiMatrices = guiGraphics.pose();
         guiMatrices.pushMatrix();
         guiMatrices.translate((float)finalTooltipX, (float)finalTooltipY);
         guiMatrices.scale(tipScale, tipScale);
-        
+
         com.shyeuar.baity.gui.render.GuiRenderUtil.drawRoundedRect(guiGraphics, 0, 0,
                                       rawTooltipWidth, rawTooltipHeight,
                                       4, theme.BG_2.getRGB());
-        
+
         int textX = bgPadding / 2;
-        int textY = (rawTooltipHeight - rawFontHeight) / 2;
-        
-        if (state.getHoveredTooltipText() != null) {
-            guiGraphics.text(client.font, state.getHoveredTooltipText(), textX, textY, 0xFFFFFFFF, false);
-        } else if (state.getHoveredTooltip() != null) {
-            guiGraphics.text(client.font, state.getHoveredTooltip(), textX, textY, theme.FONT_C.getRGB() | 0xFF000000, false);
+        int textY = (rawTooltipHeight - contentHeight) / 2;
+
+        int textColor = theme.FONT_C.getRGB() | 0xFF000000;
+        if (coloredText != null && coloredText.getStyle().getColor() != null) {
+            textColor = coloredText.getStyle().getColor().getValue() | 0xFF000000;
         }
-        
+
+        if (lines.length == 1 && coloredText != null) {
+            guiGraphics.text(client.font, coloredText, textX, textY, 0xFFFFFFFF, false);
+        } else {
+            for (int i = 0; i < lines.length; i++) {
+                int lineY = textY + i * (rawFontHeight + lineSpacing);
+                guiGraphics.text(client.font, lines[i], textX, lineY, textColor, false);
+            }
+        }
+
         guiMatrices.popMatrix();
     }
     

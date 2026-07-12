@@ -267,6 +267,9 @@ public final class NoSwimPoseUtils {
     }
 
     public static boolean shouldForceStandingModelAppearance(AvatarRenderState state) {
+        if (!isFeatureActive()) {
+            return false;
+        }
         if (shouldForceStandingModelAppearance()) {
             return true;
         }
@@ -322,11 +325,14 @@ public final class NoSwimPoseUtils {
     }
 
     public static boolean shouldClearSelfSwimState(AvatarRenderState state) {
+        if (!isFeatureActive()) {
+            return false;
+        }
         if (!isSelfPlayerById(state.id)) {
             return false;
         }
         if (RenderScope.isPaperDollRender()) {
-            return isFeatureActive();
+            return true;
         }
         return isLevelRenderContext(state);
     }

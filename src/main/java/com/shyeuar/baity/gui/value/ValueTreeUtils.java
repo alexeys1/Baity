@@ -37,6 +37,16 @@ public final class ValueTreeUtils {
         return out;
     }
 
+    public static List<ValueEntry> getSearchableEntries(Module module) {
+        List<ValueEntry> out = new ArrayList<>();
+        for (Value value : module.getValues()) {
+            if ("enabled".equals(value.getName())) continue;
+            if (isHiddenFromGui(module, value)) continue;
+            appendAll(value, 0, null, out);
+        }
+        return out;
+    }
+
     public static Value findByName(Module module, String valueName) {
         if (valueName == null) return null;
         for (ValueEntry entry : getAllEntries(module)) {

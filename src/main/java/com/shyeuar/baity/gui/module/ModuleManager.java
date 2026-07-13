@@ -145,6 +145,8 @@ public class ModuleManager {
                 new Option("head restore", "head restore", false, ModuleCategory.MISC),
                 new Option("hide armor", "hide armor", false, ModuleCategory.MISC),
                 new com.shyeuar.baity.gui.value.SliderValue(
+                    "head restore speed", "head restore speed", 1.0, 0.25, 2.0, 0.05, ModuleCategory.MISC),
+                new com.shyeuar.baity.gui.value.SliderValue(
                     "facing angle", "facing angle", 200.0, 0.0, 360.0, 1.0, ModuleCategory.MISC),
                 new com.shyeuar.baity.gui.value.SliderValue(
                     "head yaw range", "head yaw range", 30.0, 0.0, 90.0, 1.0, ModuleCategory.MISC),
@@ -161,6 +163,11 @@ public class ModuleManager {
                     "hide armor",
                     () -> ConfigManager.paperDollHideArmor,
                     val -> ConfigManager.paperDollHideArmor = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "head restore speed",
+                    () -> (double) ConfigManager.paperDollHeadRestoreSpeed,
+                    val -> ConfigManager.paperDollHeadRestoreSpeed = ((Number) val).floatValue()
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "facing angle",

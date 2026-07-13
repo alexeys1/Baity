@@ -37,7 +37,9 @@ public final class PaperDoll implements HudElement {
     private static final float SMOL_LAYOUT_SCALE = 0.5f;
     private static final float DISPLAY_FACING_YAW = 180.0f;
     private static final float YAW_CHANGE_SPEED = 0.5f;
-    private static final float YAW_RESTORE_SPEED = 20.0f;
+    private static final float HEAD_RESTORE_DEGREES_AT_ONE = 6.0f;
+    private static final float HEAD_RESTORE_SPEED_MIN = 0.25f;
+    private static final float HEAD_RESTORE_SPEED_MAX = 2.0f;
     private static final float YAW_RESTORE_REFERENCE_LIMIT = 60.0f;
     private static final int YAW_RESTORE_IDLE_TICKS = 2;
     private static final float YAW_CHANGE_EPSILON = 1.0f;
@@ -279,8 +281,12 @@ public final class PaperDoll implements HudElement {
         displayYawSmooth = displayYaw;
         float restoreLimit = Math.max(ConfigManager.paperDollHeadYawRange, YAW_RESTORE_REFERENCE_LIMIT);
         float offset = Math.abs(DISPLAY_FACING_YAW - displayYaw);
-        float delta = (1.0f + Mth.sin((float) (Math.PI / 2.0 * (offset / restoreLimit))))
-                * YAW_RESTORE_SPEED;
+        float speed = Mth.clamp(
+                ConfigManager.paperDollHeadRestoreSpeed,
+                HEAD_RESTORE_SPEED_MIN,
+                HEAD_RESTORE_SPEED_MAX);
+        float sinFactor = 1.0f + Mth.sin((float) (Math.PI / 2.0 * (offset / restoreLimit)));
+        float delta = HEAD_RESTORE_DEGREES_AT_ONE * speed * sinFactor;
         if (displayYaw > DISPLAY_FACING_YAW) {
             displayYaw = Math.max(displayYaw - delta, DISPLAY_FACING_YAW);
         } else if (displayYaw < DISPLAY_FACING_YAW) {

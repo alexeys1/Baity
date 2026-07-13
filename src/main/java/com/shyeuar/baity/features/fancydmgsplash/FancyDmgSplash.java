@@ -1,6 +1,7 @@
 package com.shyeuar.baity.features.fancydmgsplash;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.shyeuar.baity.utils.FloatingWorldTextCompat;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import net.fabricmc.api.EnvType;
@@ -24,7 +25,7 @@ import java.util.List;
 import java.util.Random;
 
 @Environment(EnvType.CLIENT)
-public class FancyDmgSplash implements LevelRenderEvents.AfterTranslucentFeatures {
+public class FancyDmgSplash implements LevelRenderEvents.EndMain {
     private static final Minecraft mc = Minecraft.getInstance();
     private static final List<DamageNumber> damageNumbers = new ArrayList<>();
     private static final List<ReactionText> reactionTexts = new ArrayList<>();
@@ -156,7 +157,7 @@ public class FancyDmgSplash implements LevelRenderEvents.AfterTranslucentFeature
     }
     
     @Override
-    public void afterTranslucentFeatures(LevelRenderContext context) {
+    public void endMain(LevelRenderContext context) {
         Module m = ModuleManager.getModuleByName("FancyDmgSplash");
         if (m == null || !m.isEnabled()) return;
         if (mc.level == null || mc.player == null) return;
@@ -170,41 +171,46 @@ public class FancyDmgSplash implements LevelRenderEvents.AfterTranslucentFeature
         Camera camera = mc.gameRenderer.getMainCamera();
         float cameraYaw = camera.yRot();
         float cameraPitch = camera.xRot();
-        
-        if (currentTime - lastWetHealCheckTime >= WET_HEAL_CHECK_INTERVAL_MS) {
-            lastWetHealCheckTime = currentTime;
-            checkWetAndHealReactions();
-        }
-        
-        Iterator<DamageNumber> iterator = damageNumbers.iterator();
-        while (iterator.hasNext()) {
-            DamageNumber dn = iterator.next();
-            if (currentTime - dn.startTime > ANIMATION_DURATION_MS) {
-                iterator.remove();
-            }
-        }
-        
-        Iterator<ReactionText> reactionIterator = reactionTexts.iterator();
-        while (reactionIterator.hasNext()) {
-            ReactionText rt = reactionIterator.next();
-            if (currentTime - rt.startTime > ANIMATION_DURATION_MS) {
-                reactionIterator.remove();
-            }
-        }
-        
-        for (DamageNumber dn : damageNumbers) {
-            renderDamageNumber(matrices, buffers, dn, cameraPos, cameraYaw, cameraPitch, currentTime);
-        }
-        
-        for (ReactionText rt : reactionTexts) {
-            renderReactionText(matrices, buffers, rt, cameraPos, cameraYaw, cameraPitch, currentTime);
-        }
 
-        if (buffers instanceof MultiBufferSource.BufferSource bufferSource) {
-            bufferSource.endBatch();
+        FloatingWorldTextCompat.beginFrame();
+        try {
+            if (currentTime - lastWetHealCheckTime >= WET_HEAL_CHECK_INTERVAL_MS) {
+                lastWetHealCheckTime = currentTime;
+                checkWetAndHealReactions();
+            }
+
+            Iterator<DamageNumber> iterator = damageNumbers.iterator();
+            while (iterator.hasNext()) {
+                DamageNumber dn = iterator.next();
+                if (currentTime - dn.startTime > ANIMATION_DURATION_MS) {
+                    iterator.remove();
+                }
+            }
+
+            Iterator<ReactionText> reactionIterator = reactionTexts.iterator();
+            while (reactionIterator.hasNext()) {
+                ReactionText rt = reactionIterator.next();
+                if (currentTime - rt.startTime > ANIMATION_DURATION_MS) {
+                    reactionIterator.remove();
+                }
+            }
+
+            for (DamageNumber dn : damageNumbers) {
+                renderDamageNumber(matrices, buffers, dn, cameraPos, cameraYaw, cameraPitch, currentTime);
+            }
+
+            for (ReactionText rt : reactionTexts) {
+                renderReactionText(matrices, buffers, rt, cameraPos, cameraYaw, cameraPitch, currentTime);
+            }
+
+            if (buffers instanceof MultiBufferSource.BufferSource bufferSource) {
+                bufferSource.endBatch();
+            }
+        } finally {
+            FloatingWorldTextCompat.endFrame();
         }
     }
-    
+
     private static void checkWetAndHealReactions() {
         if (mc.level == null || mc.player == null) return;
         if (!com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction) return;
@@ -320,8 +326,16 @@ public class FancyDmgSplash implements LevelRenderEvents.AfterTranslucentFeature
             Font textRenderer = mc.font;
             int textWidth = textRenderer.width(styledText);
 
-            textRenderer.drawInBatch(styledText, -textWidth / 2.0f, 0, finalColor, false,
-                matrices.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+            FloatingWorldTextCompat.drawInBatch(
+                    textRenderer,
+                    styledText,
+                    -textWidth / 2.0f,
+                    0,
+                    finalColor,
+                    matrices.last().pose(),
+                    buffers,
+                    15728880
+            );
         } finally {
             matrices.popPose();
         }
@@ -368,8 +382,16 @@ public class FancyDmgSplash implements LevelRenderEvents.AfterTranslucentFeature
             Font textRenderer = mc.font;
             int textWidth = textRenderer.width(styledText);
 
-            textRenderer.drawInBatch(styledText, -textWidth / 2.0f, 0, finalColor, false,
-                matrices.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+            FloatingWorldTextCompat.drawInBatch(
+                    textRenderer,
+                    styledText,
+                    -textWidth / 2.0f,
+                    0,
+                    finalColor,
+                    matrices.last().pose(),
+                    buffers,
+                    15728880
+            );
         } finally {
             matrices.popPose();
         }

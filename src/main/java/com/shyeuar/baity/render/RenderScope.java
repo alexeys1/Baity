@@ -24,6 +24,7 @@ public final class RenderScope {
     private static final ThreadLocal<Integer> WORLD_RENDER_PHASE_DEPTH = ThreadLocal.withInitial(() -> 0);
     private static final ThreadLocal<Integer> HUD_RENDER_PHASE_DEPTH = ThreadLocal.withInitial(() -> 0);
     private static final ThreadLocal<Integer> PAPER_DOLL_RENDER_DEPTH = ThreadLocal.withInitial(() -> 0);
+    private static final ThreadLocal<Integer> FLOATING_WORLD_TEXT_DEPTH = ThreadLocal.withInitial(() -> 0);
 
     private RenderScope() {
     }
@@ -73,6 +74,23 @@ public final class RenderScope {
 
     public static boolean isPaperDollRender() {
         return PAPER_DOLL_RENDER_DEPTH.get() > 0;
+    }
+
+    public static void enterFloatingWorldText() {
+        FLOATING_WORLD_TEXT_DEPTH.set(FLOATING_WORLD_TEXT_DEPTH.get() + 1);
+    }
+
+    public static void exitFloatingWorldText() {
+        int depth = FLOATING_WORLD_TEXT_DEPTH.get() - 1;
+        if (depth <= 0) {
+            FLOATING_WORLD_TEXT_DEPTH.remove();
+        } else {
+            FLOATING_WORLD_TEXT_DEPTH.set(depth);
+        }
+    }
+
+    public static boolean isFloatingWorldText() {
+        return FLOATING_WORLD_TEXT_DEPTH.get() > 0;
     }
 
     public static boolean isEntityRenderScope() {

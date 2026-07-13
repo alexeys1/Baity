@@ -37,6 +37,8 @@ public final class PaperDoll implements HudElement {
     private static final float DISPLAY_FACING_YAW = 180.0f;
     private static final float YAW_CHANGE_SPEED = 0.5f;
     private static final float YAW_RESTORE_SPEED = 20.0f;
+    private static final float YAW_RESTORE_REFERENCE_LIMIT = 60.0f;
+    private static final int YAW_RESTORE_IDLE_TICKS = 2;
     private static final float YAW_CHANGE_EPSILON = 1.0f;
 
     private static PaperDoll instance;
@@ -48,6 +50,7 @@ public final class PaperDoll implements HudElement {
     private float displayYawSmooth = DISPLAY_FACING_YAW;
     private float lastRealtimeYaw = DISPLAY_FACING_YAW;
     private boolean yawChanged;
+    private int yawActivityCooldown;
     private float displayPitch;
 
     private PaperDoll() {
@@ -262,12 +265,17 @@ public final class PaperDoll implements HudElement {
     }
 
     private void tickRotationRestore() {
+        if (yawActivityCooldown > 0) {
+            yawActivityCooldown--;
+            return;
+        }
         if (yawChanged) {
             return;
         }
         displayYawSmooth = displayYaw;
-        float yawLimit = ConfigManager.paperDollHeadYawRange;
-        float delta = (1.0f + Mth.sin((float) (Math.PI / 2.0 * (Math.abs(DISPLAY_FACING_YAW - displayYaw) / yawLimit))))
+        float restoreLimit = Math.max(ConfigManager.paperDollHeadYawRange, YAW_RESTORE_REFERENCE_LIMIT);
+        float offset = Math.abs(DISPLAY_FACING_YAW - displayYaw);
+        float delta = (1.0f + Mth.sin((float) (Math.PI / 2.0 * (offset / restoreLimit))))
                 * YAW_RESTORE_SPEED;
         if (displayYaw > DISPLAY_FACING_YAW) {
             displayYaw = Math.max(displayYaw - delta, DISPLAY_FACING_YAW);
@@ -282,6 +290,7 @@ public final class PaperDoll implements HudElement {
 
         yawChanged = Math.abs(lastRealtimeYaw - realtimeYaw) > YAW_CHANGE_EPSILON;
         if (yawChanged) {
+            yawActivityCooldown = YAW_RESTORE_IDLE_TICKS;
             float deltaYaw = Mth.wrapDegrees(realtimeYaw - lastRealtimeYaw) * YAW_CHANGE_SPEED;
             displayYaw += deltaYaw;
             displayYaw = Mth.clamp(displayYaw, DISPLAY_FACING_YAW - yawLimit, DISPLAY_FACING_YAW + yawLimit);

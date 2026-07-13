@@ -9,6 +9,7 @@ import com.shyeuar.baity.gui.hud.HudScreenUtils;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.render.RenderScope;
+import com.shyeuar.baity.render.interfaces.EntityRenderStateInterface;
 import com.shyeuar.baity.utils.NoSwimPoseUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -219,6 +220,9 @@ public final class PaperDoll implements HudElement {
             transformEntity(entity, partialTicks);
 
             EntityRenderState entityState = extractRenderState(entity, partialTicks);
+            if (entityState instanceof EntityRenderStateInterface context) {
+                context.baity$setHidePaperDollArmor(ConfigManager.paperDollHideArmor);
+            }
             if (entityState instanceof AvatarRenderState avatar && NoSwimPoseUtils.isFeatureActive()) {
                 NoSwimPoseUtils.clearSwimRenderState(avatar);
             }

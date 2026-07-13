@@ -17,4 +17,11 @@ public interface EntityRenderStateInterface {
 
 	default void baity$setWorldCameraContext(boolean worldCameraContext) {
 	}
+
+	default boolean baity$shouldHidePaperDollArmor() {
+		return false;
+	}
+
+	default void baity$setHidePaperDollArmor(boolean hidePaperDollArmor) {
+	}
 }

@@ -143,6 +143,7 @@ public class ModuleManager {
             val -> ConfigManager.paperDollEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
                 new Option("head restore", "head restore", false, ModuleCategory.MISC),
+                new Option("hide armor", "hide armor", false, ModuleCategory.MISC),
                 new com.shyeuar.baity.gui.value.SliderValue(
                     "facing angle", "facing angle", 200.0, 0.0, 360.0, 1.0, ModuleCategory.MISC),
                 new com.shyeuar.baity.gui.value.SliderValue(
@@ -155,6 +156,11 @@ public class ModuleManager {
                     "head restore",
                     () -> ConfigManager.paperDollHeadRestore,
                     val -> ConfigManager.paperDollHeadRestore = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "hide armor",
+                    () -> ConfigManager.paperDollHideArmor,
+                    val -> ConfigManager.paperDollHideArmor = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "facing angle",

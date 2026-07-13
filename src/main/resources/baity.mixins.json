@@ -76,6 +76,8 @@
     "GameRendererMixin",
     "MotionBlurMixin$LevelRendererMixin",
     "InGameHudMixin",
+    "PaperDollArmorMixin$HumanoidArmorLayerMixin",
+    "PaperDollArmorMixin$CustomHeadLayerMixin",
     "RenderScopeMixin$LivingEntityRenderStateMixin",
     "RenderScopeMixin$LivingEntityRendererScopeMixin",
     "accessor.PlayerAccessor",

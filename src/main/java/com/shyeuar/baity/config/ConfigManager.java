@@ -137,6 +137,7 @@ public class ConfigManager {
     public static double paperDollY = 0.35;
     public static float paperDollScale = 3.0f;
     public static boolean paperDollHeadRestore = false;
+    public static boolean paperDollHideArmor = false;
     public static float paperDollFacingAngle = 200.0f;
     public static float paperDollHeadYawRange = 30.0f;
     public static float paperDollHeadPitchRange = 50.0f;
@@ -572,6 +573,9 @@ public class ConfigManager {
         registerField("PaperDollHeadRestore", Boolean.class,
             c -> ConfigManager.paperDollHeadRestore,
             (c, v) -> ConfigManager.paperDollHeadRestore = (Boolean) v);
+        registerField("PaperDollHideArmor", Boolean.class,
+            c -> ConfigManager.paperDollHideArmor,
+            (c, v) -> ConfigManager.paperDollHideArmor = (Boolean) v);
         registerField("PaperDollFacingAngle", Float.class,
             c -> ConfigManager.paperDollFacingAngle,
             (c, v) -> ConfigManager.paperDollFacingAngle = (Float) v);

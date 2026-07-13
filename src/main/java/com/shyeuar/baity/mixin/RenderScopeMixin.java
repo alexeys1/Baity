@@ -23,6 +23,8 @@ public class RenderScopeMixin {
 	public static class LivingEntityRenderStateMixin implements EntityRenderStateInterface {
 		@Unique
 		private boolean baity$worldCameraContext = true;
+		@Unique
+		private boolean baity$hidePaperDollArmor = false;
 
 		@Override
 		public boolean baity$isWorldCameraContext() {
@@ -32,6 +34,16 @@ public class RenderScopeMixin {
 		@Override
 		public void baity$setWorldCameraContext(boolean worldCameraContext) {
 			this.baity$worldCameraContext = worldCameraContext;
+		}
+
+		@Override
+		public boolean baity$shouldHidePaperDollArmor() {
+			return this.baity$hidePaperDollArmor;
+		}
+
+		@Override
+		public void baity$setHidePaperDollArmor(boolean hidePaperDollArmor) {
+			this.baity$hidePaperDollArmor = hidePaperDollArmor;
 		}
 	}
 

@@ -205,4 +205,8 @@ public final class RenderScope {
         }
         return true;
     }
+
+    public static boolean shouldHidePaperDollArmor(LivingEntityRenderState renderState) {
+        return renderState instanceof EntityRenderStateInterface context && context.baity$shouldHidePaperDollArmor();
+    }
 }

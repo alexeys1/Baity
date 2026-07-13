@@ -116,7 +116,8 @@ public final class RadialIconLibrary {
                     if (!png.getFileName().toString().endsWith(".png")) {
                         continue;
                     }
-                    Path target = iconDir.resolve(png.getFileName());
+                    String fileName = png.getFileName().toString();
+                    Path target = iconDir.resolve(fileName);
                     if (!Files.exists(target)) {
                         Files.copy(png, target, StandardCopyOption.REPLACE_EXISTING);
                     }

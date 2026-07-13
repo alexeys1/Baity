@@ -357,6 +357,14 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             return;
         }
 
+        if ("RadialMenu".equals(module.getName()) && "layout".equals(buttonValue.getName())) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null) {
+                mc.setScreen(new com.shyeuar.baity.features.radialmenu.RadialLayoutEditorScreen(this));
+            }
+            return;
+        }
+
         if ("FishHookTimer".equals(module.getName()) && "custom timer template".equals(buttonValue.getName())) {
             net.minecraft.util.Util.getPlatform().openUri(
                     java.net.URI.create(com.shyeuar.baity.features.fishing.FishHookTimerTemplateManager.DOCS_URL));

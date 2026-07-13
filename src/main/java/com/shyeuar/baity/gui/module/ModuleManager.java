@@ -327,7 +327,8 @@ public class ModuleManager {
             () -> ConfigManager.radialMenuEnabled,
             val -> ConfigManager.radialMenuEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new ButtonValue("keybind", "keybind", 4, ModuleCategory.QOL, ButtonValue.ButtonValueType.KEYBIND, false)
+                new ButtonValue("keybind", "keybind", 4, ModuleCategory.QOL, ButtonValue.ButtonValueType.KEYBIND, false),
+                new ButtonValue("layout", "layout", "Edit", ModuleCategory.QOL, ButtonValue.ButtonValueType.TRIGGER, false)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(

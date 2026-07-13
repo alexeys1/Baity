@@ -64,6 +64,7 @@ public class Baity implements ClientModInitializer {
         FishHookTimer.init();
         PaperDoll.init();
         ChromaFishingLine.init();
+        RadialMenu.init();
         com.shyeuar.baity.features.chat.ChatChannelSwitcher.init();
         com.shyeuar.baity.features.enchantlore.EnchantLore.init();
         

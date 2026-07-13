@@ -1,12 +1,8 @@
 package com.shyeuar.baity.gui.owo;
 
-import com.shyeuar.baity.gui.internal.ClickGuiState;
 import com.shyeuar.baity.gui.theme.LinearTheme;
-import io.wispforest.owo.ui.base.BaseUIComponent;
 import io.wispforest.owo.ui.core.Color;
 import io.wispforest.owo.ui.core.OwoUIGraphics;
-import io.wispforest.owo.ui.core.Positioning;
-import io.wispforest.owo.ui.core.Sizing;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -17,9 +13,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.PlayerSkin;
 
-import java.util.List;
+public final class RadialMenuComponent {
 
-public class RadialMenuComponent extends BaseUIComponent {
+    private RadialMenuComponent() {
+    }
 
     public static final int OUTER_RADIUS = 80;
     public static final int INNER_RADIUS = 30;
@@ -41,8 +38,6 @@ public class RadialMenuComponent extends BaseUIComponent {
     public static final int LABEL_TEXT_COLOR = 0xFFFF55FF;
     public static final int SYMBOL_ICON_COLOR = 0xFFFFFFFF;
 
-    public record Entry(String id, String icon, String displayName) {}
-
     public enum CenterStyle {
         EXIT,
         BACK
@@ -59,109 +54,6 @@ public class RadialMenuComponent extends BaseUIComponent {
     private static final int YELLOW = 0xFFFFFF55;
     private static final int YELLOW_RIM = 0xCCFFFF55;
     private static final int YELLOW_DARK = 0xFFCCCC44;
-
-    private final List<Entry> entries;
-    private int hoveredIndex = -1;
-    private GuiGraphicsExtractor guiGraphics;
-
-    public RadialMenuComponent(List<Entry> entries) {
-        this.entries = entries;
-        this.horizontalSizing(Sizing.fill(100));
-        this.verticalSizing(Sizing.fill(100));
-        this.positioning(Positioning.absolute(0, 0));
-    }
-
-    public int hoveredIndex() {
-        return hoveredIndex;
-    }
-
-    public void setGuiGraphics(GuiGraphicsExtractor guiGraphics) {
-        this.guiGraphics = guiGraphics;
-    }
-
-    @Override
-    public void update(float delta, int mouseX, int mouseY) {
-        super.update(delta, mouseX, mouseY);
-
-        final int centerX = this.x + this.width / 2;
-        final int centerY = this.y + this.height / 2;
-
-        final double dx = mouseX - centerX;
-        final double dy = mouseY - centerY;
-        final double dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist <= INNER_RADIUS || dist > OUTER_RADIUS || entries.isEmpty()) {
-            this.hoveredIndex = -1;
-        } else {
-            double degrees = Math.toDegrees(Math.atan2(dy, dx));
-            if (degrees < 0) degrees += 360;
-            this.hoveredIndex = getSectionFromAngle(degrees, entries.size());
-        }
-    }
-
-    @Override
-    public void draw(OwoUIGraphics context, int mouseX, int mouseY, float partialTicks, float delta) {
-        final int centerX = this.x + this.width / 2;
-        final int centerY = this.y + this.height / 2;
-        if (guiGraphics == null) {
-            drawWheelContent(context, centerX, centerY);
-            return;
-        }
-
-        Minecraft client = Minecraft.getInstance();
-        float ratio = ClickGuiState.fixedScaleRatio(client);
-        var pose = guiGraphics.pose();
-        pose.pushMatrix();
-        pose.translate(centerX, centerY);
-        pose.scale(ratio, ratio);
-        pose.translate(-centerX, -centerY);
-        try {
-            drawWheelContent(context, centerX, centerY);
-            drawIconsAndText(centerX, centerY);
-        } finally {
-            pose.popMatrix();
-        }
-    }
-
-    private void drawWheelContent(OwoUIGraphics context, int centerX, int centerY) {
-        drawWheel(context, centerX, centerY);
-
-        if (!entries.isEmpty()) {
-            final double anglePerSection = 360d / entries.size();
-            final double startAngle = getStartAngle(entries.size());
-            drawSectorDividers(context, centerX, centerY, entries.size(), startAngle, anglePerSection);
-
-            if (hoveredIndex >= 0 && hoveredIndex < entries.size()) {
-                double sectionStart = startAngle + hoveredIndex * anglePerSection;
-                drawHoveredSector(context, centerX, centerY, sectionStart, sectionStart + anglePerSection);
-            }
-        }
-    }
-
-    private void drawIconsAndText(int centerX, int centerY) {
-        if (entries.isEmpty() || guiGraphics == null) return;
-
-        final var mc = Minecraft.getInstance();
-        if (mc == null) return;
-
-        final Font font = mc.font;
-        final double anglePerSection = 360d / entries.size();
-        final double startAngle = getStartAngle(entries.size());
-
-        for (int i = 0; i < entries.size(); i++) {
-            final var entry = entries.get(i);
-            final float[] pos = sectorCenter(
-                    centerX, centerY, startAngle, anglePerSection, i, INNER_RADIUS, OUTER_RADIUS);
-            drawUnicodeSymbol(guiGraphics, font, entry.icon(), pos[0], pos[1], ICON_BASE_SCALE);
-        }
-
-        if (hoveredIndex >= 0 && hoveredIndex < entries.size()) {
-            final String label = entries.get(hoveredIndex).displayName();
-            float[] labelPos = sectorLabelPosition(
-                    centerX, centerY, startAngle, anglePerSection, hoveredIndex, OUTER_RADIUS + 15, font, label);
-            drawRadialLabel(guiGraphics, font, label, labelPos[0], labelPos[1]);
-        }
-    }
 
     public static int textSecondary() {
         return TEXT_SECONDARY;
@@ -283,6 +175,12 @@ public class RadialMenuComponent extends BaseUIComponent {
         Color hiOut = Color.ofArgb(withAlpha(lerpArgb(ACCENT2, 0xFFFFFF, 0.4f), 0x00));
         drawLayoutRing(context, centerX, centerY, layoutStartDeg, layoutEndDeg,
                 OUTER_RADIUS - 9, OUTER_RADIUS - 5, hi, hiOut);
+    }
+
+    public static void drawCenterAvatarHub(OwoUIGraphics context, int centerX, int centerY) {
+        int hubFace = withAlpha(lerpArgb(BG3, BG, 0.2f), 0xFF);
+        int hubRim = withAlpha(lerpArgb(BG3, BORDER, 0.35f), 0xEE);
+        drawCenterHub(context, centerX, centerY, hubFace, hubRim);
     }
 
     public static void drawCenter(OwoUIGraphics context, int centerX, int centerY, CenterStyle style) {

@@ -1,7 +1,6 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.features.radialmenu.WarpMenuScreen;
-import com.shyeuar.baity.features.radialmenu.RadialMenuScreen;
+import com.shyeuar.baity.features.radialmenu.DynamicRadialMenuScreen;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
@@ -21,7 +20,7 @@ public class WarpMenuMovementMixin extends ClientInput {
     @Inject(method = "tick", at = @At("TAIL"))
     private void allowMovementInWarpMenu(CallbackInfo ci) {
         Minecraft client = Minecraft.getInstance();
-        if (client.screen instanceof WarpMenuScreen || client.screen instanceof RadialMenuScreen) {
+        if (client.screen instanceof DynamicRadialMenuScreen) {
             long window = client.getWindow().handle();
             Options options = client.options;
 

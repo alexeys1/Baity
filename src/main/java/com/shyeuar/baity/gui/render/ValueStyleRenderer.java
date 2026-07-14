@@ -490,16 +490,21 @@ public class ValueStyleRenderer {
 
        String raw = editing ? textInputValue : String.valueOf(value.getValue());
        String preview = raw == null ? "" : raw;
-       preview = LineTextInput.limitByCodePoints(preview, 28);
        int valueTextColor = (hovered || editing) ? interactiveYellow : textColor;
        int textY = (int) (lineY - 9);
+       int maxTextWidth = Math.max(0, Math.round(lineX2 - lineX1));
        if (editing) {
            LineTextInput.drawTextWithBlinkCursor(
                context, client.font, preview, editingTextCaretCp,
                (int) lineX1, textY, valueTextColor, true,
-               LineTextInput.shouldBlinkCursor());
-       } else {
-           context.text(client.font, preview, (int) lineX1, textY, valueTextColor, false);
+               LineTextInput.shouldBlinkCursor(),
+               maxTextWidth);
+       } else if (!preview.isEmpty()) {
+           LineTextInput.drawTextWithBlinkCursor(
+               context, client.font, preview, 0,
+               (int) lineX1, textY, valueTextColor, false,
+               false,
+               maxTextWidth);
        }
    }
 

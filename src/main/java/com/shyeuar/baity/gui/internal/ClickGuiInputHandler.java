@@ -872,10 +872,12 @@ public class ClickGuiInputHandler {
 
         if (ClickGuiLayout.isSearchBarHovered(coords.mouseX, coords.mouseY)) {
             float textStartX = ClickGuiLayout.searchBarTextStartX();
+            int searchTextMaxWidth = Math.max(0, Math.round(
+                    ClickGuiLayout.searchBarX() + ClickGuiLayout.searchBarWidth() - textStartX - 4f));
             Minecraft client = Minecraft.getInstance();
             state.setSearchFocused(true);
             if (client != null) {
-                state.getSearchInput().onMousePressed(client.font, coords.mouseX - textStartX);
+                state.getSearchInput().onMousePressed(client.font, coords.mouseX - textStartX, searchTextMaxWidth);
             }
             return true;
         }
@@ -1453,7 +1455,8 @@ public class ClickGuiInputHandler {
                         && state.getEditingTextInput().moduleName.equals(module.getName())
                         && state.getEditingTextInput().valueName.equals(value.getName())) {
                         Minecraft client = Minecraft.getInstance();
-                        state.getTextLineInput().onMousePressed(client.font, (float) coords.mouseX - lineX1);
+                        int maxTextWidth = Math.max(0, Math.round(lineX2 - lineX1));
+                        state.getTextLineInput().onMousePressed(client.font, (float) coords.mouseX - lineX1, maxTextWidth);
                     } else {
                         state.setEditingTextInput(new ClickGuiState.TextInputInfo(module.getName(), value.getName()));
                         String start = String.valueOf(value.getValue());

@@ -112,21 +112,54 @@ public final class LineTextInput {
     }
 
     public void onMousePressed(Font font, float localX) {
+        onMousePressed(font, localX, -1);
+    }
+
+    public void onMousePressed(Font font, float localX, int maxWidth) {
         int cpCount = codePointCount(text);
         if (cpCount == 0) {
             caretCp = null;
             return;
         }
-        int bestCp = 0;
+        if (maxWidth <= 0) {
+            int bestCp = 0;
+            int bestDist = Integer.MAX_VALUE;
+            for (int cp = 0; cp <= cpCount; cp++) {
+                int width = font.width(text.substring(0, cpIndexToCharIndex(text, cp)));
+                int dist = Math.abs(width - Math.round(localX));
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestCp = cp;
+                }
+            }
+            caretCp = bestCp >= cpCount ? null : bestCp;
+            return;
+        }
+
+        int windowCaret = caretCp == null ? cpCount : caretCp;
+        VisibleWindow win = computeVisibleWindow(font, text, windowCaret, maxWidth);
+        float x = localX;
+        if (win.leftEllipsis()) {
+            int dotsW = font.width(ELLIPSIS);
+            if (x <= dotsW * 0.5f) {
+                caretCp = win.startCp();
+                return;
+            }
+            x -= dotsW;
+        }
+        String mid = sliceByCodePoints(text, win.startCp(), win.endCp());
+        int midCpCount = codePointCount(mid);
+        int bestRel = 0;
         int bestDist = Integer.MAX_VALUE;
-        for (int cp = 0; cp <= cpCount; cp++) {
-            int width = font.width(text.substring(0, cpIndexToCharIndex(text, cp)));
-            int dist = Math.abs(width - Math.round(localX));
+        for (int rel = 0; rel <= midCpCount; rel++) {
+            int width = font.width(mid.substring(0, cpIndexToCharIndex(mid, rel)));
+            int dist = Math.abs(width - Math.round(x));
             if (dist < bestDist) {
                 bestDist = dist;
-                bestCp = cp;
+                bestRel = rel;
             }
         }
+        int bestCp = win.startCp() + bestRel;
         caretCp = bestCp >= cpCount ? null : bestCp;
     }
 
@@ -190,6 +223,69 @@ public final class LineTextInput {
         return System.currentTimeMillis() % 1000 < 500;
     }
 
+    public static final String ELLIPSIS = "...";
+
+    public record VisibleWindow(int startCp, int endCp, boolean leftEllipsis, boolean rightEllipsis) {
+    }
+
+    public static String sliceByCodePoints(String text, int startCp, int endCp) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        int from = cpIndexToCharIndex(text, startCp);
+        int to = cpIndexToCharIndex(text, endCp);
+        if (from >= to) {
+            return "";
+        }
+        return text.substring(from, to);
+    }
+
+    public static VisibleWindow computeVisibleWindow(Font font, String text, Integer caretCp, int maxWidth) {
+        if (text == null) {
+            text = "";
+        }
+        int cpCount = codePointCount(text);
+        int caret = caretCp == null ? cpCount : Math.max(0, Math.min(caretCp, cpCount));
+        if (maxWidth <= 0 || font.width(text) <= maxWidth) {
+            return new VisibleWindow(0, cpCount, false, false);
+        }
+        int dotsW = font.width(ELLIPSIS);
+
+        int start = 0;
+        while (start < caret) {
+            boolean leftEll = start > 0;
+            boolean rightEll = caret < cpCount;
+            int budget = maxWidth - (leftEll ? dotsW : 0) - (rightEll ? dotsW : 0);
+            if (font.width(sliceByCodePoints(text, start, caret)) <= Math.max(0, budget)) {
+                break;
+            }
+            start++;
+        }
+
+        int end = caret;
+        while (end < cpCount) {
+            boolean leftEll = start > 0;
+            boolean rightEll = (end + 1) < cpCount;
+            int budget = maxWidth - (leftEll ? dotsW : 0) - (rightEll ? dotsW : 0);
+            if (font.width(sliceByCodePoints(text, start, end + 1)) > Math.max(0, budget)) {
+                break;
+            }
+            end++;
+        }
+
+        while (start > 0) {
+            boolean leftEll = (start - 1) > 0;
+            boolean rightEll = end < cpCount;
+            int budget = maxWidth - (leftEll ? dotsW : 0) - (rightEll ? dotsW : 0);
+            if (font.width(sliceByCodePoints(text, start - 1, end)) > Math.max(0, budget)) {
+                break;
+            }
+            start--;
+        }
+
+        return new VisibleWindow(start, end, start > 0, end < cpCount);
+    }
+
     public static void drawTextWithBlinkCursor(
         GuiGraphicsExtractor context,
         Font font,
@@ -201,24 +297,54 @@ public final class LineTextInput {
         boolean focused,
         boolean blinkOn
     ) {
+        drawTextWithBlinkCursor(context, font, text, caretCp, x, y, color, focused, blinkOn, -1);
+    }
+
+    public static void drawTextWithBlinkCursor(
+        GuiGraphicsExtractor context,
+        Font font,
+        String text,
+        Integer caretCp,
+        int x,
+        int y,
+        int color,
+        boolean focused,
+        boolean blinkOn,
+        int maxWidth
+    ) {
         if (text == null) {
             text = "";
         }
+        int windowCaret = focused
+                ? (caretCp != null ? caretCp : codePointCount(text))
+                : 0;
+        VisibleWindow win = computeVisibleWindow(font, text, windowCaret, maxWidth);
+        int drawX = x;
+        if (win.leftEllipsis()) {
+            context.text(font, ELLIPSIS, drawX, y, color, false);
+            drawX += font.width(ELLIPSIS);
+        }
+        String mid = sliceByCodePoints(text, win.startCp(), win.endCp());
         if (!focused || !blinkOn) {
-            context.text(font, text, x, y, color, false);
-            return;
+            context.text(font, mid, drawX, y, color, false);
+        } else {
+            int cpCount = codePointCount(text);
+            int absCaret = caretCp != null ? caretCp : cpCount;
+            absCaret = Math.max(win.startCp(), Math.min(absCaret, win.endCp()));
+            int relCaret = absCaret - win.startCp();
+            int midCharPos = cpIndexToCharIndex(mid, relCaret);
+            String before = mid.substring(0, midCharPos);
+            String after = mid.substring(midCharPos);
+            context.text(font, before, drawX, y, color, false);
+            int caretX = drawX + font.width(before);
+            if (!after.isEmpty()) {
+                context.text(font, after, caretX, y, color, false);
+            }
+            context.fill(caretX, y, caretX + 1, y + 9, color);
         }
-        int cpCount = codePointCount(text);
-        int drawCp = caretCp != null ? caretCp : cpCount;
-        int charPos = cpIndexToCharIndex(text, drawCp);
-        String before = text.substring(0, charPos);
-        String after = text.substring(charPos);
-        context.text(font, before, x, y, color, false);
-        int caretX = x + font.width(before);
-        if (!after.isEmpty()) {
-            context.text(font, after, caretX, y, color, false);
+        if (win.rightEllipsis()) {
+            context.text(font, ELLIPSIS, drawX + font.width(mid), y, color, false);
         }
-        context.fill(caretX, y, caretX + 1, y + 9, color);
     }
 
     public static void drawCenteredClippedWithBlinkCursor(
@@ -236,12 +362,17 @@ public final class LineTextInput {
         float textAreaTop = lineY - 11f;
         float drawY = textAreaTop + (11f - font.lineHeight) * 0.5f;
         int drawYInt = Math.round(drawY);
-        context.enableScissor((int) lineX1, (int) textAreaTop, (int) lineX2, (int) lineY);
         if (text == null) {
             text = "";
         }
+        int maxWidth = Math.max(0, Math.round(lineWidth));
         int textWidth = font.width(text);
-        int drawX = Math.round(lineX1 + (lineWidth - textWidth) * 0.5f);
+        int drawX;
+        if (textWidth <= maxWidth) {
+            drawX = Math.round(lineX1 + (lineWidth - textWidth) * 0.5f);
+        } else {
+            drawX = Math.round(lineX1);
+        }
         drawTextWithBlinkCursor(
             context,
             font,
@@ -251,9 +382,9 @@ public final class LineTextInput {
             drawYInt,
             color,
             focused,
-            focused && shouldBlinkCursor()
+            focused && shouldBlinkCursor(),
+            maxWidth
         );
-        context.disableScissor();
     }
 
     private void moveCaretLeft() {

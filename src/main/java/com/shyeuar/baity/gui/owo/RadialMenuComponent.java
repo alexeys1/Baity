@@ -76,6 +76,14 @@ public final class RadialMenuComponent {
 
     public static void drawUnicodeSymbol(GuiGraphicsExtractor graphics, Font font, String symbol,
                                          float centerX, float centerY, float scale) {
+        drawUnicodeSymbol(graphics, font, symbol, centerX, centerY, scale, SYMBOL_ICON_COLOR);
+    }
+
+    public static void drawUnicodeSymbol(GuiGraphicsExtractor graphics, Font font, String symbol,
+                                         float centerX, float centerY, float scale, int colorArgb) {
+        if (symbol == null || symbol.isEmpty()) {
+            return;
+        }
         var pose = graphics.pose();
         pose.pushMatrix();
         pose.translate(centerX, centerY);
@@ -83,7 +91,7 @@ public final class RadialMenuComponent {
         Component text = Component.literal(symbol);
         float w = font.width(text);
         graphics.text(font, text, Math.round(-w / 2f), Math.round(labelBaselineOffset(font)),
-                SYMBOL_ICON_COLOR, false);
+                colorArgb, false);
         pose.popMatrix();
     }
 

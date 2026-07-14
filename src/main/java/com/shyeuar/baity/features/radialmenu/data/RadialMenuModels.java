@@ -18,7 +18,7 @@ public final class RadialMenuModels {
     public static final int MAX_CUSTOM_PRESETS = MAX_TOP_LEVEL_PRESETS - 1;
     public static final int MAX_LAYER_DEPTH = 4;
     public static final int MAX_SLOTS_PER_LAYER = 8;
-    public static final int MAX_UNICODE_ICON_CODE_POINTS = 2;
+    public static final int MAX_UNICODE_ICON_CODE_POINTS = 64;
 
     private RadialMenuModels() {
     }

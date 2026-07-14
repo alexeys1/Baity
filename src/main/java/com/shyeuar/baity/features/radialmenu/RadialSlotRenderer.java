@@ -7,6 +7,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
@@ -36,11 +37,19 @@ public final class RadialSlotRenderer {
                 drawItemIcon(graphics, stack, centerX, centerY);
                 return;
             }
+            TextureAtlasSprite blockSprite = RadialIconLibrary.resolveBlockSprite(slot.icon);
+            if (blockSprite != null) {
+                drawBlockSpriteIcon(graphics, blockSprite, centerX, centerY);
+                return;
+            }
         }
 
         if (slot.unicodeIcon != null && !slot.unicodeIcon.isEmpty()) {
-            RadialMenuComponent.drawUnicodeSymbol(graphics, font, slot.unicodeIcon, centerX, centerY,
-                    RadialMenuComponent.ICON_BASE_SCALE);
+            UnicodeIconParser.Parsed parsed = UnicodeIconParser.parse(slot.unicodeIcon);
+            if (!parsed.glyph().isEmpty()) {
+                RadialMenuComponent.drawUnicodeSymbol(graphics, font, parsed.glyph(), centerX, centerY,
+                        RadialMenuComponent.ICON_BASE_SCALE, parsed.colorArgb());
+            }
         }
     }
 
@@ -82,5 +91,13 @@ public final class RadialSlotRenderer {
         pose.translate(-centerX, -centerY);
         graphics.fakeItem(stack, drawX, drawY);
         pose.popMatrix();
+    }
+
+    private static void drawBlockSpriteIcon(GuiGraphicsExtractor graphics, TextureAtlasSprite sprite,
+                                           float centerX, float centerY) {
+        int size = RadialMenuComponent.WARP_ICON_BASE_SIZE;
+        int x = Math.round(centerX - size / 2f);
+        int y = Math.round(centerY - size / 2f);
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, x, y, size, size);
     }
 }

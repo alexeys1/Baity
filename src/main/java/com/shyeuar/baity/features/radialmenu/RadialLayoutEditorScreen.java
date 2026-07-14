@@ -40,10 +40,11 @@ public class RadialLayoutEditorScreen extends Screen {
     private static final int WHEEL_BOTTOM = 198;
     private static final int PROPS_TOP = 204;
     private static final int EDITOR_OUTER_RADIUS = 52;
-    private static final int UNICODE_LINE_WIDTH = 36;
     private static final int PROPS_RIGHT_MARGIN = 10;
     private static final int YELLOW = 0xFFFFFF55;
     private static final int LINE_GRAY = 0xFF787878;
+    private static final String UNICODE_ICON_TIP =
+            "Tip:Support color code(&).For example,&1 = dark blue";
 
     private final Screen parentScreen;
 
@@ -51,11 +52,13 @@ public class RadialLayoutEditorScreen extends Screen {
     private String pendingDeleteKey;
     private int dragSlotIndex = -1;
     private int dragHoverSlotIndex = -1;
+    private String hoveredPropTooltip;
 
     private final LineTextInput commandInput = new LineTextInput(LineTextInput.Policy.freeText(-1));
     private final LineTextInput displayNameInput = new LineTextInput(LineTextInput.Policy.freeText(-1));
     private final LineTextInput iconInput = new LineTextInput(LineTextInput.Policy.freeText(64));
-    private final LineTextInput unicodeInput = new LineTextInput(LineTextInput.Policy.damageSymbols());
+    private final LineTextInput unicodeInput = new LineTextInput(
+            LineTextInput.Policy.freeText(RadialMenuModels.MAX_UNICODE_ICON_CODE_POINTS));
 
     private enum FocusField {
         NONE, COMMAND, DISPLAY_NAME, ICON, UNICODE
@@ -126,7 +129,11 @@ public class RadialLayoutEditorScreen extends Screen {
         int wheelCenterY = WHEEL_TOP + (WHEEL_BOTTOM - WHEEL_TOP) / 2;
         drawWheelEditor(g, wheelCenterX, wheelCenterY, (int) mouseX, (int) mouseY);
 
+        hoveredPropTooltip = null;
         drawPropertyPanel(g, editX1, PROPS_TOP, editX2, PANEL_HEIGHT - 8, (int) mouseX, (int) mouseY);
+        if (hoveredPropTooltip != null) {
+            drawPropTooltip(g, hoveredPropTooltip, (int) mouseX, (int) mouseY);
+        }
     }
 
     private void drawTree(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2, int mouseX, int mouseY) {
@@ -270,22 +277,22 @@ public class RadialLayoutEditorScreen extends Screen {
         int x = x1 + 8;
         int lineRight = x2 - PROPS_RIGHT_MARGIN;
         int y = y1 + 8;
-        drawInlineInputRow(g, "command", commandInput, FocusField.COMMAND, x, lineRight, y, true, mouseX, mouseY);
+        drawInlineInputRow(g, "command", commandInput, FocusField.COMMAND, x, lineRight, y, mouseX, mouseY);
         y += rowH;
-        drawInlineInputRow(g, "display name", displayNameInput, FocusField.DISPLAY_NAME, x, lineRight, y, true, mouseX, mouseY);
+        drawInlineInputRow(g, "display name", displayNameInput, FocusField.DISPLAY_NAME, x, lineRight, y, mouseX, mouseY);
         y += rowH;
-        drawInlineInputRow(g, "icon", iconInput, FocusField.ICON, x, lineRight, y, true, mouseX, mouseY, true);
+        drawInlineInputRow(g, "icon", iconInput, FocusField.ICON, x, lineRight, y, mouseX, mouseY, true);
         y += rowH;
-        drawInlineInputRow(g, "unicode icon", unicodeInput, FocusField.UNICODE, x, lineRight, y, false, mouseX, mouseY);
+        drawInlineInputRow(g, "unicode icon", unicodeInput, FocusField.UNICODE, x, lineRight, y, mouseX, mouseY);
     }
 
     private void drawInlineInputRow(GuiGraphicsExtractor g, String label, LineTextInput input, FocusField field,
-                                    int x, int lineRight, int y, boolean fullWidth, int mouseX, int mouseY) {
-        drawInlineInputRow(g, label, input, field, x, lineRight, y, fullWidth, mouseX, mouseY, false);
+                                    int x, int lineRight, int y, int mouseX, int mouseY) {
+        drawInlineInputRow(g, label, input, field, x, lineRight, y, mouseX, mouseY, false);
     }
 
     private void drawInlineInputRow(GuiGraphicsExtractor g, String label, LineTextInput input, FocusField field,
-                                    int x, int lineRight, int y, boolean fullWidth, int mouseX, int mouseY,
+                                    int x, int lineRight, int y, int mouseX, int mouseY,
                                     boolean showIconPreview) {
         String prefix = label + ":";
         int labelColor = LinearTheme.TEXT_SECONDARY.getRGB();
@@ -293,40 +300,72 @@ public class RadialLayoutEditorScreen extends Screen {
 
         int lineX1 = x + this.font.width(prefix) + 4;
         int previewSpace = showIconPreview ? 22 : 0;
-        int lineX2 = fullWidth ? lineRight - previewSpace : lineX1 + UNICODE_LINE_WIDTH;
+        int lineX2 = lineRight - previewSpace;
         float lineY = y + this.font.lineHeight + 1;
         float hoverY1 = lineY - 10;
         float hoverY2 = lineY + 5;
         boolean focused = focusField == field;
         boolean hovered = GuiRenderUtil.isHovered(lineX1, hoverY1, lineX2, hoverY2, mouseX, mouseY);
+        if (field == FocusField.UNICODE) {
+            int labelRight = lineX1 - 2;
+            boolean tipHover = GuiRenderUtil.isHovered(x, y, labelRight, y + this.font.lineHeight + 4, mouseX, mouseY)
+                    || hovered;
+            if (tipHover) {
+                hoveredPropTooltip = UNICODE_ICON_TIP;
+            }
+        }
         int lineColor = (hovered || focused) ? YELLOW : LINE_GRAY;
         GuiRenderUtil.drawRoundedRect(g, lineX1, lineY, lineX2, lineY + 1, 0, lineColor);
 
         String text = input.getText();
         int textColor = (hovered || focused) ? YELLOW : LinearTheme.TEXT_PRIMARY.getRGB();
         int textY = (int) (lineY - 9);
+        int maxTextWidth = Math.max(0, lineX2 - lineX1);
         if (focused) {
             LineTextInput.drawTextWithBlinkCursor(
                     g, this.font, text, input.getCaretCp(),
                     lineX1, textY, textColor, true,
-                    LineTextInput.shouldBlinkCursor());
+                    LineTextInput.shouldBlinkCursor(),
+                    maxTextWidth);
         } else if (!text.isEmpty()) {
-            g.text(this.font, text, lineX1, textY, textColor, false);
+            LineTextInput.drawTextWithBlinkCursor(
+                    g, this.font, text, 0,
+                    lineX1, textY, textColor, false,
+                    false,
+                    maxTextWidth);
         }
 
         if (showIconPreview) {
             String previewIcon = focused ? text : iconInput.getText();
             if (previewIcon != null && !previewIcon.isBlank()) {
-                String normalized = RadialIconLibrary.normalizeIconName(previewIcon);
-                boolean hasFile = RadialIconLibrary.resolveFileTexture(normalized) != null;
-                boolean hasItem = !RadialIconLibrary.resolveItemStack(normalized).isEmpty();
-                if (hasFile || hasItem) {
+                if (RadialIconLibrary.isResolvableIcon(previewIcon)) {
                     float previewX = lineRight - 10;
                     float previewY = y + this.font.lineHeight - 2;
                     RadialSlotRenderer.drawIconPreview(g, this.font, previewIcon, previewX, previewY);
                 }
             }
         }
+    }
+
+    private void drawPropTooltip(GuiGraphicsExtractor g, String tip, int mouseX, int mouseY) {
+        int padding = 4;
+        int textW = this.font.width(tip);
+        int textH = this.font.lineHeight;
+        int tipX = mouseX + 8;
+        int tipY = mouseY + 8;
+        int tipX2 = tipX + textW + padding * 2;
+        int tipY2 = tipY + textH + padding * 2;
+        if (tipX2 > PANEL_WIDTH - 4) {
+            tipX = Math.max(4, mouseX - textW - padding * 2 - 8);
+            tipX2 = tipX + textW + padding * 2;
+        }
+        if (tipY2 > PANEL_HEIGHT - 4) {
+            tipY = Math.max(4, mouseY - textH - padding * 2 - 8);
+            tipY2 = tipY + textH + padding * 2;
+        }
+        GuiRenderUtil.draw3DRect(g, tipX, tipY, tipX2, tipY2, 0xEE1A1A1A, 4f);
+        GuiRenderUtil.stroke1px(g, tipX, tipY, tipX2, tipY2, LinearTheme.BORDER_PRIMARY.getRGB());
+        g.text(this.font, tip, tipX + padding, tipY + padding, YELLOW, false);
     }
 
     private void drawSidebarButton(GuiGraphicsExtractor g, int x1, int y1, int x2, int y2,
@@ -645,21 +684,22 @@ public class RadialLayoutEditorScreen extends Screen {
         int lineRight = editX2 - PROPS_RIGHT_MARGIN;
         int y = PROPS_TOP + 8;
         int rowH = 18;
-        if (tryFocusInlineField(FocusField.COMMAND, "command", x, lineRight, y, true, mx, my)) return true;
+        if (tryFocusInlineField(FocusField.COMMAND, "command", x, lineRight, y, mx, my)) return true;
         y += rowH;
-        if (tryFocusInlineField(FocusField.DISPLAY_NAME, "display name", x, lineRight, y, true, mx, my)) return true;
+        if (tryFocusInlineField(FocusField.DISPLAY_NAME, "display name", x, lineRight, y, mx, my)) return true;
         y += rowH;
-        if (tryFocusInlineField(FocusField.ICON, "icon", x, lineRight, y, true, mx, my)) return true;
+        if (tryFocusInlineField(FocusField.ICON, "icon", x, lineRight, y, mx, my)) return true;
         y += rowH;
-        if (tryFocusInlineField(FocusField.UNICODE, "unicode icon", x, lineRight, y, false, mx, my)) return true;
+        if (tryFocusInlineField(FocusField.UNICODE, "unicode icon", x, lineRight, y, mx, my)) return true;
         focusField = FocusField.NONE;
         return false;
     }
 
     private boolean tryFocusInlineField(FocusField field, String label, int x, int lineRight, int y,
-                                        boolean fullWidth, int mx, int my) {
+                                        int mx, int my) {
         int lineX1 = x + this.font.width(label + ":") + 4;
-        int lineX2 = fullWidth ? lineRight : lineX1 + UNICODE_LINE_WIDTH;
+        int previewSpace = field == FocusField.ICON ? 22 : 0;
+        int lineX2 = lineRight - previewSpace;
         float lineY = y + this.font.lineHeight + 1;
         float hoverY1 = lineY - 10;
         float hoverY2 = lineY + 5;
@@ -668,7 +708,8 @@ public class RadialLayoutEditorScreen extends Screen {
             focusField = field;
             LineTextInput active = activeInput();
             active.setTextAndCaretAtEnd(active.getText());
-            active.onMousePressed(this.font, mx - lineX1);
+            int maxTextWidth = Math.max(0, lineX2 - lineX1);
+            active.onMousePressed(this.font, mx - lineX1, maxTextWidth);
             SoundUtils.playWoodenButton();
             return true;
         }

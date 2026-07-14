@@ -292,6 +292,8 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, searchIcon, iconX, iconY, 0, 0, (int)iconSize, (int)iconSize, (int)iconSize, (int)iconSize, iconColor);
         
         float textStartX = ClickGuiLayout.searchBarTextStartX();
+        int searchTextMaxWidth = Math.max(0, Math.round(
+                ClickGuiLayout.searchBarX() + ClickGuiLayout.searchBarWidth() - textStartX - 4f));
         
         boolean focused = state.isSearchFocused();
         LineTextInput search = state.getSearchInput();
@@ -313,10 +315,22 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 textY,
                 theme.FONT_C.getRGB(),
                 true,
-                LineTextInput.shouldBlinkCursor()
+                LineTextInput.shouldBlinkCursor(),
+                searchTextMaxWidth
             );
         } else if (!empty) {
-            guiGraphics.text(client.font, searchText, textX, textY, theme.FONT_C.getRGB(), false);
+            LineTextInput.drawTextWithBlinkCursor(
+                guiGraphics,
+                client.font,
+                searchText,
+                0,
+                textX,
+                textY,
+                theme.FONT_C.getRGB(),
+                false,
+                false,
+                searchTextMaxWidth
+            );
         } else {
             guiGraphics.text(client.font, "Search...", textX, textY, theme.FONT.getRGB(), false);
         }

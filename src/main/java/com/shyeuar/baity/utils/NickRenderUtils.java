@@ -718,6 +718,10 @@ public final class NickRenderUtils {
         return out;
     }
 
+    public static Integer legacyColorRgb(char c) {
+        return mapLegacyColor(Character.toLowerCase(c));
+    }
+
     private static Integer mapLegacyColor(char c) {
         return switch (c) {
             case '0' -> 0x000000;

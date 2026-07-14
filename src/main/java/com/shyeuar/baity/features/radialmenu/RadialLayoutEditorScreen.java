@@ -13,7 +13,6 @@ import io.wispforest.owo.ui.core.OwoUIGraphics;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
@@ -228,7 +227,7 @@ public class RadialLayoutEditorScreen extends Screen {
                 RadialMenuModels.RadialSlot slot = displaySlots.get(i);
                 float[] iconPos = RadialMenuComponent.sectorCenter(centerX, centerY, startAngle, anglePerSection, i,
                         RadialMenuComponent.INNER_RADIUS, RadialMenuComponent.OUTER_RADIUS);
-                RadialSlotRenderer.drawSlotIcon(g, this.font, slot, iconPos[0], iconPos[1], i);
+                RadialSlotRenderer.drawSlotIcon(g, this.font, slot, iconPos[0], iconPos[1]);
             }
 
             RadialSlotRenderer.drawSlotLabels(g, this.font, centerX, centerY, startAngle, anglePerSection, count,
@@ -324,7 +323,7 @@ public class RadialLayoutEditorScreen extends Screen {
                 if (hasFile || hasItem) {
                     float previewX = lineRight - 10;
                     float previewY = y + this.font.lineHeight - 2;
-                    RadialSlotRenderer.drawIconPreview(g, this.font, previewIcon, "", previewX, previewY);
+                    RadialSlotRenderer.drawIconPreview(g, this.font, previewIcon, previewX, previewY);
                 }
             }
         }
@@ -506,35 +505,44 @@ public class RadialLayoutEditorScreen extends Screen {
         }
         TreeRow row = rows.get(index);
         if (rightClick) {
-            if (row.expandKey != null) {
-                RadialPresetStore.toggleExpanded(row.expandKey);
-                SoundUtils.playWoodenButton();
-            }
-            return true;
+            return handleTreeRightClick(row);
         }
         if (row.presetRow) {
             RadialPresetStore.selectPreset(row.presetId);
         } else {
-            RadialMenuModels.RadialPreset preset = RadialPresetStore.getBundle().findPreset(row.presetId);
-            if (preset == null) {
-                return true;
-            }
-            RadialMenuModels.RadialLayer layer = preset.layers.get(row.layerId);
-            if (layer == null || row.slotIndex < 0 || row.slotIndex >= layer.slots.size()) {
-                return true;
-            }
-            RadialMenuModels.RadialSlot slot = layer.slots.get(row.slotIndex);
-            boolean hasChild = slot.childLayerId != null && preset.layers.containsKey(slot.childLayerId);
-            if (hasChild && row.depth > 1) {
-                RadialPresetStore.selectLayer(row.presetId, slot.childLayerId);
-                RadialPresetStore.selectSlot(-1);
-            } else {
-                RadialPresetStore.selectLayer(row.presetId, row.layerId);
-                RadialPresetStore.selectSlot(row.slotIndex);
-            }
+            RadialPresetStore.selectLayer(row.presetId, row.layerId);
+            RadialPresetStore.selectSlot(row.slotIndex);
         }
         pendingDeleteKey = null;
         syncInputsFromSelection();
+        SoundUtils.playWoodenButton();
+        return true;
+    }
+
+    private boolean handleTreeRightClick(TreeRow row) {
+        if (row.presetRow || row.expandKey == null) {
+            return true;
+        }
+        RadialMenuModels.RadialPreset preset = RadialPresetStore.getBundle().findPreset(row.presetId);
+        if (preset == null) {
+            return true;
+        }
+        RadialMenuModels.RadialLayer layer = preset.layers.get(row.layerId);
+        if (layer == null || row.slotIndex < 0 || row.slotIndex >= layer.slots.size()) {
+            return true;
+        }
+        RadialMenuModels.RadialSlot slot = layer.slots.get(row.slotIndex);
+        RadialMenuModels.RadialLayer child = slot.childLayerId == null ? null : preset.layers.get(slot.childLayerId);
+        if (child != null && child.slots.isEmpty()) {
+            RadialPresetStore.setExpanded(row.expandKey, true);
+            RadialPresetStore.selectLayer(row.presetId, slot.childLayerId);
+            RadialPresetStore.selectSlot(-1);
+            pendingDeleteKey = null;
+            syncInputsFromSelection();
+            SoundUtils.playWoodenButton();
+            return true;
+        }
+        RadialPresetStore.toggleExpanded(row.expandKey);
         SoundUtils.playWoodenButton();
         return true;
     }
@@ -548,7 +556,7 @@ public class RadialLayoutEditorScreen extends Screen {
         if (editor.selectedSlotIndex >= 0) {
             return true;
         }
-        return preset.deletable;
+        return preset.deletable && editor.selectedLayerId.equals(preset.rootLayerId);
     }
 
     private String currentDeleteKey() {
@@ -560,7 +568,7 @@ public class RadialLayoutEditorScreen extends Screen {
         if (editor.selectedSlotIndex >= 0) {
             return "slot:" + editor.activePresetId + ":" + editor.selectedLayerId + ":" + editor.selectedSlotIndex;
         }
-        if (preset.deletable) {
+        if (preset.deletable && editor.selectedLayerId.equals(preset.rootLayerId)) {
             return "preset:" + preset.id;
         }
         return null;
@@ -597,12 +605,12 @@ public class RadialLayoutEditorScreen extends Screen {
         } else if (editor.selectedSlotIndex >= 0) {
             RadialMenuModels.RadialLayer child = RadialPresetStore.addChildLayer(preset, editor.selectedLayerId, editor.selectedSlotIndex);
             if (child == null) {
-                MessageUtils.sendBaityMessage("Cannot add more layers.");
+                MessageUtils.sendBaityMessage("Cannot add more sub-layers.");
             } else {
                 syncInputsFromSelection();
             }
         } else {
-            MessageUtils.sendBaityMessage("Select a sector first to add a child layer.");
+            MessageUtils.sendBaityMessage("Select a sector first to add a sub-layer.");
         }
         SoundUtils.playWoodenButton();
     }
@@ -850,19 +858,15 @@ public class RadialLayoutEditorScreen extends Screen {
         for (int i = 0; i < layer.slots.size(); i++) {
             RadialMenuModels.RadialSlot slot = layer.slots.get(i);
             String label = slot.displayName == null || slot.displayName.isBlank()
-                    ? String.valueOf(i + 1)
+                    ? String.valueOf(slot.serial > 0 ? slot.serial : i + 1)
                     : slot.displayName;
             boolean hasChild = slot.childLayerId != null && preset.layers.containsKey(slot.childLayerId);
-            String expandKey = hasChild ? treeNodeExpandKey(preset.id, slot.childLayerId) : null;
+            String expandKey = hasChild ? RadialPresetStore.treeNodeId(preset.id, slot.childLayerId) : null;
             rows.add(new TreeRow(preset.id, layerId, i, label, depth, expandKey, false));
             if (hasChild && RadialPresetStore.isExpanded(expandKey)) {
                 appendSlotRows(rows, preset, slot.childLayerId, depth + 1);
             }
         }
-    }
-
-    private String treeNodeExpandKey(String presetId, String nodeKey) {
-        return RadialPresetStore.treeNodeId(presetId, nodeKey);
     }
 
     private String ellipsize(String text, int maxWidth) {

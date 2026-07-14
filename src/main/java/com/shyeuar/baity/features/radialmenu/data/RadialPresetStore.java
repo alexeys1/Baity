@@ -18,8 +18,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 import static com.shyeuar.baity.features.radialmenu.data.RadialMenuModels.MAX_CUSTOM_PRESETS;
@@ -117,6 +115,7 @@ public final class RadialPresetStore {
         getBundle().editor.activePresetId = presetId;
         getBundle().editor.selectedLayerId = preset.rootLayerId;
         getBundle().editor.selectedSlotIndex = -1;
+        collapseUnrelatedEmptyExpands();
         save();
     }
 
@@ -133,21 +132,104 @@ public final class RadialPresetStore {
 
     public static void selectSlot(int slotIndex) {
         getBundle().editor.selectedSlotIndex = slotIndex;
+        collapseUnrelatedEmptyExpands();
         save();
     }
 
     public static void toggleExpanded(String nodeId) {
-        Set<String> expanded = getBundle().editor.expandedNodes;
-        if (expanded.contains(nodeId)) {
-            expanded.remove(nodeId);
+        setExpanded(nodeId, !isExpanded(nodeId));
+    }
+
+    public static void setExpanded(String nodeId, boolean expanded) {
+        Set<String> nodes = getBundle().editor.expandedNodes;
+        if (expanded) {
+            nodes.add(nodeId);
         } else {
-            expanded.add(nodeId);
+            nodes.remove(nodeId);
         }
         save();
     }
 
     public static boolean isExpanded(String nodeId) {
         return getBundle().editor.expandedNodes.contains(nodeId);
+    }
+
+    private static void collapseUnrelatedEmptyExpands() {
+        RadialMenuModels.EditorState editor = getBundle().editor;
+        RadialMenuModels.RadialPreset preset = getBundle().findPreset(editor.activePresetId);
+        if (preset == null || editor.expandedNodes.isEmpty()) {
+            return;
+        }
+        String prefix = preset.id + ":";
+        Set<String> remove = new HashSet<>();
+        for (String expandKey : editor.expandedNodes) {
+            if (!expandKey.startsWith(prefix)) {
+                continue;
+            }
+            String childLayerId = expandKey.substring(prefix.length());
+            RadialMenuModels.RadialLayer child = preset.layers.get(childLayerId);
+            if (child == null || !child.slots.isEmpty()) {
+                continue;
+            }
+            String[] owner = findChildOwner(preset, childLayerId);
+            if (owner == null
+                    || !isSelectionRelatedToEmptyChild(
+                    preset, owner[0], Integer.parseInt(owner[1]), childLayerId,
+                    editor.selectedLayerId, editor.selectedSlotIndex)) {
+                remove.add(expandKey);
+            }
+        }
+        editor.expandedNodes.removeAll(remove);
+    }
+
+    private static String[] findChildOwner(RadialMenuModels.RadialPreset preset, String childLayerId) {
+        for (RadialMenuModels.RadialLayer layer : preset.layers.values()) {
+            for (int i = 0; i < layer.slots.size(); i++) {
+                RadialMenuModels.RadialSlot slot = layer.slots.get(i);
+                if (childLayerId.equals(slot.childLayerId)) {
+                    return new String[]{layer.id, String.valueOf(i)};
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean isSelectionRelatedToEmptyChild(
+            RadialMenuModels.RadialPreset preset,
+            String ownerLayerId,
+            int ownerSlotIndex,
+            String childLayerId,
+            String selectedLayerId,
+            int selectedSlotIndex
+    ) {
+        if (childLayerId.equals(selectedLayerId)) {
+            return true;
+        }
+        if (ownerLayerId.equals(selectedLayerId) && selectedSlotIndex == ownerSlotIndex) {
+            return true;
+        }
+        return isLayerUnder(preset, selectedLayerId, childLayerId);
+    }
+
+    private static boolean isLayerUnder(RadialMenuModels.RadialPreset preset, String layerId, String ancestorLayerId) {
+        if (layerId == null || ancestorLayerId == null || layerId.equals(preset.rootLayerId)) {
+            return false;
+        }
+        if (layerId.equals(ancestorLayerId)) {
+            return true;
+        }
+        RadialMenuModels.RadialLayer layer = preset.layers.get(layerId);
+        if (layer == null || layer.parentSlotId == null) {
+            return false;
+        }
+        for (RadialMenuModels.RadialLayer candidate : preset.layers.values()) {
+            for (RadialMenuModels.RadialSlot slot : candidate.slots) {
+                if (layer.parentSlotId.equals(slot.id)) {
+                    return isLayerUnder(preset, candidate.id, ancestorLayerId);
+                }
+            }
+        }
+        return false;
     }
 
     public static RadialMenuModels.RadialPreset addPreset() {
@@ -197,34 +279,30 @@ public final class RadialPresetStore {
             int deletedIndex = editor.selectedSlotIndex;
             String layerId = editor.selectedLayerId;
             RadialMenuModels.RadialSlot slot = layer.slots.get(deletedIndex);
-            if (slot.childLayerId != null) {
-                RadialMenuModels.RadialLayer child = preset.layers.get(slot.childLayerId);
-                if (child != null && child.slots.isEmpty()) {
-                    removeEmptyChildLayer(preset, slot);
-                    save();
-                    return true;
-                }
+            if (slot.childLayerId != null && preset.layers.containsKey(slot.childLayerId)) {
+                stripChildLayer(preset, slot);
+                save();
+                return true;
             }
             removeSlot(preset, layerId, deletedIndex);
             selectAfterSlotDeletion(preset, layerId, deletedIndex);
             save();
             return true;
         }
-        if (!preset.deletable) {
+        if (!preset.deletable || !editor.selectedLayerId.equals(preset.rootLayerId)) {
             return false;
         }
         return deletePreset(preset.id);
     }
 
-    private static void removeEmptyChildLayer(RadialMenuModels.RadialPreset preset, RadialMenuModels.RadialSlot slot) {
+    private static void stripChildLayer(RadialMenuModels.RadialPreset preset, RadialMenuModels.RadialSlot slot) {
         if (slot.childLayerId == null) {
             return;
         }
         String childId = slot.childLayerId;
-        preset.layers.remove(childId);
+        deleteLayerRecursive(preset, childId);
         slot.childLayerId = null;
-        String expandKey = treeNodeId(getBundle().editor.activePresetId, childId);
-        getBundle().editor.expandedNodes.remove(expandKey);
+        getBundle().editor.expandedNodes.remove(treeNodeId(getBundle().editor.activePresetId, childId));
     }
 
     private static void selectAfterSlotDeletion(RadialMenuModels.RadialPreset preset, String layerId, int deletedIndex) {
@@ -282,7 +360,9 @@ public final class RadialPresetStore {
             return null;
         }
         RadialMenuModels.RadialSlot slot = new RadialMenuModels.RadialSlot();
-        String slotNumber = String.valueOf(layer.slots.size() + 1);
+        int serial = allocateSerial(layer);
+        String slotNumber = String.valueOf(serial);
+        slot.serial = serial;
         slot.displayName = slotNumber;
         slot.unicodeIcon = slotNumber;
         layer.slots.add(slot);
@@ -307,9 +387,9 @@ public final class RadialPresetStore {
         child.parentSlotId = slot.id;
         slot.childLayerId = child.id;
         preset.layers.put(child.id, child);
-        getBundle().editor.expandedNodes.add(treeNodeId(preset.id, layerId));
-        getBundle().editor.expandedNodes.add(treeNodeId(preset.id, slot.id));
+        getBundle().editor.expandedNodes.add(treeNodeId(preset.id, child.id));
         selectLayer(preset.id, child.id);
+        selectSlot(-1);
         save();
         return child;
     }
@@ -320,6 +400,7 @@ public final class RadialPresetStore {
             return;
         }
         RadialMenuModels.RadialSlot slot = layer.slots.remove(slotIndex);
+        recycleSerial(layer, slot.serial);
         if (slot.childLayerId != null) {
             deleteLayerRecursive(preset, slot.childLayerId);
         }
@@ -442,6 +523,9 @@ public final class RadialPresetStore {
                 preset.rootLayerId = root.id;
                 preset.layers.put(root.id, root);
             }
+            for (RadialMenuModels.RadialLayer layer : preset.layers.values()) {
+                normalizeLayerSerials(layer);
+            }
         }
         if (bundle.findPreset(bundle.editor.activePresetId) == null) {
             bundle.editor.activePresetId = DEFAULT_PRESET_ID;
@@ -453,13 +537,88 @@ public final class RadialPresetStore {
         }
     }
 
+    private static void normalizeLayerSerials(RadialMenuModels.RadialLayer layer) {
+        if (layer.slots == null) {
+            layer.slots = new ArrayList<>();
+        }
+        if (layer.freeSerials == null) {
+            layer.freeSerials = new ArrayList<>();
+        }
+        if (layer.nextSerial < 1) {
+            layer.nextSerial = 1;
+        }
+        Set<Integer> used = new HashSet<>();
+        for (RadialMenuModels.RadialSlot slot : layer.slots) {
+            if (slot.serial > 0) {
+                used.add(slot.serial);
+            }
+        }
+        for (RadialMenuModels.RadialSlot slot : layer.slots) {
+            if (slot.serial > 0) {
+                continue;
+            }
+            int serial = 1;
+            while (used.contains(serial)) {
+                serial++;
+            }
+            slot.serial = serial;
+            used.add(serial);
+        }
+        int maxUsed = 0;
+        for (int serial : used) {
+            maxUsed = Math.max(maxUsed, serial);
+        }
+        layer.nextSerial = Math.max(layer.nextSerial, maxUsed + 1);
+        layer.freeSerials.removeIf(serial -> serial == null || serial <= 0 || used.contains(serial));
+    }
+
+    private static int allocateSerial(RadialMenuModels.RadialLayer layer) {
+        if (layer.freeSerials == null) {
+            layer.freeSerials = new ArrayList<>();
+        }
+        if (layer.nextSerial < 1) {
+            layer.nextSerial = 1;
+        }
+        while (!layer.freeSerials.isEmpty()) {
+            Integer recycled = layer.freeSerials.remove(layer.freeSerials.size() - 1);
+            if (recycled != null && recycled > 0 && !isSerialInUse(layer, recycled)) {
+                return recycled;
+            }
+        }
+        int serial = layer.nextSerial++;
+        while (isSerialInUse(layer, serial)) {
+            serial = layer.nextSerial++;
+        }
+        return serial;
+    }
+
+    private static void recycleSerial(RadialMenuModels.RadialLayer layer, int serial) {
+        if (serial <= 0) {
+            return;
+        }
+        if (layer.freeSerials == null) {
+            layer.freeSerials = new ArrayList<>();
+        }
+        if (!layer.freeSerials.contains(serial) && !isSerialInUse(layer, serial)) {
+            layer.freeSerials.add(serial);
+        }
+    }
+
+    private static boolean isSerialInUse(RadialMenuModels.RadialLayer layer, int serial) {
+        for (RadialMenuModels.RadialSlot slot : layer.slots) {
+            if (slot.serial == serial) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static RadialMenuModels.RadialPresetBundle createDefaultBundle() {
         RadialMenuModels.RadialPresetBundle result = new RadialMenuModels.RadialPresetBundle();
         RadialMenuModels.RadialPreset preset = buildDefaultPreset();
         result.presets.add(preset);
         result.editor.activePresetId = preset.id;
         result.editor.selectedLayerId = preset.rootLayerId;
-        result.editor.expandedNodes.add(treeNodeId(preset.id, preset.rootLayerId));
         return result;
     }
 

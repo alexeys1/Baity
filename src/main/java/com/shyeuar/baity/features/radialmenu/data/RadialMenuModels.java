@@ -25,6 +25,7 @@ public final class RadialMenuModels {
 
     public static final class RadialSlot {
         public String id = UUID.randomUUID().toString();
+        public int serial;
         public String command = "";
         public String displayName = "";
         public String icon = "";
@@ -36,6 +37,8 @@ public final class RadialMenuModels {
         public String id = UUID.randomUUID().toString();
         public String parentSlotId;
         public List<RadialSlot> slots = new ArrayList<>();
+        public int nextSerial = 1;
+        public List<Integer> freeSerials = new ArrayList<>();
     }
 
     public static final class RadialPreset {

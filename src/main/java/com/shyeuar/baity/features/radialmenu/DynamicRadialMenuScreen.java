@@ -5,7 +5,6 @@ import com.shyeuar.baity.gui.internal.ClickGuiState;
 import com.shyeuar.baity.gui.owo.RadialMenuComponent;
 import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.utils.SoundUtils;
-import io.wispforest.owo.ui.core.OwoUIGraphics;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -98,7 +97,7 @@ public class DynamicRadialMenuScreen extends Screen {
                     float[] iconPos = RadialMenuComponent.sectorCenter(
                             centerX, centerY, startAngle, anglePerSection, i,
                             RadialMenuComponent.INNER_RADIUS, RadialMenuComponent.OUTER_RADIUS);
-                    RadialSlotRenderer.drawSlotIcon(context, this.font, layer.slots.get(i), iconPos[0], iconPos[1], i);
+                    RadialSlotRenderer.drawSlotIcon(context, this.font, layer.slots.get(i), iconPos[0], iconPos[1]);
                 }
                 RadialSlotRenderer.drawSlotLabels(context, this.font, centerX, centerY, startAngle, anglePerSection,
                         sectionCount, layer.slots, hoveredSection);

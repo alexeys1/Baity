@@ -47,6 +47,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     private static long lastSessionClosedAt;
     private static final long SESSION_TIMEOUT_MS = 5 * 60_000L;
     private boolean presenceSyncTriggeredOnClose = false;
+    private boolean uiBootstrapped = false;
     
     public static ClickGui getInstance() {
         return currentInstance;
@@ -81,17 +82,21 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             ModuleManager.init();
         }
 
-        if (!restoredFromSession) {
-            for (com.shyeuar.baity.gui.value.ModuleCategory category : com.shyeuar.baity.gui.value.ModuleCategory.values()) {
-                java.util.List<Module> categoryModules = ModuleManager.getModulesByCategory(category);
-                if (!categoryModules.isEmpty()) {
-                    state.setSelectedCategory(category);
-                    break;
+        boolean firstBootstrap = !uiBootstrapped;
+        if (firstBootstrap) {
+            if (!restoredFromSession) {
+                for (com.shyeuar.baity.gui.value.ModuleCategory category : com.shyeuar.baity.gui.value.ModuleCategory.values()) {
+                    java.util.List<Module> categoryModules = ModuleManager.getModulesByCategory(category);
+                    if (!categoryModules.isEmpty()) {
+                        state.setSelectedCategory(category);
+                        break;
+                    }
+                }
+                for (Module module : ModuleManager.getModules()) {
+                    module.setExpanded(false);
                 }
             }
-            for (Module module : ModuleManager.getModules()) {
-                module.setExpanded(false);
-            }
+            uiBootstrapped = true;
         }
         
         if (this.minecraft != null) {
@@ -111,7 +116,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             ClickGuiLayout.initializeWindowPosition(state, screenW, screenH);
         }
         
-        if (!restoredFromSession) {
+        if (firstBootstrap && !restoredFromSession) {
             triggerAutoVersionCheck();
         }
     }
@@ -179,6 +184,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+        syncDragPositionFromMouse();
         if (rootComponent != null) {
             rootComponent.setGuiGraphics(graphics);
         }
@@ -186,6 +192,20 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         if (graphics != null) {
             super.extractRenderState(graphics, mouseX, mouseY, delta);
         }
+    }
+
+    private void syncDragPositionFromMouse() {
+        if (this.minecraft == null || this.minecraft.getWindow() == null) {
+            return;
+        }
+        if (!inputHandler.isWindowDragging()
+                && state.getDraggingSlider() == null
+                && state.getDraggingGradient() == null) {
+            return;
+        }
+        double mx = this.minecraft.mouseHandler.getScaledXPos(this.minecraft.getWindow());
+        double my = this.minecraft.mouseHandler.getScaledYPos(this.minecraft.getWindow());
+        inputHandler.handleMouseMove(mx, my);
     }
     
     @Override
@@ -208,6 +228,17 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     public boolean mouseReleased(MouseButtonEvent click) {
         inputHandler.handleMouseRelease(click.button());
         return super.mouseReleased(click);
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent click, double dx, double dy) {
+        if (inputHandler.isWindowDragging()
+                || state.getDraggingSlider() != null
+                || state.getDraggingGradient() != null) {
+            inputHandler.handleMouseMove(click.x(), click.y());
+            return true;
+        }
+        return super.mouseDragged(click, dx, dy);
     }
     
     @Override

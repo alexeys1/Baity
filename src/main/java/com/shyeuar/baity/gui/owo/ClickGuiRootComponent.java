@@ -102,7 +102,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         
         var matrices = guiGraphics.pose();
         matrices.pushMatrix();
-        matrices.translate(state.getWindowX(), state.getWindowY());
+        matrices.translate(Math.round(state.getWindowX()), Math.round(state.getWindowY()));
         matrices.scale(scaleRatio, scaleRatio);
         
         renderWindowBackground(adapter);

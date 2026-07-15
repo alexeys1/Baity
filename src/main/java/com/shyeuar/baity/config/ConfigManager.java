@@ -80,7 +80,7 @@ public class ConfigManager {
     public static String fancyDmgSplashSeparator = "none";
     public static String fancyDmgSplashStyle = "default";
     
-    public static boolean noSwimPoseEnabled = false; 
+    public static boolean noSwimPoseEnabled = false;
     
     public static boolean cullingEnabled = false;
     public static boolean cullingHideDyingMob = true;

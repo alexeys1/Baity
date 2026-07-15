@@ -54,6 +54,26 @@ public class HudScreenUtils {
     public static int[] getMousePos() {
         return new int[]{getMouseX(), getMouseY()};
     }
+
+    public static double getMouseXPrecise() {
+        Minecraft mc = getMc();
+        if (mc == null || mc.getWindow() == null) {
+            return getMouseX();
+        }
+        return mc.mouseHandler.getScaledXPos(mc.getWindow());
+    }
+
+    public static double getMouseYPrecise() {
+        Minecraft mc = getMc();
+        if (mc == null || mc.getWindow() == null) {
+            return getMouseY();
+        }
+        return mc.mouseHandler.getScaledYPos(mc.getWindow());
+    }
+
+    public static double[] getMousePosPrecise() {
+        return new double[]{getMouseXPrecise(), getMouseYPrecise()};
+    }
     
     public static boolean isPointInRect(int x, int y, int left, int top, int width, int height) {
         return left <= x && x < left + width && top <= y && y < top + height;

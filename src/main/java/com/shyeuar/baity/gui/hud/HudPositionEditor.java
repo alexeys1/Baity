@@ -20,8 +20,8 @@ public class HudPositionEditor extends Screen {
     
     private final HudManager manager;
     private final Theme theme;
-    private int grabbedX = 0;
-    private int grabbedY = 0;
+    private double grabbedX = 0;
+    private double grabbedY = 0;
     private int clickedPos = -1;
     
     private float getGuiScale() {
@@ -55,10 +55,12 @@ public class HudPositionEditor extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
         this.extractMenuBackground(guiGraphics);
+
+        updateDraggedElements();
         
-        int[] mousePos = HudScreenUtils.getMousePos();
-        int guiMouseX = mousePos[0];
-        int guiMouseY = mousePos[1];
+        double[] mousePos = HudScreenUtils.getMousePosPrecise();
+        int guiMouseX = (int) mousePos[0];
+        int guiMouseY = (int) mousePos[1];
         
         List<HudElement> elements = manager.getElements();
         HudElement hovered = null;
@@ -151,9 +153,9 @@ public class HudPositionEditor extends Screen {
     
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean isInsideWindow) {
-        int[] mousePos = HudScreenUtils.getMousePos();
-        int mouseX = mousePos[0];
-        int mouseY = mousePos[1];
+        double[] mousePos = HudScreenUtils.getMousePosPrecise();
+        double mouseX = mousePos[0];
+        double mouseY = mousePos[1];
         int button = click.button();
         
         List<HudElement> elements = manager.getElements();
@@ -161,7 +163,7 @@ public class HudPositionEditor extends Screen {
         
         for (int i = elements.size() - 1; i >= 0; i--) {
             HudElement element = elements.get(i);
-            boolean hovered = isElementHovered(element, mouseX, mouseY);
+            boolean hovered = isElementHovered(element, (int) mouseX, (int) mouseY);
             if (!hovered) continue;
             
             clickedOnElement = true;
@@ -218,56 +220,60 @@ public class HudPositionEditor extends Screen {
     }
     
     @Override
-    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double mouseX, double mouseY) {
-        if (click.button() == 0) {
-            int[] guiMousePos = HudScreenUtils.getMousePos();
-            int guiMouseX = guiMousePos[0];
-            int guiMouseY = guiMousePos[1];
-            
-            for (HudElement element : manager.getElements()) {
-                if (!element.isClicked()) continue;
-                
-                int elementWidth = element.getDummyWidth(false);
-                int elementHeight = element.getDummyHeight(false);
-                int targetX = guiMouseX - grabbedX;
-                int targetY = guiMouseY - grabbedY;
-                
-                int screenWidth = HudScreenUtils.getScaledWidth();
-                int screenHeight = HudScreenUtils.getScaledHeight();
-                
-                double currentX = element.getX();
-                double currentY = element.getY();
-                boolean isRelativeX = currentX >= 0 && currentX <= 1.0;
-                boolean isRelativeY = currentY >= 0 && currentY <= 1.0;
-                
-                if (isRelativeX) {
-                    int centerX = targetX + elementWidth / 2;
-                    double newX = centerX / (double)screenWidth;
-                    if (newX < 0) newX = 0;
-                    if (newX > 1.0) newX = 1.0;
-                    element.setX(newX);
-                } else {
-                    if (targetX < 0) targetX = 0;
-                    if (targetX > screenWidth - elementWidth) targetX = screenWidth - elementWidth;
-                    element.setX(targetX);
-                }
-                
-                if (isRelativeY) {
-                    int centerY = targetY + elementHeight / 2;
-                    double newY = centerY / (double)screenHeight;
-                    if (newY < 0) newY = 0;
-                    if (newY > 1.0) newY = 1.0;
-                    element.setY(newY);
-                } else {
-                    if (targetY < 0) targetY = 0;
-                    if (targetY > screenHeight - elementHeight) targetY = screenHeight - elementHeight;
-                    element.setY(targetY);
-                }
-            }
-            
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double dx, double dy) {
+        if (click.button() == 0 && updateDraggedElements()) {
             return true;
         }
-        return super.mouseDragged(click, mouseX, mouseY);
+        return super.mouseDragged(click, dx, dy);
+    }
+
+    private boolean updateDraggedElements() {
+        boolean any = false;
+        double[] guiMousePos = HudScreenUtils.getMousePosPrecise();
+        double guiMouseX = guiMousePos[0];
+        double guiMouseY = guiMousePos[1];
+        int screenWidth = HudScreenUtils.getScaledWidth();
+        int screenHeight = HudScreenUtils.getScaledHeight();
+
+        for (HudElement element : manager.getElements()) {
+            if (!element.isClicked()) continue;
+            any = true;
+
+            int elementWidth = element.getDummyWidth(false);
+            int elementHeight = element.getDummyHeight(false);
+            double targetX = guiMouseX - grabbedX;
+            double targetY = guiMouseY - grabbedY;
+
+            double currentX = element.getX();
+            double currentY = element.getY();
+            boolean isRelativeX = currentX >= 0 && currentX <= 1.0;
+            boolean isRelativeY = currentY >= 0 && currentY <= 1.0;
+
+            if (isRelativeX) {
+                double centerX = targetX + elementWidth / 2.0;
+                double newX = centerX / (double) screenWidth;
+                if (newX < 0) newX = 0;
+                if (newX > 1.0) newX = 1.0;
+                element.setX(newX);
+            } else {
+                if (targetX < 0) targetX = 0;
+                if (targetX > screenWidth - elementWidth) targetX = screenWidth - elementWidth;
+                element.setX(targetX);
+            }
+
+            if (isRelativeY) {
+                double centerY = targetY + elementHeight / 2.0;
+                double newY = centerY / (double) screenHeight;
+                if (newY < 0) newY = 0;
+                if (newY > 1.0) newY = 1.0;
+                element.setY(newY);
+            } else {
+                if (targetY < 0) targetY = 0;
+                if (targetY > screenHeight - elementHeight) targetY = screenHeight - elementHeight;
+                element.setY(targetY);
+            }
+        }
+        return any;
     }
     
     @Override

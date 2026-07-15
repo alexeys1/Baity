@@ -154,10 +154,6 @@ public class ClickGuiInputHandler {
                 }
             }
         }
-        
-        if (button == 0 && handleWindowDrag(coords, mouseX, mouseY)) {
-            return true;
-        }
 
         if (handleCategoryClick(coords)) {
             return true;
@@ -172,6 +168,10 @@ public class ClickGuiInputHandler {
         }
         
         if (handleVersionClick(coords, button)) {
+            return true;
+        }
+        
+        if (button == 0 && handleWindowDrag(coords, mouseX, mouseY)) {
             return true;
         }
         
@@ -507,6 +507,10 @@ public class ClickGuiInputHandler {
         handlePainterDrag(mouseX, mouseY);
     }
 
+    public boolean isWindowDragging() {
+        return state.isDragging();
+    }
+
     private void clearPainterDrag() {
         painterDragModule = null;
         painterDragValue = null;
@@ -701,15 +705,47 @@ public class ClickGuiInputHandler {
     }
     
     private boolean handleWindowDrag(ClickGuiLayout.ScaledCoordinates coords, double mouseX, double mouseY) {
-        if (GuiRenderUtil.isHovered(0, 0, ClickGuiState.WIDTH, 20, coords.mouseX, coords.mouseY)) {
-            if (state.getDragX() == 0 && state.getDragY() == 0) {
-                state.setDragX(coords.mouseX);
-                state.setDragY(coords.mouseY);
-            } else {
-                ClickGuiLayout.updateWindowPosition(state, mouseX, mouseY, state.getDragX(), state.getDragY());
-            }
-            state.setDragging(true);
+        if (!isWindowDragRegion(coords.mouseX, coords.mouseY)) {
+            return false;
+        }
+        if (state.getDragX() == 0 && state.getDragY() == 0) {
+            state.setDragX(coords.mouseX);
+            state.setDragY(coords.mouseY);
+        } else {
+            ClickGuiLayout.updateWindowPosition(state, mouseX, mouseY, state.getDragX(), state.getDragY());
+        }
+        state.setDragging(true);
+        return true;
+    }
+
+    private boolean isWindowDragRegion(float mouseX, float mouseY) {
+        if (mouseX < 0f || mouseY < 0f || mouseX >= ClickGuiState.WIDTH || mouseY >= ClickGuiState.HEIGHT) {
+            return false;
+        }
+        if (mouseY < 20f) {
             return true;
+        }
+        if (mouseY >= ClickGuiState.HEIGHT - ClickGuiState.FOOTER_HEIGHT) {
+            return true;
+        }
+        if (mouseX < ClickGuiState.SIDEBAR_WIDTH && !isCategoryHit(mouseX, mouseY)) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isCategoryHit(float mouseX, float mouseY) {
+        if (mouseX < 0f || mouseX >= ClickGuiState.SIDEBAR_WIDTH) {
+            return false;
+        }
+        float categoryY = ClickGuiState.HEADER_HEIGHT + 20;
+        float categorySpacing = 35f;
+        for (com.shyeuar.baity.gui.value.ModuleCategory ignored :
+             com.shyeuar.baity.gui.value.ModuleCategory.values()) {
+            if (mouseY >= categoryY - 5 && mouseY < categoryY + 25) {
+                return true;
+            }
+            categoryY += categorySpacing;
         }
         return false;
     }

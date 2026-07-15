@@ -117,8 +117,10 @@ public class ClickGuiLayout {
     
     public static ScaledCoordinates getScaledCoordinates(ClickGuiState state, double mouseX, double mouseY) {
         float scaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
-        float scaledMouseX = ((float)mouseX - state.getWindowX()) / scaleRatio;
-        float scaledMouseY = ((float)mouseY - state.getWindowY()) / scaleRatio;
+        float windowX = Math.round(state.getWindowX());
+        float windowY = Math.round(state.getWindowY());
+        float scaledMouseX = ((float)mouseX - windowX) / scaleRatio;
+        float scaledMouseY = ((float)mouseY - windowY) / scaleRatio;
         return new ScaledCoordinates(scaledMouseX, scaledMouseY, scaleRatio);
     }
 
@@ -166,14 +168,46 @@ public class ClickGuiLayout {
         float scaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
         float windowX = (screenWidth - ClickGuiState.WIDTH * scaleRatio) / 2f;
         float windowY = (screenHeight - ClickGuiState.HEIGHT * scaleRatio) / 2f;
-        state.setWindowX(windowX);
-        state.setWindowY(windowY);
+        state.setWindowX(Math.round(windowX));
+        state.setWindowY(Math.round(windowY));
     }
     
     public static void updateWindowPosition(ClickGuiState state, double mouseX, double mouseY, float dragX, float dragY) {
         float scaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
-        state.setWindowX((float)mouseX - dragX * scaleRatio);
-        state.setWindowY((float)mouseY - dragY * scaleRatio);
+        float windowX = (float) mouseX - dragX * scaleRatio;
+        float windowY = (float) mouseY - dragY * scaleRatio;
+        windowX = Math.round(windowX);
+        windowY = Math.round(windowY);
+        clampWindowToScreen(state, windowX, windowY, scaleRatio);
+    }
+
+    private static void clampWindowToScreen(ClickGuiState state, float windowX, float windowY, float scaleRatio) {
+        net.minecraft.client.Minecraft client = net.minecraft.client.Minecraft.getInstance();
+        if (client == null || client.getWindow() == null) {
+            state.setWindowX(windowX);
+            state.setWindowY(windowY);
+            return;
+        }
+        int screenW = client.getWindow().getGuiScaledWidth();
+        int screenH = client.getWindow().getGuiScaledHeight();
+        float dispW = ClickGuiState.WIDTH * scaleRatio;
+        float dispH = ClickGuiState.HEIGHT * scaleRatio;
+        float minX = -dispW / 2f;
+        float maxX = screenW - dispW / 2f;
+        float minY = -dispH / 2f;
+        float maxY = screenH - dispH / 2f;
+        if (maxX < minX) {
+            windowX = (screenW - dispW) / 2f;
+        } else {
+            windowX = Math.max(minX, Math.min(maxX, windowX));
+        }
+        if (maxY < minY) {
+            windowY = (screenH - dispH) / 2f;
+        } else {
+            windowY = Math.max(minY, Math.min(maxY, windowY));
+        }
+        state.setWindowX(Math.round(windowX));
+        state.setWindowY(Math.round(windowY));
     }
     
     public static void clampScrollOffset(ClickGuiState state, float maxScroll) {

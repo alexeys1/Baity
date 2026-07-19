@@ -2,6 +2,8 @@ package com.shyeuar.baity.features;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.shyeuar.baity.config.ConfigManager;
@@ -168,7 +170,12 @@ public final class MotionBlur {
                 builder.putInt(0);
                 builder.putInt(1);
             }
-            chain.process(client.getMainRenderTarget(), frameAllocator);
+            RenderTarget mainTarget = client.getMainRenderTarget();
+            FrameGraphBuilder frame = new FrameGraphBuilder();
+            PostChain.TargetBundle targets = PostChain.TargetBundle.of(
+                    PostChain.MAIN_TARGET_ID, frame.importExternal("main", mainTarget));
+            chain.addToFrame(frame, mainTarget.width, mainTarget.height, targets);
+            frame.execute(frameAllocator);
         } catch (RuntimeException e) {
             if (ubo.resetIfClosed(e)) {
                 return;

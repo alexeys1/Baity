@@ -32,6 +32,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.resources.Identifier;
 import net.minecraft.client.Minecraft;
 import com.shyeuar.baity.features.radialmenu.RadialMenu;
+import com.shyeuar.baity.features.SoftFullscreen;
 import com.shyeuar.baity.utils.SoundUtils;
 
 import java.util.Objects;
@@ -98,6 +99,8 @@ public class Baity implements ClientModInitializer {
             }
             
             KeybindManager.handleModuleKeybinds(client, windowHandle);
+
+            SoftFullscreen.tick(client);
             
             RadialMenu.tick(client);
             BaityPresenceSync.tick();

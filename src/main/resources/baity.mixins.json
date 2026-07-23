@@ -67,6 +67,7 @@
     "InvisibugHighlightsMixin$EntityRemovalMixin",
     "FancyCreeperVeilMixin",
     "NoTextShadowMixin",
+    "SoftFullscreenMixin",
     "DroppedItem2DMixin",
     "ItemEntityRenderStateMixin",
     "OldSneakingMixin$OldSneakingCameraMixin",

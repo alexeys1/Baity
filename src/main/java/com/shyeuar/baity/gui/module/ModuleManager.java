@@ -715,6 +715,12 @@ public class ModuleManager {
             () -> ConfigManager.noHurtCamEnabled,
             val -> ConfigManager.noHurtCamEnabled = val
         );
+
+        ModuleRegistry.registerSimpleModule(
+            "SoftFullscreen", "SoftFullscreen", ModuleCategory.QOL,
+            () -> ConfigManager.softFullscreenEnabled,
+            val -> ConfigManager.softFullscreenEnabled = val
+        );
         
         ModuleRegistry.registerModuleWithValues(
             "HeldItemTweaks", "HeldItemTweaks", ModuleCategory.RENDER,
@@ -1133,6 +1139,7 @@ public class ModuleManager {
         );
         TooltipManager.registerTooltip("FancyCreeperVeil", "Replace the wither cloak ability creeper model to a fancy one.", 0xFFFFFF);
         TooltipManager.registerTooltip("NoSwimPose", "Only disables the swimming pose and eye height change on your client.", 0xFFFFFF);
+        TooltipManager.registerTooltip("SoftFullscreen", "Borderless Fullscreen.", 0xFFFFFF);
         TooltipManager.registerTooltip(
             "HeldItemTweaks",
             "Client-side tweaks for how first-person held items are rendered.",

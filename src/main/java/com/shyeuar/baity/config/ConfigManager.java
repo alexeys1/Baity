@@ -91,6 +91,8 @@ public class ConfigManager {
     public static boolean skinLayer3DEnabled = false;
     
     public static boolean noHurtCamEnabled = false;
+
+    public static boolean softFullscreenEnabled = false;
     
     public static boolean heldItemTweaksEnabled = false;
     public static boolean heldItemTweaksNoItemswapAnimationEnabled = false;
@@ -466,6 +468,9 @@ public class ConfigManager {
         registerField("NoHurtCam", Boolean.class,
             c -> ConfigManager.noHurtCamEnabled,
             (c, v) -> ConfigManager.noHurtCamEnabled = (Boolean) v);
+        registerField("SoftFullscreen", Boolean.class,
+            c -> ConfigManager.softFullscreenEnabled,
+            (c, v) -> ConfigManager.softFullscreenEnabled = (Boolean) v);
         registerField("HeldItemTweaks", Boolean.class,
             c -> ConfigManager.heldItemTweaksEnabled,
             (c, v) -> ConfigManager.heldItemTweaksEnabled = (Boolean) v);

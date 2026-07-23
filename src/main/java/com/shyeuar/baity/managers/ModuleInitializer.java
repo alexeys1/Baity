@@ -17,7 +17,7 @@ public class ModuleInitializer {
         "force pink color",
         "focus player nametag"
     );
-    private static final Set<String> REMINDER_OPTIONS = Set.of("cookie buff reminder", "god potion reminder");
+    private static final Set<String> REMINDER_OPTIONS = Set.of("cookie buff reminder", "god potion reminder", "kat reminder");
     private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of(
             "sync non-critical dmg",
             "genshin elemental reaction",
@@ -123,6 +123,7 @@ public class ModuleInitializer {
                     switch (v.getName()) {
                         case "cookie buff reminder" -> v.setValue(ConfigManager.reminderCookieBuffEnabled);
                         case "god potion reminder" -> v.setValue(ConfigManager.reminderGodPotionEnabled);
+                        case "kat reminder" -> v.setValue(ConfigManager.reminderKatEnabled);
                     }
                 }
             }

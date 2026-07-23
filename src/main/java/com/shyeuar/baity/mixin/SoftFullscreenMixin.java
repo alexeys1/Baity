@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class SoftFullscreenMixin {
 
     @Inject(method = "toggleFullScreen", at = @At("HEAD"))
-    private void baity$yieldSoftFullscreenToExclusive(CallbackInfo ci) {
-        SoftFullscreen.yieldToExclusiveFullscreen(Minecraft.getInstance());
+    private void baity$softFullscreenBeforeToggle(CallbackInfo ci) {
+        SoftFullscreen.onBeforeToggleFullScreen(Minecraft.getInstance());
     }
 }

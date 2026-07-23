@@ -34,8 +34,12 @@ public final class SoftFullscreen {
             | WS_EX_CLIENTEDGE | WS_EX_LAYERED | WS_EX_STATICEDGE | WS_EX_TOOLWINDOW | WS_EX_APPWINDOW;
 
     private static final int POS_FLAGS = User32.SWP_SHOWWINDOW | User32.SWP_NOOWNERZORDER | User32.SWP_NOSENDCHANGING;
+    private static final int SETTLE_TICKS_AFTER_EXCLUSIVE = 3;
 
     private static boolean applied;
+    private static boolean wasExclusive;
+    private static boolean pendingReapply;
+    private static int settleTicks;
     private static long savedStyle;
     private static long savedExStyle;
     private static int savedLeft;
@@ -63,47 +67,78 @@ public final class SoftFullscreen {
             if (applied) {
                 restoreWindow();
             }
+            pendingReapply = false;
+            settleTicks = 0;
+            wasExclusive = exclusive;
             return;
         }
 
         if (exclusive) {
             if (applied) {
-                applied = false;
-                savedStyle = 0L;
-                savedExStyle = 0L;
+                restoreWindow();
             }
+            wasExclusive = true;
+            pendingReapply = true;
+            settleTicks = SETTLE_TICKS_AFTER_EXCLUSIVE;
             return;
         }
 
-        if (!applied) {
-            tryApply(client);
+        if (wasExclusive) {
+            wasExclusive = false;
+            pendingReapply = true;
+            settleTicks = SETTLE_TICKS_AFTER_EXCLUSIVE;
         }
-    }
 
-    public static void yieldToExclusiveFullscreen(Minecraft client) {
-        if (!isWindows() || !applied || client == null || client.getWindow() == null) {
+        if (settleTicks > 0) {
+            settleTicks--;
             return;
         }
-        restoreWindow();
+
+        if (pendingReapply || !applied) {
+            if (tryApply(client)) {
+                pendingReapply = false;
+            }
+        }
     }
 
-    private static void tryApply(Minecraft client) {
+    public static void onBeforeToggleFullScreen(Minecraft client) {
+        if (!isWindows() || client == null || client.getWindow() == null) {
+            return;
+        }
+
+        if (client.getWindow().isFullscreen()) {
+            pendingReapply = true;
+            settleTicks = SETTLE_TICKS_AFTER_EXCLUSIVE;
+            return;
+        }
+
+        if (applied) {
+            restoreWindow();
+        }
+        pendingReapply = true;
+        settleTicks = SETTLE_TICKS_AFTER_EXCLUSIVE;
+    }
+
+    private static boolean tryApply(Minecraft client) {
+        if (client.getWindow().isFullscreen()) {
+            return false;
+        }
         long hwnd = hwnd(client.getWindow().handle());
         if (hwnd == 0L) {
-            return;
+            return false;
         }
         if (!captureAndBorderless(hwnd)) {
-            return;
+            return false;
         }
         applied = true;
+        return true;
     }
 
     private static void restoreWindow() {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.getWindow() == null) {
             applied = false;
-            savedStyle = 0L;
-            savedExStyle = 0L;
+            clearSaved();
             return;
         }
 
@@ -123,8 +158,16 @@ public final class SoftFullscreen {
             );
         }
         applied = false;
+        clearSaved();
+    }
+
+    private static void clearSaved() {
         savedStyle = 0L;
         savedExStyle = 0L;
+        savedLeft = 0;
+        savedTop = 0;
+        savedWidth = 0;
+        savedHeight = 0;
     }
 
     private static boolean captureAndBorderless(long hwnd) {
@@ -161,8 +204,7 @@ public final class SoftFullscreen {
             if (monitor == 0L || !User32.GetMonitorInfo(monitor, info)) {
                 User32.SetWindowLongPtr(null, hwnd, User32.GWL_STYLE, savedStyle);
                 User32.SetWindowLongPtr(null, hwnd, User32.GWL_EXSTYLE, savedExStyle);
-                savedStyle = 0L;
-                savedExStyle = 0L;
+                clearSaved();
                 return false;
             }
             RECT monitorRect = info.rcMonitor();

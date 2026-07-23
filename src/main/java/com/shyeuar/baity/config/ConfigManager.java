@@ -40,6 +40,9 @@ public class ConfigManager {
     public static boolean reminderEnabled = false;
     public static boolean reminderCookieBuffEnabled = true;
     public static boolean reminderGodPotionEnabled = true;
+    public static boolean reminderKatEnabled = true;
+    public static String reminderKatPetName = "";
+    public static long reminderKatReadyAtMs = 0L;
     
     public static boolean customHandHoldingEnabled = false;
     public static double swingDuration = 6;
@@ -327,6 +330,15 @@ public class ConfigManager {
         registerField("GodPotionReminder", Boolean.class,
             c -> ConfigManager.reminderGodPotionEnabled,
             (c, v) -> ConfigManager.reminderGodPotionEnabled = (Boolean) v);
+        registerField("KatReminder", Boolean.class,
+            c -> ConfigManager.reminderKatEnabled,
+            (c, v) -> ConfigManager.reminderKatEnabled = (Boolean) v);
+        registerField("KatReminderPetName", String.class,
+            c -> ConfigManager.reminderKatPetName,
+            (c, v) -> ConfigManager.reminderKatPetName = (String) v);
+        registerField("KatReminderReadyAtMs", Long.class,
+            c -> ConfigManager.reminderKatReadyAtMs,
+            (c, v) -> ConfigManager.reminderKatReadyAtMs = ((Number) v).longValue());
         registerField("CustomHandHolding", Boolean.class,
             c -> ConfigManager.customHandHoldingEnabled,
             (c, v) -> ConfigManager.customHandHoldingEnabled = (Boolean) v);

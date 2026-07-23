@@ -370,7 +370,8 @@ public class ModuleManager {
             val -> ConfigManager.reminderEnabled = val,
             new Option[]{
                 new Option("cookie buff reminder", "cookie buff reminder", true, ModuleCategory.QOL),
-                new Option("god potion reminder", "god potion reminder", true, ModuleCategory.QOL)
+                new Option("god potion reminder", "god potion reminder", true, ModuleCategory.QOL),
+                new Option("kat reminder", "kat reminder", true, ModuleCategory.QOL)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
@@ -382,6 +383,11 @@ public class ModuleManager {
                     "god potion reminder",
                     () -> ConfigManager.reminderGodPotionEnabled,
                     val -> ConfigManager.reminderGodPotionEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "kat reminder",
+                    () -> ConfigManager.reminderKatEnabled,
+                    val -> ConfigManager.reminderKatEnabled = (Boolean) val
                 )
             }
         );

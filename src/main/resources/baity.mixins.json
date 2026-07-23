@@ -85,6 +85,7 @@
     "accessor.LivingEntityAccessor",
     "accessor.CameraAccessor",
     "accessor.AvatarRenderStateAccessor",
+    "accessor.AvatarRendererInvoker",
     "accessor.CameraRenderStateAccessor",
     "accessor.PostRenderAccessors$PostChainAccessor",
     "accessor.PostRenderAccessors$PostPassAccessor",

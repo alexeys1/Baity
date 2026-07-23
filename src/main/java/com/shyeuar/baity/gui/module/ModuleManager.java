@@ -929,8 +929,20 @@ public class ModuleManager {
             .setExpanded(ConfigManager.nametagOptionsGroupExpanded)
             .addChild(new Option("show distance", "show distance", false, ModuleCategory.RENDER))
             .addChild(new Option("show own nametag", "show own nametag", true, ModuleCategory.RENDER))
-            .addChild(new Option("force pink color", "force pink color", true, ModuleCategory.RENDER))
-            .addChild(new Option("focus player nametag", "focus player nametag", false, ModuleCategory.RENDER));
+            .addChild(new Option("force pink color", "force pink color", true, ModuleCategory.RENDER));
+
+        GroupValue focusPlayerNametagGroup = new GroupValue("focus player nametag", "focus player nametag", ModuleCategory.RENDER)
+            .setExpanded(ConfigManager.nametagFocusPlayerGroupExpanded)
+            .addChild(new ButtonValue("keybind", "keybind", ConfigManager.nametagFocusPlayerKeybind, ModuleCategory.RENDER, ButtonValue.ButtonValueType.KEYBIND, false))
+            .addChild(new ButtonValue(
+                "mode",
+                "mode",
+                ConfigManager.nametagFocusPlayerMode,
+                ConfigManager.nametagFocusPlayerMode,
+                ModuleCategory.RENDER,
+                ButtonValue.ButtonValueType.TRIGGER,
+                false
+            ));
 
         ModuleRegistry.registerModuleWithValues(
             "Nametag", "Nametag", ModuleCategory.RENDER,
@@ -939,7 +951,8 @@ public class ModuleManager {
             new com.shyeuar.baity.gui.value.Value[]{
                 new Option("default nametag", "only show the default nametag", false, ModuleCategory.RENDER),
                 new Option("transparentize other tags", "transparent tags", false, ModuleCategory.RENDER),
-                nametagOptionsGroup
+                nametagOptionsGroup,
+                focusPlayerNametagGroup
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
@@ -974,8 +987,18 @@ public class ModuleManager {
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "focus player nametag",
-                    () -> ConfigManager.nametagFocusPlayerNametag,
-                    val -> ConfigManager.nametagFocusPlayerNametag = (Boolean) val
+                    () -> ConfigManager.nametagFocusPlayerGroupExpanded,
+                    val -> ConfigManager.nametagFocusPlayerGroupExpanded = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "keybind",
+                    () -> ConfigManager.nametagFocusPlayerKeybind,
+                    val -> ConfigManager.nametagFocusPlayerKeybind = ((Number) val).intValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "mode",
+                    () -> ConfigManager.nametagFocusPlayerMode,
+                    val -> ConfigManager.nametagFocusPlayerMode = (String) val
                 )
             }
         );

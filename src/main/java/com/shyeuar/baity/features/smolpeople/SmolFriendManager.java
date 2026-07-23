@@ -3,6 +3,7 @@ package com.shyeuar.baity.features.smolpeople;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.config.BaityConfigDir;
 import com.shyeuar.baity.sync.BaityPresenceSync;
+import com.shyeuar.baity.utils.AntiBotUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -61,6 +62,10 @@ public final class SmolFriendManager {
             return false;
         }
 
+        if (isLocalPlayerLookalike(targetPlayer)) {
+            return true;
+        }
+
         Boolean remotePreference = BaityPresenceSync.getRemoteSmolPreference(targetPlayer.getUUID());
         if (remotePreference != null) {
             return remotePreference;
@@ -71,6 +76,39 @@ public final class SmolFriendManager {
         }
 
         return isFriend(targetPlayer.getName().getString());
+    }
+
+    private static boolean isLocalPlayerLookalike(Player other) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || other == mc.player) {
+            return false;
+        }
+
+        if (other.getUUID().equals(mc.player.getUUID())) {
+            return true;
+        }
+
+        String selfName = mc.player.getGameProfile().name();
+        String otherName = other.getGameProfile().name();
+        if (selfName != null && !selfName.isEmpty() && selfName.equalsIgnoreCase(otherName)) {
+            return true;
+        }
+
+        if (!(other instanceof net.minecraft.client.player.AbstractClientPlayer otherClient)) {
+            return false;
+        }
+
+        var selfSkin = mc.player.getSkin();
+        var otherSkin = otherClient.getSkin();
+        if (selfSkin == null || otherSkin == null
+            || selfSkin.body() == null || otherSkin.body() == null) {
+            return false;
+        }
+
+        if (!selfSkin.body().texturePath().equals(otherSkin.body().texturePath())) {
+            return false;
+        }
+        return AntiBotUtils.isBot(other);
     }
 
     public static Player getPlayerByEntityId(int entityId) {

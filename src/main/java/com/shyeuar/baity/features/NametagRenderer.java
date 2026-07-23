@@ -50,8 +50,7 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
         if (m == null || !m.isEnabled()) {
             return; 
         }
-        boolean defaultNametag = ModuleUtils.getOptionBoolean(m, "default nametag", false);
-        if (defaultNametag) {
+        if (!FocusPlayerNametag.shouldUseCustomNametagPath()) {
             return;
         }
 
@@ -91,6 +90,8 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
                 if (!showOwnNametag) {
                     continue;
                 }
+            } else if (!com.shyeuar.baity.utils.NametagUtils.shouldDrawCustomNametag(player)) {
+                continue;
             }
             
             Vec3 lerpedPos = player.getPosition(tickDelta);
@@ -129,7 +130,7 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
             matrices.mulPose(new org.joml.Quaternionf().rotationX(cameraPitch * 0.017453292F));
 
             assert mc.player != null;
-            boolean focusPlayerNametag = ModuleUtils.getOptionBoolean(module, "focus player nametag", false);
+            boolean focusPlayerNametag = FocusPlayerNametag.isActive();
             
             double distance = mc.player.distanceTo(player);
             float dynamicScale = (float) Math.max(0.03, Math.min(distance * 0.0025, 0.12));
@@ -256,7 +257,7 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
     private static String buildLayoutSignature(Module nametagModule) {
         boolean showDistance = ModuleUtils.getOptionBoolean(nametagModule, "show distance", true);
         boolean forcePinkColor = ModuleUtils.getOptionBoolean(nametagModule, "force pink color", true);
-        boolean focusPlayerNametag = ModuleUtils.getOptionBoolean(nametagModule, "focus player nametag", false);
+        boolean focusPlayerNametag = FocusPlayerNametag.isActive();
         boolean showOwnNametag = ModuleUtils.getOptionBoolean(nametagModule, "show own nametag", false);
         boolean nickTweaksEnabled = com.shyeuar.baity.config.ConfigManager.nickTweaksEnabled;
         boolean nickTweaksChromaEnabled = com.shyeuar.baity.config.ConfigManager.nickTweaksChromaEnabled;

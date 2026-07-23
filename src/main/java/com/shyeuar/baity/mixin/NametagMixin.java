@@ -106,7 +106,8 @@ public class NametagMixin {
             int entityId = baity$resolveEntityId(state);
             Minecraft mc = Minecraft.getInstance();
 
-            if (NametagUtils.isDefaultNametagMode()) {
+            if (NametagUtils.isDefaultNametagMode()
+                && !com.shyeuar.baity.features.FocusPlayerNametag.isActive()) {
                 return;
             }
 
@@ -162,6 +163,10 @@ public class NametagMixin {
 
         @Inject(method = "shouldShowName", at = @At("HEAD"), cancellable = true)
         private void baity$disableVanillaNameTag(Avatar avatar, double d, CallbackInfoReturnable<Boolean> cir) {
+            if (NametagUtils.isQueryingVanillaVisibility()) {
+                return;
+            }
+
             Module m = ModuleManager.getModuleByName("Nametag");
             if (m == null || !m.isEnabled()) {
                 return;
@@ -172,7 +177,8 @@ public class NametagMixin {
                 return;
             }
 
-            if (NametagUtils.isDefaultNametagMode()) {
+            if (NametagUtils.isDefaultNametagMode()
+                && !com.shyeuar.baity.features.FocusPlayerNametag.isActive()) {
                 if (avatar == mc.player) {
                     cir.setReturnValue(true);
                 }
@@ -202,7 +208,9 @@ public class NametagMixin {
             if (m == null || !m.isEnabled()) {
                 return avatar.isInvisibleTo(viewer);
             }
-            if (!NametagUtils.isDefaultNametagEnabled()) {
+            if (NametagUtils.isQueryingVanillaVisibility()
+                || !NametagUtils.isDefaultNametagEnabled()
+                || com.shyeuar.baity.features.FocusPlayerNametag.isActive()) {
                 return avatar.isInvisibleTo(viewer);
             }
             return false;

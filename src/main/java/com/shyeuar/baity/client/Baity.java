@@ -103,6 +103,7 @@ public class Baity implements ClientModInitializer {
             SoftFullscreen.tick(client);
             
             RadialMenu.tick(client);
+            com.shyeuar.baity.features.FocusPlayerNametag.tick(client);
             BaityPresenceSync.tick();
             PestHighlights.tickPestCaches();
             

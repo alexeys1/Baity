@@ -34,6 +34,9 @@ public class ConfigManager {
     public static boolean nametagShowOwnNametag = true;
     public static boolean nametagForcePinkColor = true;
     public static boolean nametagFocusPlayerNametag = false;
+    public static int nametagFocusPlayerKeybind = 0;
+    public static String nametagFocusPlayerMode = "Toggle";
+    public static boolean nametagFocusPlayerGroupExpanded = false;
     public static boolean nametagTransparentizeOtherTags = false;
     public static boolean nametagOptionsGroupExpanded = false;
     public static boolean pepCatEnabled = false;
@@ -312,6 +315,15 @@ public class ConfigManager {
         registerField("  FocusPlayerNametag", Boolean.class,
             c -> ConfigManager.nametagFocusPlayerNametag,
             (c, v) -> ConfigManager.nametagFocusPlayerNametag = (Boolean) v);
+        registerField("  FocusPlayerNametagKeybind", Integer.class,
+            c -> ConfigManager.nametagFocusPlayerKeybind,
+            (c, v) -> ConfigManager.nametagFocusPlayerKeybind = (Integer) v);
+        registerField("  FocusPlayerNametagMode", String.class,
+            c -> ConfigManager.nametagFocusPlayerMode,
+            (c, v) -> ConfigManager.nametagFocusPlayerMode = (String) v);
+        registerField("FocusPlayerNametagGroupExpanded", Boolean.class,
+            c -> ConfigManager.nametagFocusPlayerGroupExpanded,
+            (c, v) -> ConfigManager.nametagFocusPlayerGroupExpanded = (Boolean) v);
         registerField("  TransparentizeOtherTags", Boolean.class,
             c -> ConfigManager.nametagTransparentizeOtherTags,
             (c, v) -> ConfigManager.nametagTransparentizeOtherTags = (Boolean) v);

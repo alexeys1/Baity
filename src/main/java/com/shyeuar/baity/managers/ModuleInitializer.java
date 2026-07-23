@@ -14,8 +14,7 @@ public class ModuleInitializer {
     private static final Set<String> PLAYERESP_OPTIONS = Set.of(
         "show distance",
         "show own nametag",
-        "force pink color",
-        "focus player nametag"
+        "force pink color"
     );
     private static final Set<String> REMINDER_OPTIONS = Set.of("cookie buff reminder", "god potion reminder", "kat reminder");
     private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of(
@@ -150,9 +149,21 @@ public class ModuleInitializer {
                                         case "show distance" -> child.setValue(ConfigManager.nametagShowDistance);
                                         case "show own nametag" -> child.setValue(ConfigManager.nametagShowOwnNametag);
                                         case "force pink color" -> child.setValue(ConfigManager.nametagForcePinkColor);
-                                        case "focus player nametag" -> child.setValue(ConfigManager.nametagFocusPlayerNametag);
                                         default -> {
                                         }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    case "focus player nametag" -> {
+                        if (v instanceof GroupValue group) {
+                            group.setExpanded(ConfigManager.nametagFocusPlayerGroupExpanded);
+                            for (Value child : group.getChildren()) {
+                                switch (child.getName()) {
+                                    case "keybind" -> child.setValue(ConfigManager.nametagFocusPlayerKeybind);
+                                    case "mode" -> child.setValue(ConfigManager.nametagFocusPlayerMode);
+                                    default -> {
                                     }
                                 }
                             }

@@ -371,6 +371,14 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             return;
         }
 
+        if ("Nametag".equals(module.getName()) && "mode".equals(buttonValue.getName())) {
+            String current = buttonValue.getValue() == null ? "Toggle" : String.valueOf(buttonValue.getValue());
+            String next = "Hold".equalsIgnoreCase(current) ? "Toggle" : "Hold";
+            buttonValue.setValue(next);
+            ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
+            return;
+        }
+
         if ("EnchantLore".equals(module.getName()) && "layout mode".equals(buttonValue.getName())) {
             String current = buttonValue.getValue() == null ? "normal" : String.valueOf(buttonValue.getValue());
             String next = "compress".equalsIgnoreCase(current) ? "normal" : "compress";

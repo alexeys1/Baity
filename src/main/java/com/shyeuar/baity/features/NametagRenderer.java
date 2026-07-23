@@ -188,18 +188,21 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
                 NAME_CACHE.put(cacheKey, newEntry);
             }
         }
-        int totalWidth = nameWidth;
+        int prefixWidth = 0;
         if (isDeveloper) {
-            totalWidth += textRenderer.width(DevConfig.DEV_PREFIX) + 2; 
+            prefixWidth = textRenderer.width(DevConfig.DEV_PREFIX) + 2;
         }
-        
-        int currentX;
-        if (isDeveloper) {
-            int prefixWidth = textRenderer.width(DevConfig.DEV_PREFIX) + 2;
-            currentX = -nameWidth / 2 - prefixWidth; 
-        } else {
-            currentX = -totalWidth / 2;
+
+        String distanceText = null;
+        int distanceWidth = 0;
+        if (showDistance) {
+            double dist = mc.player != null ? mc.player.distanceTo(player) : 0.0;
+            distanceText = " [" + (int) Math.round(dist) + "]";
+            distanceWidth = textRenderer.width(distanceText);
         }
+
+        int totalWidth = nameWidth + prefixWidth + distanceWidth + (showDistance ? 2 : 0);
+        int currentX = -totalWidth / 2;
         
         MultiBufferSource.BufferSource immediate = mc.renderBuffers().bufferSource();
         
@@ -208,21 +211,15 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
         
         if (isDeveloper) {
             textRenderer.drawInBatch(DevConfig.DEV_PREFIX, currentX, 0, devColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
-            currentX += textRenderer.width(DevConfig.DEV_PREFIX) + 2;
+            currentX += prefixWidth;
         }
         
         textRenderer.drawInBatch(nameComponent, currentX, 0, 0xFFFFFFFF, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+        currentX += nameWidth;
         
-        if (showDistance) {
-            double dist = mc.player != null ? mc.player.distanceTo(player) : 0.0;
-            String distanceText = " [" + (int) Math.round(dist) + "]";
-            int distanceX;
-            if (isDeveloper) {
-                distanceX = currentX + nameWidth + 2;
-            } else {
-                distanceX = totalWidth / 2 + 2;
-            }
-            textRenderer.drawInBatch(distanceText, distanceX, 0, distanceColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+        if (showDistance && distanceText != null) {
+            currentX += 2;
+            textRenderer.drawInBatch(distanceText, currentX, 0, distanceColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
         }
         
             immediate.endBatch();

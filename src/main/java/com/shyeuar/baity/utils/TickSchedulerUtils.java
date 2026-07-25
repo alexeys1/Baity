@@ -47,14 +47,24 @@ public final class TickSchedulerUtils {
         return found;
     }
 
-    public void runLater(Runnable task, int delay, TimeUnit unit) {
-        runLater(task, TickUtils.fromTime(Math.max(0, delay), unit));
+    public int runLater(Runnable task, int delay, TimeUnit unit) {
+        return runLater(task, TickUtils.fromTime(Math.max(0, delay), unit));
     }
 
-    public void runLater(Runnable task, int delayTicks) {
+    public int runLaterMillis(Runnable task, long delayMs) {
+        if (delayMs <= 0L) {
+            return runLater(task, 1);
+        }
+        long ticksLong = delayMs / TickUtils.MS_PER_TICK;
+        int delayTicks = ticksLong >= Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(1, (int) ticksLong);
+        return runLater(task, delayTicks);
+    }
+
+    public int runLater(Runnable task, int delayTicks) {
         ScheduledTask scheduled = new ScheduledTask(task);
         scheduled.taskId = nextTaskId.incrementAndGet();
         addTask(scheduled, currentTick + Math.max(0, delayTicks));
+        return scheduled.taskId;
     }
 
     public int runRepeating(Runnable task, int interval, TimeUnit unit) {

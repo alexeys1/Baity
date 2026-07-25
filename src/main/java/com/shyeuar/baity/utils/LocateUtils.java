@@ -77,6 +77,15 @@ public final class LocateUtils {
         return n.contains("Galatea");
     }
 
+    public static boolean isHub(Minecraft mc) {
+        refresh(mc);
+        if (!inSkyBlock(mc) || isDungeonHub(mc)) {
+            return false;
+        }
+        String area = normalizeAreaName(cachedAreaIslandName);
+        return "Hub".equalsIgnoreCase(area);
+    }
+
     public static boolean isDungeonHub(Minecraft mc) {
         refresh(mc);
         return normalizeAreaName(cachedAreaIslandName).contains("Dungeon Hub");

@@ -39,6 +39,7 @@
     "ClientPickMixin$EntityPickEyeMixin",
     "ClientPickMixin$LocalPlayerPickMixin",
     "NonStarredMobTagsMixin",
+    "FishHookTimerHideDefaultTimerMixin",
     "FishingHookRenderStateMixin",
     "ChromaFishingLineMixin",
     "PestEntityDataMixin",

@@ -1,6 +1,7 @@
 package com.shyeuar.baity.features.blockanimation;
 
 import com.shyeuar.baity.config.BaityConfigDir;
+import com.shyeuar.baity.utils.RemoteFileFetcher;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -12,8 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,8 +30,6 @@ public final class BlockAnimationSwordCatalog {
 
     private static final String CACHE_FILE_NAME = "blockanimation-sword-catalog.tsv";
     private static final String EMBEDDED_RESOURCE = "/baity/blockanimation-sword-catalog.tsv";
-    private static final int CONNECT_TIMEOUT_MS = 8_000;
-    private static final int READ_TIMEOUT_MS = 8_000;
 
     private static final Set<String> SWORD_IDS = Collections.synchronizedSet(new HashSet<>());
     private static volatile boolean refreshStarted;
@@ -72,9 +69,8 @@ public final class BlockAnimationSwordCatalog {
     }
 
     private static void refreshFromRemote() {
-        String body = httpGet(REMOTE_CATALOG_URL);
+        String body = RemoteFileFetcher.fetchText(REMOTE_CATALOG_URL, "BlockAnimationSwordCatalog");
         if (body == null || body.isBlank()) {
-            LOGGER.debug("Remote block animation sword catalog unavailable; using local cache or embedded data.");
             return;
         }
 
@@ -84,7 +80,9 @@ public final class BlockAnimationSwordCatalog {
             return;
         }
 
-        if (!writeCacheFile(body)) {
+        if (writeCacheFile(body)) {
+            LOGGER.info("Cached {} sword ids to {}", remoteIds.size(), getCachePath());
+        } else {
             LOGGER.warn("Fetched sword catalog but failed to write cache; applying in-memory only.");
         }
 
@@ -188,28 +186,6 @@ public final class BlockAnimationSwordCatalog {
             return root.getString("id").orElse("");
         } catch (Throwable ignored) {
             return "";
-        }
-    }
-
-    private static String httpGet(String url) {
-        HttpURLConnection connection = null;
-        try {
-            connection = (HttpURLConnection) URI.create(url).toURL().openConnection();
-            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-            connection.setReadTimeout(READ_TIMEOUT_MS);
-            connection.setRequestProperty("User-Agent", "Baity");
-            int code = connection.getResponseCode();
-            InputStream in = code >= 200 && code < 300 ? connection.getInputStream() : connection.getErrorStream();
-            if (in == null) {
-                return null;
-            }
-            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (Throwable ignored) {
-            return null;
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
         }
     }
 }

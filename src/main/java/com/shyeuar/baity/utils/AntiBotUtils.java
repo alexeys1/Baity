@@ -4,9 +4,6 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.scores.Objective;
-import net.minecraft.world.scores.Scoreboard;
-import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.client.multiplayer.ServerData;
 
 import java.util.HashMap;
@@ -19,7 +16,8 @@ import java.util.regex.Pattern;
 public class AntiBotUtils {
     private static final Minecraft mc = Minecraft.getInstance();
     private static Map<String, String> playerMap = new HashMap<>();
-    private static int tickCount = 0;
+    private static long lastRebuildGameTime = Long.MIN_VALUE;
+    private static final int REBUILD_INTERVAL_GAME_TICKS = 100;
     private static String lastRulesServerSignature = null;
     private static Boolean lastRulesShouldApply = null;
     private static String lastSkyblockSignature = null;
@@ -116,70 +114,6 @@ public class AntiBotUtils {
             .replaceAll("§[0-9a-fk-or]", "");
     }
 
-    private static String getSidebarFirstLineText() {
-        return getSidebarLineText(true);
-    }
-
-    private static String getSidebarLineText(boolean first) {
-        try {
-            if (mc.level == null) return "";
-            Scoreboard scoreboard = mc.level.getScoreboard();
-            if (scoreboard == null) return "";
-
-            Objective sidebarObjective = scoreboard.getDisplayObjective(DisplaySlot.SIDEBAR);
-            if (sidebarObjective == null) return "";
-
-            java.util.List<?> sortedScores = tryGetSortedScores(scoreboard, sidebarObjective);
-            if (sortedScores == null || sortedScores.isEmpty()) return "";
-
-            Object lineScore = first ? sortedScores.get(0) : sortedScores.get(sortedScores.size() - 1);
-            String raw = extractScoreOwnerText(lineScore);
-            return raw == null ? "" : removeColorCodes(raw);
-        } catch (Exception ignored) {
-            return "";
-        }
-    }
-
-    private static java.util.List<?> tryGetSortedScores(Scoreboard scoreboard, Objective objective) {
-        try {
-            for (java.lang.reflect.Method m : scoreboard.getClass().getMethods()) {
-                if (!"getSortedScores".equals(m.getName())) continue;
-                if (m.getParameterCount() != 1) continue;
-                try {
-                    Object res = m.invoke(scoreboard, objective);
-                    if (res instanceof java.util.List<?> list) return list;
-                } catch (Exception ignored) {
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return java.util.Collections.emptyList();
-    }
-
-    private static String extractScoreOwnerText(Object scoreObj) {
-        if (scoreObj == null) return "";
-        try {
-            for (String methodName : new String[]{"getOwner", "getName", "getPlayerName"}) {
-                try {
-                    java.lang.reflect.Method m = scoreObj.getClass().getMethod(methodName);
-                    Object v = m.invoke(scoreObj);
-                    if (v == null) continue;
-                    try {
-                        java.lang.reflect.Method getString = v.getClass().getMethod("getString");
-                        Object s = getString.invoke(v);
-                        if (s != null) return String.valueOf(s);
-                    } catch (Exception ignored) {
-                    }
-                    if (v instanceof String) return (String) v;
-                    return String.valueOf(v);
-                } catch (Exception ignored) {
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return String.valueOf(scoreObj);
-    }
-    
     private static boolean isInSkyBlock() {
         if (mc.level == null || mc.player == null || mc.getConnection() == null) return false;
 
@@ -203,92 +137,104 @@ public class AntiBotUtils {
             lastRulesShouldApply = null;
             lastSkyblockSignature = null;
             lastIsInSkyblock = null;
+            lastRebuildGameTime = Long.MIN_VALUE;
             return;
         }
         if (!shouldApplyAntiBotRules()) {
             playerMap.clear();
+            lastRebuildGameTime = Long.MIN_VALUE;
             return;
         }
-        
-        boolean inSkyBlock = isInSkyBlock();
-        
-        tickCount++;
-        if (tickCount % 100 == 0) {
-            playerMap.clear();
-            for (Player worldPlayer : mc.level.players()) {
-                try {
-                    if (worldPlayer == null || worldPlayer == mc.player) continue;
-                    
-                    UUID uuid = worldPlayer.getUUID();
-                    if (uuid == null) continue;
-                    
-                    String playerName = worldPlayer.getName().getString();
-                    
-                    if (inSkyBlock) {
-                        String displayName = null;
-                        if (worldPlayer.getDisplayName() != null) {
-                            displayName = worldPlayer.getDisplayName().getString();
-                        }
-                        
-                        if (displayName != null && !displayName.isEmpty()) {
-                            String nameWithoutColor = removeColorCodes(displayName).trim();
-                            boolean hasLevelPrefix = LEVEL_PREFIX_PATTERN.matcher(nameWithoutColor).find();
-                            if (hasLevelPrefix) {
-                                playerMap.put(uuid.toString(), playerName);
-                            } else {
-                                continue;
-                            }
-                        }
-                        continue;
-                    }
-                    
-                    if (playerName.startsWith("!")) {
-                        continue;
-                    }
-                    
-                    if (worldPlayer.getActiveEffects().isEmpty()) {
-                        continue;
-                    }
-                    
-                    try {
-                        UUID.fromString(uuid.toString());
-                    } catch (IllegalArgumentException e) {
-                        continue; 
-                    }
-                    
-                    playerMap.put(uuid.toString(), playerName);
-                } catch (Exception e) {
+
+        long gameTime = mc.level.getGameTime();
+        if (!playerMap.isEmpty() && gameTime - lastRebuildGameTime < REBUILD_INTERVAL_GAME_TICKS) {
+            return;
+        }
+
+        rebuildPlayerMap(isInSkyBlock());
+        lastRebuildGameTime = gameTime;
+    }
+
+    private static void rebuildPlayerMap(boolean inSkyBlock) {
+        playerMap.clear();
+        for (Player worldPlayer : mc.level.players()) {
+            try {
+                if (worldPlayer == null || worldPlayer == mc.player) {
                     continue;
                 }
+
+                UUID uuid = worldPlayer.getUUID();
+                if (uuid == null) {
+                    continue;
+                }
+
+                String playerName = worldPlayer.getName().getString();
+
+                if (inSkyBlock) {
+                    String displayName = null;
+                    if (worldPlayer.getDisplayName() != null) {
+                        displayName = worldPlayer.getDisplayName().getString();
+                    }
+
+                    if (displayName != null && !displayName.isEmpty()) {
+                        String nameWithoutColor = removeColorCodes(displayName).trim();
+                        boolean hasLevelPrefix = LEVEL_PREFIX_PATTERN.matcher(nameWithoutColor).find();
+                        if (hasLevelPrefix) {
+                            playerMap.put(uuid.toString(), playerName);
+                        }
+                    }
+                    continue;
+                }
+
+                if (playerName.startsWith("!")) {
+                    continue;
+                }
+
+                if (worldPlayer.getActiveEffects().isEmpty()) {
+                    continue;
+                }
+
+                playerMap.put(uuid.toString(), playerName);
+            } catch (Exception ignored) {
             }
         }
     }
-    
-    
-    public static boolean isRealPlayer(Player player) {
-        if (!shouldApplyAntiBotRules()) return true;
-        if (player == null || player == mc.player) return true; 
-        
-        String uuid = player.getUUID().toString();
-        
-        
+
+    public static boolean isAntiBotActive() {
+        return shouldApplyAntiBotRules();
+    }
+
+    public static boolean isPlayerMapEmpty() {
+        return playerMap.isEmpty();
+    }
+
+    public static boolean isConfirmedBot(Player player) {
+        if (!shouldApplyAntiBotRules() || player == null || player == mc.player) {
+            return false;
+        }
         if (playerMap.isEmpty()) {
             return false;
         }
-        
-        boolean real = playerMap.containsKey(uuid);
-        return real;
+        return !playerMap.containsKey(player.getUUID().toString());
     }
-    
-    
+
+    public static boolean isRealPlayer(Player player) {
+        if (!shouldApplyAntiBotRules()) {
+            return true;
+        }
+        if (player == null || player == mc.player) {
+            return true;
+        }
+        if (playerMap.isEmpty()) {
+            return false;
+        }
+        return playerMap.containsKey(player.getUUID().toString());
+    }
+
     public static boolean isBot(Player player) {
-        if (!shouldApplyAntiBotRules()) return false;
-        boolean bot = !isRealPlayer(player);
-        return bot;
-    }
-    
-    public static void reset() {
-        playerMap.clear();
-        tickCount = 0;
+        if (!shouldApplyAntiBotRules()) {
+            return false;
+        }
+        return !isRealPlayer(player);
     }
 }

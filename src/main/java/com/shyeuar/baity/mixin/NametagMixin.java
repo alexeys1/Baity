@@ -5,8 +5,6 @@ import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.render.RenderScope;
-import com.shyeuar.baity.utils.AntiBotUtils;
-import com.shyeuar.baity.utils.ModuleUtils;
 import com.shyeuar.baity.utils.NametagUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -115,17 +113,8 @@ public class NametagMixin {
                 return;
             }
 
-            boolean isSelf = mc.player.getId() == entityId;
             Entity entity = mc.level.getEntity(entityId);
-            if (entity instanceof Player player && AntiBotUtils.isBot(player)) {
-                ci.cancel();
-                return;
-            }
-
-            Module m = ModuleManager.getModuleByName("Nametag");
-            if (isSelf && ModuleUtils.getOptionBoolean(m, "show own nametag", false)) {
-                ci.cancel();
-            } else if (!isSelf) {
+            if (entity instanceof Player player && NametagUtils.shouldSuppressVanillaNametag(player)) {
                 ci.cancel();
             }
         }
@@ -185,14 +174,9 @@ public class NametagMixin {
                 return;
             }
 
-            if (avatar == mc.player) {
-                if (ModuleUtils.getOptionBoolean(m, "show own nametag", false)) {
-                    cir.setReturnValue(false);
-                }
-                return;
+            if (avatar instanceof Player player && NametagUtils.shouldSuppressVanillaNametag(player)) {
+                cir.setReturnValue(false);
             }
-
-            cir.setReturnValue(false);
         }
 
         @Redirect(

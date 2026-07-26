@@ -83,6 +83,41 @@ public final class NametagUtils {
         return wouldEntityRender(player);
     }
 
+    public static boolean shouldRenderCustomNametag(Player player) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null || player == null) {
+            return false;
+        }
+        if (AntiBotUtils.isBot(player)) {
+            return false;
+        }
+        if (player == mc.player) {
+            if (mc.options.getCameraType().isFirstPerson()) {
+                return false;
+            }
+            Module nametag = ModuleManager.getModuleByName("Nametag");
+            return nametag != null && nametag.isEnabled()
+                && ModuleUtils.getOptionBoolean(nametag, "show own nametag", false);
+        }
+        return shouldDrawCustomNametag(player);
+    }
+
+    public static boolean shouldSuppressVanillaNametag(Player player) {
+        if (!FocusPlayerNametag.shouldUseCustomNametagPath()) {
+            return false;
+        }
+        if (player == null) {
+            return false;
+        }
+        if (AntiBotUtils.isConfirmedBot(player)) {
+            return true;
+        }
+        if (AntiBotUtils.isAntiBotActive() && AntiBotUtils.isPlayerMapEmpty()) {
+            return false;
+        }
+        return shouldRenderCustomNametag(player);
+    }
+
     public static boolean isNametagModuleActive() {
         return ConfigManager.nametagEnabled;
     }

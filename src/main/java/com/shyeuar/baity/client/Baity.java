@@ -33,6 +33,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.client.Minecraft;
 import com.shyeuar.baity.features.radialmenu.RadialMenu;
 import com.shyeuar.baity.features.SoftFullscreen;
+import com.shyeuar.baity.utils.RemoteFileFetcher;
 import com.shyeuar.baity.utils.SoundUtils;
 
 import java.util.Objects;
@@ -48,6 +49,7 @@ public class Baity implements ClientModInitializer {
     @SuppressWarnings("deprecation")
     public void onInitializeClient() {
         com.shyeuar.baity.config.BaityConfigDir.init();
+        RemoteFileFetcher.init();
         BlockAnimationSwordCatalog.init();
         Objects.requireNonNull(CustomTotemItem.CUSTOM_TOTEM);
         
@@ -104,6 +106,9 @@ public class Baity implements ClientModInitializer {
             
             RadialMenu.tick(client);
             com.shyeuar.baity.features.FocusPlayerNametag.tick(client);
+            if (ConfigManager.nametagEnabled) {
+                com.shyeuar.baity.utils.AntiBotUtils.updatePlayerMap();
+            }
             BaityPresenceSync.tick();
             PestHighlights.tickPestCaches();
             

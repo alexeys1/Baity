@@ -75,22 +75,9 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
         }
         
         updateCache();
-        
-        com.shyeuar.baity.utils.AntiBotUtils.updatePlayerMap();
+
         for (Player player : mc.level.players()) {
-            if (com.shyeuar.baity.utils.AntiBotUtils.isBot(player)) {
-                continue;
-            }
-            
-            boolean showOwnNametag = ModuleUtils.getOptionBoolean(m, "show own nametag", false);
-            if (player == mc.player) {
-                if (mc.options.getCameraType().isFirstPerson()) {
-                    continue;
-                }
-                if (!showOwnNametag) {
-                    continue;
-                }
-            } else if (!com.shyeuar.baity.utils.NametagUtils.shouldDrawCustomNametag(player)) {
+            if (!com.shyeuar.baity.utils.NametagUtils.shouldRenderCustomNametag(player)) {
                 continue;
             }
             

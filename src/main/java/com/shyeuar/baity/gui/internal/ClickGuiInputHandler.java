@@ -26,25 +26,29 @@ import com.shyeuar.baity.utils.VersionCheckUtils;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
-import java.util.function.BiConsumer;
 import net.minecraft.client.Minecraft;
 
 public class ClickGuiInputHandler {
+    @FunctionalInterface
+    public interface ButtonValueClickListener {
+        void onClick(com.shyeuar.baity.gui.module.Module module, ButtonValue buttonValue, int mouseButton);
+    }
+
     private static final float VERSION_RIGHT_PADDING = 8.0f;
     
     private final ClickGuiState state;
     private final TimerUtils timer;
-    private final BiConsumer<com.shyeuar.baity.gui.module.Module, com.shyeuar.baity.gui.value.ButtonValue> onTriggerValueClick;
+    private final ButtonValueClickListener onButtonValueClick;
     private String painterDragModule = null;
     private String painterDragValue = null;
     private int painterDragButton = -1;
     private int painterLastPx = Integer.MIN_VALUE;
     private int painterLastPy = Integer.MIN_VALUE;
-    public ClickGuiInputHandler(ClickGuiState state, TimerUtils timer, 
-                               BiConsumer<com.shyeuar.baity.gui.module.Module, com.shyeuar.baity.gui.value.ButtonValue> onTriggerValueClick) {
+    public ClickGuiInputHandler(ClickGuiState state, TimerUtils timer,
+                               ButtonValueClickListener onButtonValueClick) {
         this.state = state;
         this.timer = timer;
-        this.onTriggerValueClick = onTriggerValueClick;
+        this.onButtonValueClick = onButtonValueClick;
     }
    
     public boolean handleMouseClick(double mouseX, double mouseY, int button) {
@@ -1169,7 +1173,7 @@ public class ClickGuiInputHandler {
                     timer.reset();
                     return true;
                 }
-            } else if (button == 0 && style == ValueStyle.BUTTON_LIKE && value instanceof ButtonValue) {
+            } else if ((button == 0 || button == 1) && style == ValueStyle.BUTTON_LIKE && value instanceof ButtonValue) {
                 ButtonValue buttonValue = (ButtonValue) value;
                 
                 String boxText = buttonValue.getDisplayText(val -> {
@@ -1194,15 +1198,28 @@ public class ClickGuiInputHandler {
                 
                 if (GuiRenderUtil.isHovered(boxX1, boxY1, boxX2, boxY2, coords.mouseX, coords.mouseY)) {
                     if (buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.KEYBIND) {
+                        if (button != 0) {
+                            return false;
+                        }
                         state.setListeningButtonValue(module.getName(), value.getName());
                         SoundUtils.playWoodenButton();
                         timer.reset();
                         return true;
+                    } else if (buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.CYCLE) {
+                        SoundUtils.playWoodenButton();
+                        if (onButtonValueClick != null) {
+                            onButtonValueClick.onClick(module, buttonValue, button);
+                        }
+                        timer.reset();
+                        return true;
                     } else if (buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.TRIGGER ||
                                buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.FONT_SELECTOR) {
+                        if (button != 0) {
+                            return false;
+                        }
                         SoundUtils.playWoodenButton();
-                        if (onTriggerValueClick != null) {
-                            onTriggerValueClick.accept(module, buttonValue);
+                        if (onButtonValueClick != null) {
+                            onButtonValueClick.onClick(module, buttonValue, button);
                         }
                         timer.reset();
                         return true;

@@ -42,7 +42,7 @@ public class ModuleManager {
                     ConfigManager.blockAnimationAnimaMode,
                     "default",
                     ModuleCategory.MISC,
-                    ButtonValue.ButtonValueType.TRIGGER,
+                    ButtonValue.ButtonValueType.CYCLE,
                     false
                 )
             },
@@ -224,7 +224,7 @@ public class ModuleManager {
                     ConfigManager.crosshairAnimaMode,
                     "always",
                     ModuleCategory.MISC,
-                    ButtonValue.ButtonValueType.TRIGGER,
+                    ButtonValue.ButtonValueType.CYCLE,
                     false
                 ),
                 new com.shyeuar.baity.gui.value.CrosshairPainterValue(
@@ -511,7 +511,7 @@ public class ModuleManager {
                 ConfigManager.enchantLoreLayoutMode,
                 "normal",
                 ModuleCategory.RENDER,
-                ButtonValue.ButtonValueType.TRIGGER,
+                ButtonValue.ButtonValueType.CYCLE,
                 false
         );
 
@@ -653,7 +653,7 @@ public class ModuleManager {
                     "default",
                     "default",
                     ModuleCategory.MISC,
-                    ButtonValue.ButtonValueType.TRIGGER,
+                    ButtonValue.ButtonValueType.CYCLE,
                     false
                 ),
                 new Option("sync non-critical dmg", "sync non-critical dmg", false, ModuleCategory.MISC),
@@ -666,7 +666,7 @@ public class ModuleManager {
                     "none",
                     "none",
                     ModuleCategory.MISC,
-                    ButtonValue.ButtonValueType.TRIGGER,
+                    ButtonValue.ButtonValueType.CYCLE,
                     false
                 ),
                 new com.shyeuar.baity.gui.value.FancyDmgSplashColorEditorValue("color editor", "color editor", ModuleCategory.MISC),
@@ -940,7 +940,7 @@ public class ModuleManager {
                 ConfigManager.nametagFocusPlayerMode,
                 ConfigManager.nametagFocusPlayerMode,
                 ModuleCategory.RENDER,
-                ButtonValue.ButtonValueType.TRIGGER,
+                ButtonValue.ButtonValueType.CYCLE,
                 false
             ));
 

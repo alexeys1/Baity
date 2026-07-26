@@ -13,6 +13,7 @@ import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.gui.tooltip.TooltipManager;
 import com.shyeuar.baity.gui.value.ButtonValue;
+import com.shyeuar.baity.gui.value.ValueCycleUtils;
 import com.shyeuar.baity.sync.BaityPresenceSync;
 import com.shyeuar.baity.utils.TimerUtils;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
@@ -64,7 +65,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             this.restoredFromSession = false;
         }
         this.valuetimer = new TimerUtils();
-        this.inputHandler = new ClickGuiInputHandler(state, valuetimer, this::handleTriggerValueClick);
+        this.inputHandler = new ClickGuiInputHandler(state, valuetimer, this::handleButtonValueClick);
         currentInstance = this;
     }
     
@@ -343,48 +344,54 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         state.setCurrentKeyDisplay(com.shyeuar.baity.utils.KeyMappingUtils.formatKeyDisplay(ConfigManager.guiKeyCode, ""));
     }
     
-    private void handleTriggerValueClick(Module module, ButtonValue buttonValue) {
+    private void handleButtonValueClick(Module module, ButtonValue buttonValue, int mouseButton) {
+        if (buttonValue.getButtonValueType() == ButtonValue.ButtonValueType.CYCLE) {
+            if (mouseButton == 0 || mouseButton == 1) {
+                handleCycleValueClick(module, buttonValue, mouseButton == 0);
+            }
+            return;
+        }
+        if (mouseButton == 0) {
+            handleTriggerValueClick(module, buttonValue);
+        }
+    }
+
+    private void handleCycleValueClick(Module module, ButtonValue buttonValue, boolean forward) {
         if (module == null || buttonValue == null) {
             return;
         }
 
+        String current = buttonValue.getValue() == null ? "" : String.valueOf(buttonValue.getValue());
+        String next = null;
+
         if ("Crosshair".equals(module.getName()) && "anima mode".equals(buttonValue.getName())) {
-            String current = buttonValue.getValue() == null ? "always" : String.valueOf(buttonValue.getValue());
-            String next = "bow only".equalsIgnoreCase(current) ? "always" : "bow only";
-            buttonValue.setValue(next);
-            ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
+            next = ValueCycleUtils.cycle(current, new String[]{"always", "bow only"}, forward);
+        } else if ("BlockAnimation".equals(module.getName()) && "anima mode".equals(buttonValue.getName())) {
+            next = ValueCycleUtils.cycle(current, new String[]{"default", "circle", "rotor"}, forward);
+        } else if ("Nametag".equals(module.getName()) && "mode".equals(buttonValue.getName())) {
+            next = ValueCycleUtils.cycle(current, new String[]{"Toggle", "Hold"}, forward);
+        } else if ("EnchantLore".equals(module.getName()) && "layout mode".equals(buttonValue.getName())) {
+            next = ValueCycleUtils.cycle(current, new String[]{"normal", "compress"}, forward);
+        } else if ("FancyDmgSplash".equals(module.getName()) && "style".equals(buttonValue.getName())) {
+            next = FancyDmgSplashSettings.cycleStyle(current, forward);
+        } else if ("FancyDmgSplash".equals(module.getName()) && "separator".equals(buttonValue.getName())) {
+            next = ValueCycleUtils.cycle(current, new String[]{"none", "comma", "hyphen", "underscore"}, forward);
+            com.shyeuar.baity.config.ConfigManager.fancyDmgSplashSeparator = next;
+        }
+
+        if (next == null) {
             return;
         }
 
-        if ("BlockAnimation".equals(module.getName()) && "anima mode".equals(buttonValue.getName())) {
-            String current = buttonValue.getValue() == null ? "default" : String.valueOf(buttonValue.getValue());
-            String next;
-            if ("default".equalsIgnoreCase(current)) {
-                next = "circle";
-            } else if ("circle".equalsIgnoreCase(current)) {
-                next = "rotor";
-            } else {
-                next = "default";
-            }
-            buttonValue.setValue(next);
-            ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
-            return;
-        }
-
-        if ("Nametag".equals(module.getName()) && "mode".equals(buttonValue.getName())) {
-            String current = buttonValue.getValue() == null ? "Toggle" : String.valueOf(buttonValue.getValue());
-            String next = "Hold".equalsIgnoreCase(current) ? "Toggle" : "Hold";
-            buttonValue.setValue(next);
-            ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
-            return;
-        }
-
+        buttonValue.setValue(next);
+        ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
         if ("EnchantLore".equals(module.getName()) && "layout mode".equals(buttonValue.getName())) {
-            String current = buttonValue.getValue() == null ? "normal" : String.valueOf(buttonValue.getValue());
-            String next = "compress".equalsIgnoreCase(current) ? "normal" : "compress";
-            buttonValue.setValue(next);
-            ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
             com.shyeuar.baity.features.enchantlore.EnchantLore.invalidateCache();
+        }
+    }
+
+    private void handleTriggerValueClick(Module module, ButtonValue buttonValue) {
+        if (module == null || buttonValue == null) {
             return;
         }
 
@@ -407,28 +414,6 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         if ("FishHookTimer".equals(module.getName()) && "custom timer template".equals(buttonValue.getName())) {
             net.minecraft.util.Util.getPlatform().openUri(
                     java.net.URI.create(com.shyeuar.baity.features.fishing.FishHookTimerTemplateManager.DOCS_URL));
-            return;
-        }
-
-        if ("FancyDmgSplash".equals(module.getName()) && "style".equals(buttonValue.getName())) {
-            String current = buttonValue.getValue() == null ? "default" : String.valueOf(buttonValue.getValue());
-            String next = FancyDmgSplashSettings.cycleStyle(current);
-            buttonValue.setValue(next);
-            ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
-            return;
-        }
-
-        if ("FancyDmgSplash".equals(module.getName()) && "separator".equals(buttonValue.getName())) {
-            String current = buttonValue.getValue() == null ? "none" : String.valueOf(buttonValue.getValue());
-            String next = switch (current) {
-                case "none" -> "comma";
-                case "comma" -> "hyphen";
-                case "hyphen" -> "underscore";
-                default -> "none";
-            };
-            buttonValue.setValue(next);
-            com.shyeuar.baity.config.ConfigManager.fancyDmgSplashSeparator = next;
-            ConfigSynchronizer.handleValueUpdate(module.getName(), buttonValue.getName(), next);
         }
     }
     

@@ -25,6 +25,22 @@ public final class FancyDmgSplashSettings {
     public static final String DEFAULT_SYMBOL = "✧";
     public static final String STYLE_DEFAULT = "default";
     public static final String STYLE_GENSHIN = "genshin";
+    public static final String STYLE_ARC = "arc";
+    public static final String STYLE_SLAM = "slam";
+    public static final String STYLE_BOUNCE = "bounce";
+    public static final String STYLE_SHAKE = "shake";
+    public static final String STYLE_FALL = "fall";
+    public static final String STYLE_SPIRAL = "spiral";
+    public static final String[] STYLE_ORDER = {
+            STYLE_DEFAULT,
+            STYLE_GENSHIN,
+            STYLE_ARC,
+            STYLE_SLAM,
+            STYLE_BOUNCE,
+            STYLE_SHAKE,
+            STYLE_FALL,
+            STYLE_SPIRAL
+    };
     public static final int MAX_DAMAGE_SYMBOL_CODE_POINTS = 1;
     public static final int DEFAULT_GRADIENT_START = 0xFFFF55;
     public static final int DEFAULT_GRADIENT_END = 0xFF5555;
@@ -52,15 +68,36 @@ public final class FancyDmgSplashSettings {
     private FancyDmgSplashSettings() {
     }
 
+    public static String getAnimationStyle() {
+        String style = ConfigManager.fancyDmgSplashStyle;
+        if (style == null || style.isBlank()) {
+            return STYLE_DEFAULT;
+        }
+        if ("pop".equalsIgnoreCase(style)) {
+            return STYLE_DEFAULT;
+        }
+        return style;
+    }
+
     public static boolean isGenshinAnimationStyle() {
-        return STYLE_GENSHIN.equalsIgnoreCase(ConfigManager.fancyDmgSplashStyle);
+        return STYLE_GENSHIN.equalsIgnoreCase(getAnimationStyle());
+    }
+
+    public static String cycleStyle(String current, boolean forward) {
+        String normalized = current == null || current.isBlank() ? STYLE_DEFAULT : current;
+        for (int i = 0; i < STYLE_ORDER.length; i++) {
+            if (STYLE_ORDER[i].equalsIgnoreCase(normalized)) {
+                int nextIndex = forward
+                        ? (i + 1) % STYLE_ORDER.length
+                        : (i - 1 + STYLE_ORDER.length) % STYLE_ORDER.length;
+                return STYLE_ORDER[nextIndex];
+            }
+        }
+        return forward ? STYLE_DEFAULT : STYLE_ORDER[STYLE_ORDER.length - 1];
     }
 
     public static String cycleStyle(String current) {
-        if (STYLE_DEFAULT.equalsIgnoreCase(current)) {
-            return STYLE_GENSHIN;
-        }
-        return STYLE_DEFAULT;
+        return cycleStyle(current, true);
     }
 
     public static int symbolCodePointCount(String symbols) {
@@ -133,10 +170,6 @@ public final class FancyDmgSplashSettings {
 
     public static void onAppearanceSettingChanged() {
         FancyDmgSplashPresetStore.handleAppearanceEdit();
-    }
-
-    public static Component createCritSourceComponent(long damage) {
-        return Component.literal(DEFAULT_SYMBOL + damage + DEFAULT_SYMBOL);
     }
 
     public static DamageKind classifyDamage(Component originalText) {
@@ -255,26 +288,27 @@ public final class FancyDmgSplashSettings {
         if (hasCompactSuffix(originalText.getString())) {
             return originalText;
         }
-        List<Component> siblings = originalText.getSiblings();
-        if (siblings.isEmpty()) {
-            return originalText;
-        }
         NonCritFormat format = resolveNonCritFormat(originalText, damage);
         if (format == null) {
             return originalText;
         }
-        TextColor originalColor = siblings.getFirst().getStyle().getColor();
-        int displayColor;
-        if (originalColor == null || originalColor == TextColor.fromLegacyFormat(ChatFormatting.GRAY)) {
-            displayColor = ConfigManager.fancyDmgSplashNormalDamageColor & 0xFFFFFF;
-        } else {
-            displayColor = originalColor.getValue();
-        }
+        int displayColor = resolveLegacyNonCritColor(originalText);
         MutableComponent result = Component.literal(format.numericDisplay)
                 .setStyle(originalText.getStyle())
                 .withStyle(Style.EMPTY.withColor(displayColor));
         appendSuffix(result, originalText, format.suffix);
         return result;
+    }
+
+    private static int resolveLegacyNonCritColor(Component originalText) {
+        List<Component> siblings = originalText.getSiblings();
+        TextColor originalColor = siblings.isEmpty()
+                ? originalText.getStyle().getColor()
+                : siblings.getFirst().getStyle().getColor();
+        if (originalColor == null || originalColor == TextColor.fromLegacyFormat(ChatFormatting.GRAY)) {
+            return ConfigManager.fancyDmgSplashNormalDamageColor & 0xFFFFFF;
+        }
+        return originalColor.getValue();
     }
 
     private static NonCritFormat resolveNonCritFormat(Component originalText, double damage) {

@@ -36,6 +36,23 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
     private static final float BASE_SCALE = 0.0325f; 
     private static final float PHASE2_FLOAT_UP = 0.18f; 
     private static final float PHASE2_DISPLAY_RATIO = 0.25f;
+    private static final float ARC_DRIFT_SCALE = 0.8f;
+    private static final float ARC_PEAK_HEIGHT = 0.25f;
+    private static final float ARC_RISE_DRIFT = 0.12f;
+    private static final float SLAM_DROP_HEIGHT = 0.35f;
+    private static final float SLAM_DROP_RATIO = 0.2f;
+    private static final float SLAM_BOUNCE_RATIO = 0.15f;
+    private static final float BOUNCE_ACTIVE_RATIO = 0.42f;
+    private static final float BOUNCE_PEAK_HEIGHT = 0.14f;
+    private static final float BOUNCE_HEIGHT_DECAY = 0.55f;
+    private static final int BOUNCE_COUNT = 3;
+    private static final float SHAKE_CRIT_AMPLITUDE = 0.045f;
+    private static final float SHAKE_FREQUENCY = 18f;
+    private static final float SHAKE_ACTIVE_RATIO = 0.35f;
+    private static final float FALL_DISTANCE = 0.38f;
+    private static final float SPIRAL_RADIUS = 0.18f;
+    private static final float SPIRAL_RISE = 0.22f;
+    private static final float SPIRAL_TURNS = 1.25f;
 
     private record AnimationFrame(Vec3 pos, float alpha, float scaleAnimation) {
     }
@@ -79,8 +96,12 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
             preserveComponentColors = false;
         }
 
+        float arcDriftX = (random.nextFloat() - 0.5f) * 1.2f;
+        float arcDriftZ = (random.nextFloat() - 0.5f) * 1.2f;
+        float motionPhase = random.nextFloat() * ((float) Math.PI * 2f);
+
         damageNumbers.add(new DamageNumber(damage, finalTargetPos, formattedText, color,
-                System.currentTimeMillis(), preserveComponentColors));
+                System.currentTimeMillis(), preserveComponentColors, arcDriftX, arcDriftZ, kind, motionPhase));
 
         boolean genshinReaction = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(
                 moduleRef,
@@ -269,7 +290,7 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
         float totalProgress = (float)(currentTime - dn.startTime) / ANIMATION_DURATION_MS;
         totalProgress = Math.min(1.0f, Math.max(0.0f, totalProgress));
 
-        AnimationFrame frame = computeDamageAnimationFrame(dn.targetPos, totalProgress);
+        AnimationFrame frame = computeDamageAnimationFrame(dn, totalProgress);
         Vec3 currentPos = frame.pos;
         float alpha = frame.alpha;
         float scaleAnimation = frame.scaleAnimation;
@@ -397,18 +418,177 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
         }
     }
 
-    private static AnimationFrame computeDamageAnimationFrame(Vec3 basePos, float totalProgress) {
-        if (!FancyDmgSplashSettings.isGenshinAnimationStyle()) {
-            return new AnimationFrame(basePos, 1.0f, 1.0f);
+    private static AnimationFrame computeDamageAnimationFrame(DamageNumber dn, float totalProgress) {
+        String style = FancyDmgSplashSettings.getAnimationStyle();
+        if (FancyDmgSplashSettings.STYLE_GENSHIN.equalsIgnoreCase(style)) {
+            return computeGenshinAnimationFrame(dn.targetPos, totalProgress, 1.0f, 0.5f, 1.0f, 1.5f, 0.5f);
         }
-        return computeGenshinAnimationFrame(basePos, totalProgress, 1.0f, 0.5f, 1.0f, 1.5f, 0.5f);
+        if (FancyDmgSplashSettings.STYLE_ARC.equalsIgnoreCase(style)) {
+            return computeArcAnimationFrame(dn, totalProgress);
+        }
+        if (FancyDmgSplashSettings.STYLE_SLAM.equalsIgnoreCase(style)) {
+            return computeSlamAnimationFrame(dn, totalProgress);
+        }
+        if (FancyDmgSplashSettings.STYLE_BOUNCE.equalsIgnoreCase(style)) {
+            return computeBounceAnimationFrame(dn, totalProgress);
+        }
+        if (FancyDmgSplashSettings.STYLE_SHAKE.equalsIgnoreCase(style)) {
+            return computeShakeAnimationFrame(dn, totalProgress);
+        }
+        if (FancyDmgSplashSettings.STYLE_FALL.equalsIgnoreCase(style)) {
+            return computeFallAnimationFrame(dn, totalProgress);
+        }
+        if (FancyDmgSplashSettings.STYLE_SPIRAL.equalsIgnoreCase(style)) {
+            return computeSpiralAnimationFrame(dn, totalProgress);
+        }
+        return new AnimationFrame(dn.targetPos, 1.0f, 1.0f);
     }
 
     private static AnimationFrame computeReactionAnimationFrame(Vec3 basePos, float totalProgress) {
-        if (!FancyDmgSplashSettings.isGenshinAnimationStyle()) {
-            return new AnimationFrame(basePos, 1.0f, 1.0f);
-        }
         return computeGenshinAnimationFrame(basePos, totalProgress, 0.8f, 0.5f, 0.8f, 1.3f, 0.3f);
+    }
+
+    private static AnimationFrame computeArcAnimationFrame(DamageNumber dn, float totalProgress) {
+        float eased = easeOutQuad(totalProgress);
+        float horizontal = eased * ARC_DRIFT_SCALE;
+        double offsetX = dn.arcDriftX * horizontal;
+        double offsetZ = dn.arcDriftZ * horizontal;
+        double offsetY = Math.sin(totalProgress * Math.PI) * ARC_PEAK_HEIGHT + totalProgress * ARC_RISE_DRIFT;
+
+        float scaleAnimation = 1.0f;
+        if (totalProgress < 0.15f) {
+            scaleAnimation = computePopScale(totalProgress / 0.15f, 0.5f, 1.0f, 1.5f, 0.5f);
+        }
+
+        float alpha = computeTailFadeAlpha(totalProgress, 0.75f);
+        Vec3 pos = dn.targetPos.add(offsetX, offsetY, offsetZ);
+        return new AnimationFrame(pos, alpha, scaleAnimation);
+    }
+
+    private static AnimationFrame computeSlamAnimationFrame(DamageNumber dn, float totalProgress) {
+        if (dn.kind != FancyDmgSplashSettings.DamageKind.CRITICAL) {
+            return computeSimpleFloatFadeFrame(dn.targetPos, totalProgress, 1.0f);
+        }
+
+        float dropEnd = SLAM_DROP_RATIO;
+        float bounceEnd = dropEnd + SLAM_BOUNCE_RATIO;
+        double offsetY;
+        float scaleAnimation;
+
+        if (totalProgress < dropEnd) {
+            float dropProgress = totalProgress / dropEnd;
+            float easedDrop = dropProgress * dropProgress * dropProgress;
+            offsetY = SLAM_DROP_HEIGHT * (1.0f - easedDrop);
+            scaleAnimation = 1.2f - easedDrop * 0.1f;
+        } else if (totalProgress < bounceEnd) {
+            float bounceProgress = (totalProgress - dropEnd) / SLAM_BOUNCE_RATIO;
+            offsetY = -0.02f * (1.0f - bounceProgress);
+            scaleAnimation = 1.1f + (float) Math.sin(bounceProgress * Math.PI) * 0.25f;
+        } else {
+            float settleProgress = (totalProgress - bounceEnd) / (1.0f - bounceEnd);
+            float easedFloat = easeOutQuad(settleProgress);
+            offsetY = easedFloat * 0.08f;
+            scaleAnimation = 1.0f;
+        }
+
+        float alpha = computeTailFadeAlpha(totalProgress, 0.7f);
+        Vec3 pos = dn.targetPos.add(0, offsetY, 0);
+        return new AnimationFrame(pos, alpha, scaleAnimation);
+    }
+
+    private static AnimationFrame computeBounceAnimationFrame(DamageNumber dn, float totalProgress) {
+        double offsetY;
+        float scaleAnimation = 1.0f;
+
+        if (totalProgress < BOUNCE_ACTIVE_RATIO) {
+            float local = totalProgress / BOUNCE_ACTIVE_RATIO;
+            float bounceSlot = local * BOUNCE_COUNT;
+            int bounceIndex = Math.min(BOUNCE_COUNT - 1, (int) bounceSlot);
+            float inBounce = bounceSlot - bounceIndex;
+            float peak = BOUNCE_PEAK_HEIGHT * (float) Math.pow(BOUNCE_HEIGHT_DECAY, bounceIndex);
+            offsetY = peak * (4.0 * inBounce * (1.0 - inBounce));
+            scaleAnimation = 1.0f + (float) Math.sin(inBounce * Math.PI) * 0.1f * (peak / BOUNCE_PEAK_HEIGHT);
+        } else {
+            float settleProgress = (totalProgress - BOUNCE_ACTIVE_RATIO) / (1.0f - BOUNCE_ACTIVE_RATIO);
+            offsetY = easeOutQuad(settleProgress) * 0.06f;
+        }
+
+        float alpha = computeTailFadeAlpha(totalProgress, 0.68f);
+        Vec3 pos = dn.targetPos.add(0, offsetY, 0);
+        return new AnimationFrame(pos, alpha, scaleAnimation);
+    }
+
+    private static AnimationFrame computeShakeAnimationFrame(DamageNumber dn, float totalProgress) {
+        if (dn.kind != FancyDmgSplashSettings.DamageKind.CRITICAL) {
+            return new AnimationFrame(dn.targetPos, 1.0f, 1.0f);
+        }
+
+        float shakeProgress = Math.min(1.0f, totalProgress / SHAKE_ACTIVE_RATIO);
+        float decay = 1.0f - easeOutQuad(shakeProgress);
+        float amplitude = SHAKE_CRIT_AMPLITUDE * decay;
+
+        float angle = dn.motionPhase + shakeProgress * SHAKE_FREQUENCY * ((float) Math.PI * 2f);
+        double offsetX = Math.sin(angle) * amplitude;
+        double offsetZ = Math.cos(angle * 1.31f) * amplitude * 0.5f;
+
+        float alpha = computeTailFadeAlpha(totalProgress, 0.75f);
+        Vec3 pos = dn.targetPos.add(offsetX, 0, offsetZ);
+        return new AnimationFrame(pos, alpha, 1.0f);
+    }
+
+    private static AnimationFrame computeFallAnimationFrame(DamageNumber dn, float totalProgress) {
+        float easedFall = totalProgress * totalProgress;
+        double offsetY = -FALL_DISTANCE * easedFall;
+        float alpha = computeTailFadeAlpha(totalProgress, 0.55f);
+        Vec3 pos = dn.targetPos.add(0, offsetY, 0);
+        return new AnimationFrame(pos, alpha, 1.0f);
+    }
+
+    private static AnimationFrame computeSpiralAnimationFrame(DamageNumber dn, float totalProgress) {
+        float radius = SPIRAL_RADIUS * (1.0f - totalProgress * 0.35f);
+        float angle = dn.motionPhase + totalProgress * SPIRAL_TURNS * ((float) Math.PI * 2f);
+        double offsetX = Math.cos(angle) * radius;
+        double offsetZ = Math.sin(angle) * radius;
+        double offsetY = easeOutQuad(totalProgress) * SPIRAL_RISE;
+
+        float scaleAnimation = 1.0f;
+        if (totalProgress < 0.12f) {
+            scaleAnimation = computePopScale(totalProgress / 0.12f, 0.85f, 0.3f, 1.15f, 0.15f);
+        }
+
+        float alpha = computeTailFadeAlpha(totalProgress, 0.72f);
+        Vec3 pos = dn.targetPos.add(offsetX, offsetY, offsetZ);
+        return new AnimationFrame(pos, alpha, scaleAnimation);
+    }
+
+    private static AnimationFrame computeSimpleFloatFadeFrame(Vec3 basePos, float totalProgress, float floatUpScale) {
+        float easedFloat = easeOutQuad(totalProgress);
+        Vec3 pos = basePos.add(0, easedFloat * PHASE2_FLOAT_UP * floatUpScale, 0);
+        float alpha = computeTailFadeAlpha(totalProgress, 0.6f);
+        return new AnimationFrame(pos, alpha, 1.0f);
+    }
+
+    private static float computePopScale(float phaseProgress, float scaleStart, float scaleMidBoost, float scalePeak, float scaleEndReduction) {
+        if (phaseProgress < 0.3f) {
+            return scaleStart + phaseProgress / 0.3f * scaleMidBoost;
+        }
+        if (phaseProgress < 0.6f) {
+            return scalePeak - (phaseProgress - 0.3f) / 0.3f * scaleEndReduction;
+        }
+        return 1.0f;
+    }
+
+    private static float computeTailFadeAlpha(float totalProgress, float fadeStart) {
+        if (totalProgress < fadeStart) {
+            return 1.0f;
+        }
+        float fadeProgress = (totalProgress - fadeStart) / (1.0f - fadeStart);
+        float acceleratedFade = Math.min(1.0f, fadeProgress * 2.0f);
+        return 1.0f - acceleratedFade * acceleratedFade;
+    }
+
+    private static float easeOutQuad(float t) {
+        return 1.0f - (1.0f - t) * (1.0f - t);
     }
 
     private static AnimationFrame computeGenshinAnimationFrame(
@@ -422,12 +602,7 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
     ) {
         if (totalProgress < PHASE1_RATIO) {
             float phase1Progress = totalProgress / PHASE1_RATIO;
-            float scaleAnimation = 1.0f;
-            if (phase1Progress < 0.3f) {
-                scaleAnimation = scaleStart + phase1Progress / 0.3f * scaleMidBoost;
-            } else if (phase1Progress < 0.6f) {
-                scaleAnimation = scalePeak - (phase1Progress - 0.3f) / 0.3f * scaleEndReduction;
-            }
+            float scaleAnimation = computePopScale(phase1Progress, scaleStart, scaleMidBoost, scalePeak, scaleEndReduction);
             return new AnimationFrame(basePos, 1.0f, scaleAnimation);
         }
 
@@ -452,15 +627,24 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
         final int color;
         final long startTime;
         final boolean preserveComponentColors;
+        final float arcDriftX;
+        final float arcDriftZ;
+        final FancyDmgSplashSettings.DamageKind kind;
+        final float motionPhase;
 
         DamageNumber(double damage, Vec3 targetPos, Component originalText, int color, long startTime,
-                       boolean preserveComponentColors) {
+                       boolean preserveComponentColors, float arcDriftX, float arcDriftZ,
+                       FancyDmgSplashSettings.DamageKind kind, float motionPhase) {
             this.damage = damage;
             this.targetPos = targetPos;
             this.originalText = originalText;
             this.color = color;
             this.startTime = startTime;
             this.preserveComponentColors = preserveComponentColors;
+            this.arcDriftX = arcDriftX;
+            this.arcDriftZ = arcDriftZ;
+            this.kind = kind;
+            this.motionPhase = motionPhase;
         }
     }
     

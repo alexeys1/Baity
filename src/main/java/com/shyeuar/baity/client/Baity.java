@@ -70,6 +70,7 @@ public class Baity implements ClientModInitializer {
         RadialMenu.init();
         com.shyeuar.baity.features.chat.ChatChannelSwitcher.init();
         com.shyeuar.baity.features.enchantlore.EnchantLore.init();
+        com.shyeuar.baity.features.keybinds.Keybinds.init();
         
         registerCustomSounds();
         

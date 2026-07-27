@@ -80,6 +80,7 @@
     "InGameHudMixin",
     "PaperDollArmorMixin$HumanoidArmorLayerMixin",
     "PaperDollArmorMixin$CustomHeadLayerMixin",
+    "KeybindsSlotClickMixin",
     "RenderScopeMixin$LivingEntityRenderStateMixin",
     "RenderScopeMixin$LivingEntityRendererScopeMixin",
     "accessor.PlayerAccessor",

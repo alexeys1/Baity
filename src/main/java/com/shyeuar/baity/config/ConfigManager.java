@@ -69,6 +69,24 @@ public class ConfigManager {
     public static float chatChannelSwitcherScale = 1.0f;
     public static boolean chatChannelSwitcherHintHidden = false;
     public static long chatChannelSwitcherLastProcessExitAtMs = 0L;
+
+    public static boolean keybindsEnabled = false;
+    public static boolean keybindsWardrobeGroupExpanded = false;
+    public static boolean keybindsWardrobeEnabled = true;
+    public static boolean keybindsWardrobeAutoCloseOnUse = false;
+    public static boolean keybindsWardrobePreventUnequip = false;
+    public static String keybindsWardrobeHoldToUnequip = "ctrl";
+    public static boolean keybindsEquipmentGroupExpanded = false;
+    public static boolean keybindsEquipmentEnabled = true;
+    public static boolean keybindsEquipmentAutoCloseOnUse = false;
+    public static boolean keybindsEquipmentPreventUnequip = false;
+    public static String keybindsEquipmentHoldToUnequip = "ctrl";
+    public static boolean keybindsLoadoutGroupExpanded = false;
+    public static boolean keybindsLoadoutEnabled = true;
+    public static boolean keybindsLoadoutAutoCloseOnUse = false;
+    public static int keybindsLoadoutSlot10Key = 48;
+    public static int keybindsLoadoutSlot11Key = 45;
+    public static int keybindsLoadoutSlot12Key = 61;
     
     public static boolean fancyDmgSplashEnabled = false;
     public static boolean fancyDmgSplashGenshinReaction = false;
@@ -414,6 +432,57 @@ public class ConfigManager {
         registerField("ChatChannelSwitcherLastProcessExitAtMs", Long.class,
             c -> ConfigManager.chatChannelSwitcherLastProcessExitAtMs,
             (c, v) -> ConfigManager.chatChannelSwitcherLastProcessExitAtMs = (Long) v);
+        registerField("Keybinds", Boolean.class,
+            c -> ConfigManager.keybindsEnabled,
+            (c, v) -> ConfigManager.keybindsEnabled = (Boolean) v);
+        registerField("KeybindsWardrobeGroupExpanded", Boolean.class,
+            c -> ConfigManager.keybindsWardrobeGroupExpanded,
+            (c, v) -> ConfigManager.keybindsWardrobeGroupExpanded = (Boolean) v);
+        registerField("KeybindsWardrobeEnabled", Boolean.class,
+            c -> ConfigManager.keybindsWardrobeEnabled,
+            (c, v) -> ConfigManager.keybindsWardrobeEnabled = (Boolean) v);
+        registerField("KeybindsWardrobeAutoCloseOnUse", Boolean.class,
+            c -> ConfigManager.keybindsWardrobeAutoCloseOnUse,
+            (c, v) -> ConfigManager.keybindsWardrobeAutoCloseOnUse = (Boolean) v);
+        registerField("KeybindsWardrobePreventUnequip", Boolean.class,
+            c -> ConfigManager.keybindsWardrobePreventUnequip,
+            (c, v) -> ConfigManager.keybindsWardrobePreventUnequip = (Boolean) v);
+        registerField("KeybindsWardrobeHoldToUnequip", String.class,
+            c -> ConfigManager.keybindsWardrobeHoldToUnequip,
+            (c, v) -> ConfigManager.keybindsWardrobeHoldToUnequip = (String) v);
+        registerField("KeybindsEquipmentGroupExpanded", Boolean.class,
+            c -> ConfigManager.keybindsEquipmentGroupExpanded,
+            (c, v) -> ConfigManager.keybindsEquipmentGroupExpanded = (Boolean) v);
+        registerField("KeybindsEquipmentEnabled", Boolean.class,
+            c -> ConfigManager.keybindsEquipmentEnabled,
+            (c, v) -> ConfigManager.keybindsEquipmentEnabled = (Boolean) v);
+        registerField("KeybindsEquipmentAutoCloseOnUse", Boolean.class,
+            c -> ConfigManager.keybindsEquipmentAutoCloseOnUse,
+            (c, v) -> ConfigManager.keybindsEquipmentAutoCloseOnUse = (Boolean) v);
+        registerField("KeybindsEquipmentPreventUnequip", Boolean.class,
+            c -> ConfigManager.keybindsEquipmentPreventUnequip,
+            (c, v) -> ConfigManager.keybindsEquipmentPreventUnequip = (Boolean) v);
+        registerField("KeybindsEquipmentHoldToUnequip", String.class,
+            c -> ConfigManager.keybindsEquipmentHoldToUnequip,
+            (c, v) -> ConfigManager.keybindsEquipmentHoldToUnequip = (String) v);
+        registerField("KeybindsLoadoutGroupExpanded", Boolean.class,
+            c -> ConfigManager.keybindsLoadoutGroupExpanded,
+            (c, v) -> ConfigManager.keybindsLoadoutGroupExpanded = (Boolean) v);
+        registerField("KeybindsLoadoutEnabled", Boolean.class,
+            c -> ConfigManager.keybindsLoadoutEnabled,
+            (c, v) -> ConfigManager.keybindsLoadoutEnabled = (Boolean) v);
+        registerField("KeybindsLoadoutAutoCloseOnUse", Boolean.class,
+            c -> ConfigManager.keybindsLoadoutAutoCloseOnUse,
+            (c, v) -> ConfigManager.keybindsLoadoutAutoCloseOnUse = (Boolean) v);
+        registerField("KeybindsLoadoutSlot10Key", Integer.class,
+            c -> ConfigManager.keybindsLoadoutSlot10Key,
+            (c, v) -> ConfigManager.keybindsLoadoutSlot10Key = (Integer) v);
+        registerField("KeybindsLoadoutSlot11Key", Integer.class,
+            c -> ConfigManager.keybindsLoadoutSlot11Key,
+            (c, v) -> ConfigManager.keybindsLoadoutSlot11Key = (Integer) v);
+        registerField("KeybindsLoadoutSlot12Key", Integer.class,
+            c -> ConfigManager.keybindsLoadoutSlot12Key,
+            (c, v) -> ConfigManager.keybindsLoadoutSlot12Key = (Integer) v);
         registerField("FancyDmgSplash", Boolean.class,
             c -> ConfigManager.fancyDmgSplashEnabled,
             (c, v) -> ConfigManager.fancyDmgSplashEnabled = (Boolean) v);
@@ -988,7 +1057,8 @@ public class ConfigManager {
                 legacyKeyAliases.put("ThirdPersonCrosshair", "ThirdPersonBackCrosshair");
                 
                 legacyKeyAliases.put("FishHookTimerHideArmorStand", "FishHookTimerHideDefaultTimer");
-                legacyKeyAliases.put("FancyDmgSplashColorPalette", "FancyDmgSplashBuiltinPresetMask");
+                legacyKeyAliases.put("KeybindsWardrobeReleaseOnHold", "KeybindsWardrobeHoldToUnequip");
+                legacyKeyAliases.put("KeybindsEquipmentReleaseOnHold", "KeybindsEquipmentHoldToUnequip");
                 legacyKeyAliases.put("FancyDmgSplashActivePresetIndex", "FancyDmgSplashBuiltinPresetMask");
 
                 boolean legacy2dDroppedItemPresent = false;

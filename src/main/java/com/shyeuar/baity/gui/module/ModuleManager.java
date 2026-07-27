@@ -363,6 +363,161 @@ public class ModuleManager {
             () -> ConfigManager.chatChannelSwitcherEnabled,
             val -> ConfigManager.chatChannelSwitcherEnabled = val
         );
+
+        GroupValue keybindsWardrobeGroup = new GroupValue("wardrobe keybind", "wardrobe keybind", ModuleCategory.QOL)
+            .setExpanded(ConfigManager.keybindsWardrobeGroupExpanded)
+            .setSubModuleSwitchChildName("wardrobe enabled")
+            .addChild(new Option("wardrobe enabled", "enabled", ConfigManager.keybindsWardrobeEnabled, ModuleCategory.QOL))
+            .addChild(new Option("wardrobe auto close on use", "auto close on use", ConfigManager.keybindsWardrobeAutoCloseOnUse, ModuleCategory.QOL))
+            .addChild(new Option("wardrobe prevent unequip", "prevent unequip", ConfigManager.keybindsWardrobePreventUnequip, ModuleCategory.QOL))
+            .addChild(new ButtonValue(
+                "wardrobe hold to unequip",
+                "hold to unequip",
+                ConfigManager.keybindsWardrobeHoldToUnequip,
+                ConfigManager.keybindsWardrobeHoldToUnequip,
+                ModuleCategory.QOL,
+                ButtonValue.ButtonValueType.CYCLE,
+                false
+            ));
+
+        GroupValue keybindsEquipmentGroup = new GroupValue("equipment keybind", "equipment keybind", ModuleCategory.QOL)
+            .setExpanded(ConfigManager.keybindsEquipmentGroupExpanded)
+            .setSubModuleSwitchChildName("equipment enabled")
+            .addChild(new Option("equipment enabled", "enabled", ConfigManager.keybindsEquipmentEnabled, ModuleCategory.QOL))
+            .addChild(new Option("equipment auto close on use", "auto close on use", ConfigManager.keybindsEquipmentAutoCloseOnUse, ModuleCategory.QOL))
+            .addChild(new Option("equipment prevent unequip", "prevent unequip", ConfigManager.keybindsEquipmentPreventUnequip, ModuleCategory.QOL))
+            .addChild(new ButtonValue(
+                "equipment hold to unequip",
+                "hold to unequip",
+                ConfigManager.keybindsEquipmentHoldToUnequip,
+                ConfigManager.keybindsEquipmentHoldToUnequip,
+                ModuleCategory.QOL,
+                ButtonValue.ButtonValueType.CYCLE,
+                false
+            ));
+
+        GroupValue keybindsLoadoutGroup = new GroupValue("loadout keybind", "loadout keybind", ModuleCategory.QOL)
+            .setExpanded(ConfigManager.keybindsLoadoutGroupExpanded)
+            .setSubModuleSwitchChildName("loadout enabled")
+            .addChild(new Option("loadout enabled", "enabled", ConfigManager.keybindsLoadoutEnabled, ModuleCategory.QOL))
+            .addChild(new Option("loadout auto close on use", "auto close on use", ConfigManager.keybindsLoadoutAutoCloseOnUse, ModuleCategory.QOL))
+            .addChild(new ButtonValue(
+                "slot 10 keybind",
+                "slot 10 keybind",
+                ConfigManager.keybindsLoadoutSlot10Key,
+                ModuleCategory.QOL,
+                ButtonValue.ButtonValueType.KEYBIND,
+                false
+            ))
+            .addChild(new ButtonValue(
+                "slot 11 keybind",
+                "slot 11 keybind",
+                ConfigManager.keybindsLoadoutSlot11Key,
+                ModuleCategory.QOL,
+                ButtonValue.ButtonValueType.KEYBIND,
+                false
+            ))
+            .addChild(new ButtonValue(
+                "slot 12 keybind",
+                "slot 12 keybind",
+                ConfigManager.keybindsLoadoutSlot12Key,
+                ModuleCategory.QOL,
+                ButtonValue.ButtonValueType.KEYBIND,
+                false
+            ));
+
+        ModuleRegistry.registerModuleWithValues(
+            "Keybinds", "Keybinds", ModuleCategory.QOL,
+            () -> ConfigManager.keybindsEnabled,
+            val -> ConfigManager.keybindsEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                keybindsWardrobeGroup,
+                keybindsEquipmentGroup,
+                keybindsLoadoutGroup
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "wardrobe keybind",
+                    () -> ConfigManager.keybindsWardrobeGroupExpanded,
+                    val -> ConfigManager.keybindsWardrobeGroupExpanded = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "wardrobe enabled",
+                    () -> ConfigManager.keybindsWardrobeEnabled,
+                    val -> ConfigManager.keybindsWardrobeEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "wardrobe auto close on use",
+                    () -> ConfigManager.keybindsWardrobeAutoCloseOnUse,
+                    val -> ConfigManager.keybindsWardrobeAutoCloseOnUse = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "wardrobe prevent unequip",
+                    () -> ConfigManager.keybindsWardrobePreventUnequip,
+                    val -> ConfigManager.keybindsWardrobePreventUnequip = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "wardrobe hold to unequip",
+                    () -> ConfigManager.keybindsWardrobeHoldToUnequip,
+                    val -> ConfigManager.keybindsWardrobeHoldToUnequip = (String) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "equipment keybind",
+                    () -> ConfigManager.keybindsEquipmentGroupExpanded,
+                    val -> ConfigManager.keybindsEquipmentGroupExpanded = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "equipment enabled",
+                    () -> ConfigManager.keybindsEquipmentEnabled,
+                    val -> ConfigManager.keybindsEquipmentEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "equipment auto close on use",
+                    () -> ConfigManager.keybindsEquipmentAutoCloseOnUse,
+                    val -> ConfigManager.keybindsEquipmentAutoCloseOnUse = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "equipment prevent unequip",
+                    () -> ConfigManager.keybindsEquipmentPreventUnequip,
+                    val -> ConfigManager.keybindsEquipmentPreventUnequip = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "equipment hold to unequip",
+                    () -> ConfigManager.keybindsEquipmentHoldToUnequip,
+                    val -> ConfigManager.keybindsEquipmentHoldToUnequip = (String) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "loadout keybind",
+                    () -> ConfigManager.keybindsLoadoutGroupExpanded,
+                    val -> ConfigManager.keybindsLoadoutGroupExpanded = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "loadout enabled",
+                    () -> ConfigManager.keybindsLoadoutEnabled,
+                    val -> ConfigManager.keybindsLoadoutEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "loadout auto close on use",
+                    () -> ConfigManager.keybindsLoadoutAutoCloseOnUse,
+                    val -> ConfigManager.keybindsLoadoutAutoCloseOnUse = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "slot 10 keybind",
+                    () -> ConfigManager.keybindsLoadoutSlot10Key,
+                    val -> ConfigManager.keybindsLoadoutSlot10Key = ((Number) val).intValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "slot 11 keybind",
+                    () -> ConfigManager.keybindsLoadoutSlot11Key,
+                    val -> ConfigManager.keybindsLoadoutSlot11Key = ((Number) val).intValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "slot 12 keybind",
+                    () -> ConfigManager.keybindsLoadoutSlot12Key,
+                    val -> ConfigManager.keybindsLoadoutSlot12Key = ((Number) val).intValue()
+                )
+            }
+        );
         
         ModuleRegistry.registerModuleWithValues(
             "Reminder", "Reminder", ModuleCategory.QOL,
@@ -1137,6 +1292,11 @@ public class ModuleManager {
         TooltipManager.registerTooltip("BlockAnimation", "Restore the blocking animation of version 1.7.", 0xFFFFFF);
         TooltipManager.registerTooltip("PepCat", "Play an animation and give pep talk when you died. It's a skill issue!", 0xFFFFFF);
         TooltipManager.registerTooltip("RadialMenu", "A roulette tool that invokes a shortcut command.", 0xFFFFFF);
+        TooltipManager.registerTooltip(
+            "Keybinds",
+            "你自己的快捷键1-9 → 9个栏位\n左移 → 上一页 / Scroll Left\n右移 → 下一页 / Scroll Right",
+            0xFFFF00
+        );
         TooltipManager.registerTooltip(
             "NumInputer",
             "Alt+前进/后退换行，Alt+左移/右移移字\nAlt+Move keys move cursor (up/down = line)",

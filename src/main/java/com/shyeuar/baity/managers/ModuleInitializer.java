@@ -17,12 +17,6 @@ public class ModuleInitializer {
         "force pink color"
     );
     private static final Set<String> REMINDER_OPTIONS = Set.of("cookie buff reminder", "god potion reminder", "kat reminder");
-    private static final Set<String> FANCYDMGSPLASH_OPTIONS = Set.of(
-            "sync non-critical dmg",
-            "genshin elemental reaction",
-            "bold",
-            "compact damage number"
-    );
     private static final Set<String> FANCYDMGSPLASH_HIDDEN_GUI = Set.of(
             "bold",
             "compact damage number"

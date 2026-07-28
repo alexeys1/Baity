@@ -6,7 +6,6 @@ import com.shyeuar.baity.gui.internal.ClickGuiSearchUtils;
 import com.shyeuar.baity.gui.internal.ClickGuiState;
 import com.shyeuar.baity.gui.theme.Theme;
 import com.shyeuar.baity.gui.module.Module;
-import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.gui.render.ModuleStyleRenderer;
 import com.shyeuar.baity.gui.render.ValueStyleRenderer;
 import com.shyeuar.baity.gui.value.Value;
@@ -52,6 +51,9 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         this.getTooltipTextWithColors = getTooltipTextWithColors;
         this.getDisplayTextFormatter = getDisplayTextFormatter;
         this.tooltipInfo = tooltipInfo;
+    }
+
+    public void configureRootLayout() {
         this.horizontalSizing(Sizing.fixed((int)ClickGuiState.WIDTH));
         this.verticalSizing(Sizing.fixed((int)ClickGuiState.HEIGHT));
         this.positioning(Positioning.absolute(0, 0));
@@ -225,9 +227,9 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, 5, categoryY - 5, ClickGuiState.SIDEBAR_WIDTH - 5, categoryY + 25, hoverBg, 0f);
             } else {
                 int normalBg = new java.awt.Color(
-                    (int)((categoryBgColor >> 16) & 0xFF) - 10,
-                    (int)((categoryBgColor >> 8) & 0xFF) - 10,
-                    (int)(categoryBgColor & 0xFF) - 10,
+                    ((categoryBgColor >> 16) & 0xFF) - 10,
+                    ((categoryBgColor >> 8) & 0xFF) - 10,
+                    (categoryBgColor & 0xFF) - 10,
                     255
                 ).getRGB();
                 com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, 5, categoryY - 5, ClickGuiState.SIDEBAR_WIDTH - 5, categoryY + 25, normalBg, 0f);

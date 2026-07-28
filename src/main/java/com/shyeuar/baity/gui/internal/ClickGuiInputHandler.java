@@ -629,8 +629,8 @@ public class ClickGuiInputHandler {
         if (dragInfo == null) return;
 
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
-        float hue = (float) ((coords.mouseX - dragInfo.mapX1) / Math.max(1f, (dragInfo.mapX2 - dragInfo.mapX1)));
-        float sat = (float) (1f - (coords.mouseY - dragInfo.mapY1) / Math.max(1f, (dragInfo.mapY2 - dragInfo.mapY1)));
+        float hue = (coords.mouseX - dragInfo.mapX1) / Math.max(1f, (dragInfo.mapX2 - dragInfo.mapX1));
+        float sat = 1f - (coords.mouseY - dragInfo.mapY1) / Math.max(1f, (dragInfo.mapY2 - dragInfo.mapY1));
 
         for (Module module : ModuleManager.getModules()) {
             if (!module.getName().equals(dragInfo.moduleName)) continue;
@@ -653,7 +653,7 @@ public class ClickGuiInputHandler {
             }
             if (gradientValue != null) {
                 if (dragInfo.dragValue) {
-                    float valNorm = (float)(1f - (coords.mouseY - dragInfo.mapY1) / Math.max(1f, (dragInfo.mapY2 - dragInfo.mapY1)));
+                    float valNorm = 1f - (coords.mouseY - dragInfo.mapY1) / Math.max(1f, (dragInfo.mapY2 - dragInfo.mapY1));
                     gradientValue.setSelectedValue(valNorm);
                 } else {
                     gradientValue.setSelectedFromHueSat(hue, sat);
@@ -744,8 +744,7 @@ public class ClickGuiInputHandler {
         }
         float categoryY = ClickGuiState.HEADER_HEIGHT + 20;
         float categorySpacing = 35f;
-        for (com.shyeuar.baity.gui.value.ModuleCategory ignored :
-             com.shyeuar.baity.gui.value.ModuleCategory.values()) {
+        for (int i = 0, count = com.shyeuar.baity.gui.value.ModuleCategory.values().length; i < count; i++) {
             if (mouseY >= categoryY - 5 && mouseY < categoryY + 25) {
                 return true;
             }
@@ -1083,9 +1082,9 @@ public class ClickGuiInputHandler {
             float boxCenterY = modY + 25 / 2f;
             int boxHeight = 12;
             int containerX2 = (int)(ClickGuiState.WIDTH - 20);
-            int keyBoxX1 = (int)(containerX2 - keyBoxWidth - 10);
+            int keyBoxX1 = containerX2 - keyBoxWidth - 10;
             int keyBoxY1 = (int)(boxCenterY - boxHeight / 2f);
-            int keyBoxX2 = (int)(containerX2 - 10);
+            int keyBoxX2 = containerX2 - 10;
             int keyBoxY2 = (int)(boxCenterY + boxHeight / 2f);
             
             if (button == 0 && GuiRenderUtil.isHovered(keyBoxX1, keyBoxY1, keyBoxX2, keyBoxY2, 
@@ -1191,9 +1190,9 @@ public class ClickGuiInputHandler {
                 int boxWidth = boxTextWidth + 16;
                 float boxCenterY = subModY + dims.subOptionHeight / 2f;
                 int boxHeight = 12;
-                int boxX1 = (int)(subX2 - boxWidth - 10);
+                int boxX1 = subX2 - boxWidth - 10;
                 int boxY1 = (int)(boxCenterY - boxHeight / 2f);
-                int boxX2 = (int)(subX2 - 10);
+                int boxX2 = subX2 - 10;
                 int boxY2 = (int)(boxCenterY + boxHeight / 2f);
                 
                 if (GuiRenderUtil.isHovered(boxX1, boxY1, boxX2, boxY2, coords.mouseX, coords.mouseY)) {
@@ -1264,7 +1263,7 @@ public class ClickGuiInputHandler {
                         && state.getEditingSlider().valueName.equals(value.getName())) {
                         String display = state.getSliderInput().getText();
                         int textX = valueDisplayX + (valueDisplayWidth - client.font.width(display)) / 2;
-                        state.getSliderInput().onMousePressed(client.font, (float) coords.mouseX - textX);
+                        state.getSliderInput().onMousePressed(client.font, coords.mouseX - textX);
                     } else {
                         beginSliderEdit(sliderValue, module.getName(), value.getName());
                     }
@@ -1509,7 +1508,7 @@ public class ClickGuiInputHandler {
                         && state.getEditingTextInput().valueName.equals(value.getName())) {
                         Minecraft client = Minecraft.getInstance();
                         int maxTextWidth = Math.max(0, Math.round(lineX2 - lineX1));
-                        state.getTextLineInput().onMousePressed(client.font, (float) coords.mouseX - lineX1, maxTextWidth);
+                        state.getTextLineInput().onMousePressed(client.font, coords.mouseX - lineX1, maxTextWidth);
                     } else {
                         state.setEditingTextInput(new ClickGuiState.TextInputInfo(module.getName(), value.getName()));
                         String start = String.valueOf(value.getValue());

@@ -13,7 +13,8 @@ import com.shyeuar.baity.features.FancyCreeperVeil;
 import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
 import com.shyeuar.baity.features.fishing.ChromaFishingLine;
 import com.shyeuar.baity.features.fishing.FishHookTimer;
-import com.shyeuar.baity.features.paperdoll.PaperDoll;
+import com.shyeuar.baity.features.PaperDoll;
+import com.shyeuar.baity.features.ChatChannelSwitcher;
 import com.shyeuar.baity.features.blockanimation.BlockAnimationSwordCatalog;
 import com.shyeuar.baity.features.fishing.HypixelFishingRodCatalog;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
@@ -46,7 +47,6 @@ public class Baity implements ClientModInitializer {
     public static boolean openSmolFriendsNextTick = false;
 
     @Override
-    @SuppressWarnings("deprecation")
     public void onInitializeClient() {
         com.shyeuar.baity.config.BaityConfigDir.init();
         RemoteFileFetcher.init();
@@ -68,9 +68,10 @@ public class Baity implements ClientModInitializer {
         PaperDoll.init();
         ChromaFishingLine.init();
         RadialMenu.init();
-        com.shyeuar.baity.features.chat.ChatChannelSwitcher.init();
+        ChatChannelSwitcher.init();
         com.shyeuar.baity.features.enchantlore.EnchantLore.init();
-        com.shyeuar.baity.features.keybinds.Keybinds.init();
+        com.shyeuar.baity.features.Keybinds.init();
+        com.shyeuar.baity.features.sidepanel.SidePanel.init();
         
         registerCustomSounds();
         
@@ -107,9 +108,6 @@ public class Baity implements ClientModInitializer {
             
             RadialMenu.tick(client);
             com.shyeuar.baity.features.FocusPlayerNametag.tick(client);
-            if (ConfigManager.nametagEnabled) {
-                com.shyeuar.baity.utils.AntiBotUtils.updatePlayerMap();
-            }
             BaityPresenceSync.tick();
             PestHighlights.tickPestCaches();
             

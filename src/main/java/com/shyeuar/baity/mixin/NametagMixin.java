@@ -20,6 +20,7 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Mixin;
@@ -180,14 +181,17 @@ public class NametagMixin {
         }
 
         @Redirect(
-            method = "shouldShowName",
+            method = "shouldShowName(Lnet/minecraft/world/entity/Avatar;D)Z",
             at = @At(
                 value = "INVOKE",
-                target = "Lnet/minecraft/world/entity/Avatar;isInvisibleTo(Lnet/minecraft/world/entity/player/Player;)Z"
+                target = "Lnet/minecraft/world/entity/LivingEntity;isInvisibleTo(Lnet/minecraft/world/entity/player/Player;)Z"
             ),
             require = 0
         )
-        private boolean baity$ignoreInvisibilityForDefaultNametag(Avatar avatar, Player viewer) {
+        private static boolean baity$ignoreInvisibilityForDefaultNametag(LivingEntity entity, Player viewer) {
+            if (!(entity instanceof Avatar avatar)) {
+                return entity.isInvisibleTo(viewer);
+            }
             Module m = ModuleManager.getModuleByName("Nametag");
             if (m == null || !m.isEnabled()) {
                 return avatar.isInvisibleTo(viewer);

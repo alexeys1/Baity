@@ -115,8 +115,7 @@ public class PepCat {
     private static void playTotemAnimation(LocalPlayer player) {
         Minecraft client = Minecraft.getInstance();
         if (client.player != null && client.level != null) {
-            if (client.level instanceof net.minecraft.client.multiplayer.ClientLevel) {
-                net.minecraft.client.multiplayer.ClientLevel clientWorld = (net.minecraft.client.multiplayer.ClientLevel) client.level;
+            if (client.level instanceof net.minecraft.client.multiplayer.ClientLevel clientWorld) {
                 clientWorld.playSound(
                     player, 
                     player.getX(), player.getY(), player.getZ(),

@@ -36,7 +36,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     private final ClickGuiState state;
     private final boolean restoredFromSession;
     private final TimerUtils valuetimer;
-    private final ClickGuiInputHandler inputHandler;
+    private ClickGuiInputHandler inputHandler;
     private ClickGuiRootComponent rootComponent;
     
     public static Theme theme = new Theme();
@@ -65,8 +65,14 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             this.restoredFromSession = false;
         }
         this.valuetimer = new TimerUtils();
-        this.inputHandler = new ClickGuiInputHandler(state, valuetimer, this::handleButtonValueClick);
         currentInstance = this;
+    }
+
+    private ClickGuiInputHandler inputHandler() {
+        if (inputHandler == null) {
+            inputHandler = new ClickGuiInputHandler(state, valuetimer, this::handleButtonValueClick);
+        }
+        return inputHandler;
     }
     
     @Override
@@ -76,6 +82,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     
     @Override
     protected void init() {
+        inputHandler();
         super.init();
         theme.setDark();
         
@@ -180,6 +187,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
             this::getTooltipTextWithColors,
             this::getDisplayTextFormatter,
             tooltipInfo);
+        this.rootComponent.configureRootLayout();
         rootComponent.child(this.rootComponent);
     }
     
@@ -199,19 +207,19 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         if (this.minecraft == null || this.minecraft.getWindow() == null) {
             return;
         }
-        if (!inputHandler.isWindowDragging()
+        if (!inputHandler().isWindowDragging()
                 && state.getDraggingSlider() == null
                 && state.getDraggingGradient() == null) {
             return;
         }
         double mx = this.minecraft.mouseHandler.getScaledXPos(this.minecraft.getWindow());
         double my = this.minecraft.mouseHandler.getScaledYPos(this.minecraft.getWindow());
-        inputHandler.handleMouseMove(mx, my);
+        inputHandler().handleMouseMove(mx, my);
     }
     
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (inputHandler.handleMouseScroll(mouseX, mouseY, verticalAmount)) {
+        if (inputHandler().handleMouseScroll(mouseX, mouseY, verticalAmount)) {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
@@ -219,7 +227,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     
     @Override
     public boolean mouseClicked(MouseButtonEvent click, boolean isInsideWindow) {
-        if (inputHandler.handleMouseClick(click.x(), click.y(), click.button())) {
+        if (inputHandler().handleMouseClick(click.x(), click.y(), click.button())) {
             return true;
         }
         return super.mouseClicked(click, isInsideWindow);
@@ -227,16 +235,16 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     
     @Override
     public boolean mouseReleased(MouseButtonEvent click) {
-        inputHandler.handleMouseRelease(click.button());
+        inputHandler().handleMouseRelease(click.button());
         return super.mouseReleased(click);
     }
 
     @Override
     public boolean mouseDragged(MouseButtonEvent click, double dx, double dy) {
-        if (inputHandler.isWindowDragging()
+        if (inputHandler().isWindowDragging()
                 || state.getDraggingSlider() != null
                 || state.getDraggingGradient() != null) {
-            inputHandler.handleMouseMove(click.x(), click.y());
+            inputHandler().handleMouseMove(click.x(), click.y());
             return true;
         }
         return super.mouseDragged(click, dx, dy);
@@ -244,7 +252,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        inputHandler.handleMouseMove(mouseX, mouseY);
+        inputHandler().handleMouseMove(mouseX, mouseY);
         super.mouseMoved(mouseX, mouseY);
     }
     
@@ -253,7 +261,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         int keyCode = input.input();
         int scanCode = input.scancode();
         int modifiers = input.modifiers();
-        if (inputHandler.handleKeyPress(keyCode, scanCode, modifiers)) {
+        if (inputHandler().handleKeyPress(keyCode, scanCode, modifiers)) {
             return true;
         }
         return super.keyPressed(input);
@@ -262,7 +270,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     @Override
     public boolean charTyped(CharacterEvent input) {
         int codePoint = input.codepoint();
-        if (inputHandler.handleCodePointTyped(codePoint, 0)) {
+        if (inputHandler().handleCodePointTyped(codePoint, 0)) {
             return true;
         }
         return super.charTyped(input);

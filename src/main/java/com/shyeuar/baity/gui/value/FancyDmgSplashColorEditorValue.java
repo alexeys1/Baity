@@ -25,8 +25,11 @@ public class FancyDmgSplashColorEditorValue implements Value {
                 FancyDmgSplashSettings.DEFAULT_GRADIENT_START,
                 FancyDmgSplashSettings.DEFAULT_GRADIENT_END
         );
-        this.symbols = FancyDmgSplashSettings.DEFAULT_SYMBOL;
-        loadFromConfig();
+        this.symbols = FancyDmgSplashSettings.clampSymbols(ConfigManager.fancyDmgSplashDamageSymbols);
+        ConfigManager.fancyDmgSplashDamageSymbols = this.symbols;
+        this.gradient.setValue(String.format("#%06X,#%06X",
+                ConfigManager.fancyDmgSplashCritGradientStart & 0xFFFFFF,
+                ConfigManager.fancyDmgSplashCritGradientEnd & 0xFFFFFF));
     }
 
     @Override

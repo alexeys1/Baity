@@ -52,7 +52,6 @@ public final class BaityPresenceSync {
     private static final long SOFT_STALE_AFTER_MS = 3L * 24L * 60L * 60L * 1000L;
     private static final long HARD_EXPIRE_AFTER_MS = 3L * 24L * 60L * 60L * 1000L;
     private static final Path CACHE_FILE_PATH = BaityConfigDir.getBaityConfigDir().resolve("remote-users-cache.json");
-    private static final Path LEGACY_CACHE_FILE_PATH = BaityConfigDir.getBaityConfigDir().resolve("presence-cache.json");
 
     private static final AtomicBoolean FETCHING = new AtomicBoolean(false);
     private static final AtomicBoolean REPORTING = new AtomicBoolean(false);
@@ -667,12 +666,16 @@ public final class BaityPresenceSync {
 
                 int code = connection.getResponseCode();
                 if (code >= 200 && code < 300) {
-                    try (InputStream ignored = connection.getInputStream()) {
+                    try (InputStream responseBody = connection.getInputStream()) {
+                        responseBody.transferTo(java.io.OutputStream.nullOutputStream());
                     }
                     LOGGER.info("[PresenceSync] report ok, code={}, uuid={}, attempt={}", code, state.uuid(), attempt + 1);
                     return true;
                 }
-                try (InputStream ignored = connection.getErrorStream()) {
+                try (InputStream errorBody = connection.getErrorStream()) {
+                    if (errorBody != null) {
+                        errorBody.transferTo(java.io.OutputStream.nullOutputStream());
+                    }
                 }
                 LOGGER.warn("[PresenceSync] report failed, code={}, uuid={}, attempt={}", code, state.uuid(), attempt + 1);
                 if (code == 401 || code == 403) {
@@ -999,17 +1002,10 @@ public final class BaityPresenceSync {
 
     private static void loadCacheFromDisk() {
         try {
-            Path path = CACHE_FILE_PATH;
-            if (!Files.exists(path) && Files.exists(LEGACY_CACHE_FILE_PATH)) {
-                path = LEGACY_CACHE_FILE_PATH;
-            }
-            if (!Files.exists(path)) return;
-            String json = Files.readString(path, StandardCharsets.UTF_8);
+            if (!Files.exists(CACHE_FILE_PATH)) return;
+            String json = Files.readString(CACHE_FILE_PATH, StandardCharsets.UTF_8);
             if (json == null || json.isBlank()) return;
             applyPayload(json, false);
-            if (path.equals(LEGACY_CACHE_FILE_PATH)) {
-                saveCacheToDisk(json);
-            }
         } catch (Exception ignored) {
         }
     }

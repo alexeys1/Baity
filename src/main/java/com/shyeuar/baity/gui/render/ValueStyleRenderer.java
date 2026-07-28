@@ -223,12 +223,6 @@ public class ValueStyleRenderer {
                deleteX1, toggleY1, deleteX2, toggleY2);
    }
 
-   private static void drawCenteredClippedText(GuiGraphicsExtractor context, net.minecraft.client.gui.Font font,
-                                               String text, float lineX1, float lineY, float lineX2, int color) {
-       LineTextInput.drawCenteredClippedWithBlinkCursor(
-           context, font, text, 0, lineX1, lineY, lineX2, color, false);
-   }
-
    public static GradientEditorBottomLayout computeGradientEditorBottomLayout(
            Minecraft client, float x1, float y, float x2, float blockHeight,
            String hexDisplay, boolean withReset, String symbolDisplay) {
@@ -309,16 +303,6 @@ public class ValueStyleRenderer {
        float yR = y1 + 4f;
        drawThickLine(context, xL, yL, xM, yM, 2, color);
        drawThickLine(context, xM, yM, xR, yR, 2, color);
-   }
-
-   private static void renderGradientEditorBottomControls(GuiGraphicsExtractor context, Minecraft client, Theme theme,
-                                                          GradientEditorBottomLayout bottom, String selectedHex,
-                                                          boolean editingHex, int localAlpha,
-                                                          ModuleStyleRenderer.TooltipInfo hoveredTooltipInfo,
-                                                          float mouseX, float mouseY,
-                                                          String syncTooltip) {
-       renderGradientEditorBottomControls(context, client, theme, bottom, selectedHex, editingHex, null,
-               null, false, null, localAlpha, hoveredTooltipInfo, mouseX, mouseY, syncTooltip);
    }
 
    private static void renderGradientEditorBottomControls(GuiGraphicsExtractor context, Minecraft client, Theme theme,

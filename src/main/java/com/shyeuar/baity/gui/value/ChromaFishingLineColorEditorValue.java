@@ -22,7 +22,9 @@ public class ChromaFishingLineColorEditorValue implements Value {
                 ConfigManager.chromaFishingLineGradientStart,
                 ConfigManager.chromaFishingLineGradientEnd
         );
-        loadFromConfig();
+        this.gradient.setValue(String.format("#%06X,#%06X",
+                ConfigManager.chromaFishingLineGradientStart & 0xFFFFFF,
+                ConfigManager.chromaFishingLineGradientEnd & 0xFFFFFF));
     }
 
     @Override

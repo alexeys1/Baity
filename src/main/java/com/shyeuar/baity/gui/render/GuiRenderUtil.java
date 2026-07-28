@@ -68,7 +68,7 @@ public class GuiRenderUtil {
         int sliceW = Math.max(1, (int) Math.ceil(width / (double) slices));
         for (int px = ix; px < ix2; px += sliceW) {
             int next = Math.min(ix2, px + sliceW);
-            float t = (float) ((px + next) * 0.5f - ix) / (float) width;
+            float t = ((px + next) * 0.5f - ix) / (float) width;
             t = Math.max(0f, Math.min(1f, t));
             int a = (int)(a1 + (a2 - a1) * t);
             int rVal = (int)(r1 + (r2 - r1) * t);

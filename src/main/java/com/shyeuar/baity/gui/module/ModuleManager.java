@@ -128,7 +128,7 @@ public class ModuleManager {
         ModuleRegistry.registerSimpleModule(
             "FancyCreeperVeil", "FancyCreeperVeil", ModuleCategory.MISC,
             () -> ConfigManager.fancyCreeperVeilEnabled,
-            val -> ConfigManager.fancyCreeperVeilEnabled = (Boolean) val
+            val -> ConfigManager.fancyCreeperVeilEnabled = val
         );
         
         ModuleRegistry.registerSimpleModule(
@@ -882,6 +882,22 @@ public class ModuleManager {
             () -> ConfigManager.softFullscreenEnabled,
             val -> ConfigManager.softFullscreenEnabled = val
         );
+
+        ModuleRegistry.registerModuleWithValues(
+            "SidePanel", "SidePanel", ModuleCategory.QOL,
+            () -> ConfigManager.sidePanelEnabled,
+            val -> ConfigManager.sidePanelEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new Option("pet panel", "pet panel", ConfigManager.sidePanelPetEnabled, ModuleCategory.QOL)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "pet panel",
+                    () -> ConfigManager.sidePanelPetEnabled,
+                    val -> ConfigManager.sidePanelPetEnabled = (Boolean) val
+                )
+            }
+        );
         
         ModuleRegistry.registerModuleWithValues(
             "HeldItemTweaks", "HeldItemTweaks", ModuleCategory.RENDER,
@@ -1329,6 +1345,16 @@ public class ModuleManager {
         TooltipManager.registerTooltip("FancyCreeperVeil", "Replace the wither cloak ability creeper model to a fancy one.", 0xFFFFFF);
         TooltipManager.registerTooltip("NoSwimPose", "Only disables the swimming pose and eye height change on your client.", 0xFFFFFF);
         TooltipManager.registerTooltip("SoftFullscreen", "Borderless Fullscreen.", 0xFFFFFF);
+        TooltipManager.registerTooltip(
+            "SidePanel",
+            "Display your equipment and pet on side of inventory.",
+            0xFFFFFF
+        );
+        TooltipManager.registerTooltip(
+            "pet panel",
+            "Show the pet slot on the side panel.",
+            0xFFFFFF
+        );
         TooltipManager.registerTooltip(
             "HeldItemTweaks",
             "Client-side tweaks for how first-person held items are rendered.",

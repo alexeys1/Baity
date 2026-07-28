@@ -1,4 +1,4 @@
-package com.shyeuar.baity.features.numinputer;
+package com.shyeuar.baity.features;
 
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.render.GuiRenderUtil;

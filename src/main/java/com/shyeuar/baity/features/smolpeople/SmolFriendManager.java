@@ -1,31 +1,31 @@
 package com.shyeuar.baity.features.smolpeople;
 
-import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.config.BaityConfigDir;
+import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.sync.BaityPresenceSync;
-import com.shyeuar.baity.utils.AntiBotUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Environment(EnvType.CLIENT)
 public final class SmolFriendManager {
     private static final Map<String, String> FRIENDS = new LinkedHashMap<>();
     private static final String FRIENDS_FILE_NAME = "smol-friends.txt";
-    private static final String LEGACY_FRIENDS_FILE_NAME = "synced_players.txt";
     private static final Pattern VALID_PLAYER_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9_]{3,16}$");
     private static final long LOBBY_PLAYERS_REFRESH_INTERVAL_MS = 500L;
     private static List<String> cachedLobbyPlayers = List.of();
@@ -62,7 +62,7 @@ public final class SmolFriendManager {
             return false;
         }
 
-        if (isLocalPlayerLookalike(targetPlayer)) {
+        if (isLocalPlayerLookalike(targetPlayer) || isLocalPlayerMirror(targetPlayer)) {
             return true;
         }
 
@@ -90,10 +90,14 @@ public final class SmolFriendManager {
 
         String selfName = mc.player.getGameProfile().name();
         String otherName = other.getGameProfile().name();
-        if (selfName != null && !selfName.isEmpty() && selfName.equalsIgnoreCase(otherName)) {
-            return true;
-        }
+        return selfName != null && !selfName.isEmpty() && selfName.equalsIgnoreCase(otherName);
+    }
 
+    private static boolean isLocalPlayerMirror(Player other) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || other == mc.player) {
+            return false;
+        }
         if (!(other instanceof net.minecraft.client.player.AbstractClientPlayer otherClient)) {
             return false;
         }
@@ -101,14 +105,26 @@ public final class SmolFriendManager {
         var selfSkin = mc.player.getSkin();
         var otherSkin = otherClient.getSkin();
         if (selfSkin == null || otherSkin == null
-            || selfSkin.body() == null || otherSkin.body() == null) {
+                || selfSkin.body() == null || otherSkin.body() == null) {
             return false;
         }
-
         if (!selfSkin.body().texturePath().equals(otherSkin.body().texturePath())) {
             return false;
         }
-        return AntiBotUtils.isBot(other);
+        return !isListedInTab(other.getUUID());
+    }
+
+    private static boolean isListedInTab(UUID uuid) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getConnection() == null || uuid == null) {
+            return false;
+        }
+        for (PlayerInfo entry : mc.getConnection().getOnlinePlayers()) {
+            if (entry != null && entry.getProfile() != null && uuid.equals(entry.getProfile().id())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static Player getPlayerByEntityId(int entityId) {
@@ -260,10 +276,6 @@ public final class SmolFriendManager {
 
     private static boolean loadFromFile() {
         Path filePath = getFriendsFilePath();
-        Path legacyPath = getLegacyFriendsFilePath();
-        if (!Files.exists(filePath) && Files.exists(legacyPath)) {
-            filePath = legacyPath;
-        }
         if (!Files.exists(filePath)) {
             return false;
         }
@@ -275,13 +287,9 @@ public final class SmolFriendManager {
                     continue;
                 }
 
-                String[] entries = line.split(",");
-                for (String entry : entries) {
+                for (String entry : line.split(",")) {
                     addNameToMemory(entry);
                 }
-            }
-            if (filePath.equals(legacyPath)) {
-                saveToFile();
             }
             return true;
         } catch (IOException e) {
@@ -302,10 +310,6 @@ public final class SmolFriendManager {
 
     private static Path getFriendsFilePath() {
         return BaityConfigDir.getBaityConfigDir().resolve(FRIENDS_FILE_NAME);
-    }
-
-    private static Path getLegacyFriendsFilePath() {
-        return BaityConfigDir.getBaityConfigDir().resolve(LEGACY_FRIENDS_FILE_NAME);
     }
 
     private static void syncLegacyConfigField() {

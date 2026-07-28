@@ -228,8 +228,7 @@ public final class BlockAnimationRenderer {
             boolean blockingNow) {
 
         poseStack.pushPose();
-        ArmedModel<AvatarRenderState> avatarModel = (ArmedModel<AvatarRenderState>) model;
-        avatarModel.translateToHand(renderState, humanoidArm, poseStack);
+        model.translateToHand(renderState, humanoidArm, poseStack);
         boolean leftHand = humanoidArm == HumanoidArm.LEFT;
         InteractionHand blockingHand = BlockAnimationUtils.getBlockingHand(player);
         boolean worldContext = RenderScope.isWorldCameraContext(renderState);

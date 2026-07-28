@@ -1,11 +1,24 @@
 package com.shyeuar.baity.config;
 
-import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ConfigManager {
     private static final Logger LOGGER = LoggerFactory.getLogger("Baity/Config");
@@ -117,6 +130,8 @@ public class ConfigManager {
     public static boolean noHurtCamEnabled = false;
 
     public static boolean softFullscreenEnabled = false;
+    public static boolean sidePanelEnabled = false;
+    public static boolean sidePanelPetEnabled = true;
     
     public static boolean heldItemTweaksEnabled = false;
     public static boolean heldItemTweaksNoItemswapAnimationEnabled = false;
@@ -254,7 +269,9 @@ public class ConfigManager {
     
     
     
-    private static final String CONFIG_FILE_NAME = "config.txt";
+    private static final String CONFIG_JSON_FILE_NAME = "config.json";
+    private static final String LEGACY_CONFIG_TXT_FILE_NAME = "config.txt";
+    private static final Gson CONFIG_GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static final Map<String, SettingField> CONFIG_FIELDS = new HashMap<>();
     private static boolean pendingSave = false;
@@ -564,6 +581,15 @@ public class ConfigManager {
         registerField("SoftFullscreen", Boolean.class,
             c -> ConfigManager.softFullscreenEnabled,
             (c, v) -> ConfigManager.softFullscreenEnabled = (Boolean) v);
+        registerField("SidePanel", Boolean.class,
+            c -> ConfigManager.sidePanelEnabled,
+            (c, v) -> ConfigManager.sidePanelEnabled = (Boolean) v);
+        registerField("CharmRow", Boolean.class,
+            c -> ConfigManager.sidePanelEnabled,
+            (c, v) -> ConfigManager.sidePanelEnabled = (Boolean) v);
+        registerField("pet panel", Boolean.class,
+            c -> ConfigManager.sidePanelPetEnabled,
+            (c, v) -> ConfigManager.sidePanelPetEnabled = (Boolean) v);
         registerField("HeldItemTweaks", Boolean.class,
             c -> ConfigManager.heldItemTweaksEnabled,
             (c, v) -> ConfigManager.heldItemTweaksEnabled = (Boolean) v);
@@ -977,23 +1003,25 @@ public class ConfigManager {
         pendingSave = false;
         pendingSaveAt = 0L;
         try {
-            java.nio.file.Path baityDir = BaityConfigDir.getBaityConfigDir();
-            if (!java.nio.file.Files.exists(baityDir)) {
-                java.nio.file.Files.createDirectories(baityDir);
+            Path baityDir = BaityConfigDir.getBaityConfigDir();
+            if (!Files.exists(baityDir)) {
+                Files.createDirectories(baityDir);
             }
-            
-            java.nio.file.Path configPath = baityDir.resolve(CONFIG_FILE_NAME);
-            StringBuilder config = new StringBuilder();
-            
-            ConfigManager instance = null; 
-            for (Map.Entry<String, SettingField> entry : CONFIG_FIELDS.entrySet()) {
-                String key = entry.getKey();
-                SettingField field = entry.getValue();
-                Object value = field.getValue(instance);
-                config.append(key).append(":").append(value).append("\n");
+
+            JsonObject root = new JsonObject();
+            root.addProperty("version", 1);
+            JsonObject settings = new JsonObject();
+            List<String> keys = new ArrayList<>(CONFIG_FIELDS.keySet());
+            Collections.sort(keys);
+            ConfigManager instance = null;
+            for (String key : keys) {
+                SettingField field = CONFIG_FIELDS.get(key);
+                putJsonValue(settings, key, field.getValue(instance));
             }
-            
-            java.nio.file.Files.writeString(configPath, config.toString(), java.nio.charset.StandardCharsets.UTF_8);
+            root.add("settings", settings);
+
+            Path configPath = baityDir.resolve(CONFIG_JSON_FILE_NAME);
+            Files.writeString(configPath, CONFIG_GSON.toJson(root), StandardCharsets.UTF_8);
         } catch (java.io.IOException e) {
             LOGGER.error("Failed to save Baity config: {}", e.toString());
         }
@@ -1018,111 +1046,32 @@ public class ConfigManager {
 
     public static void loadConfig() {
         try {
-            java.nio.file.Path baityDir = BaityConfigDir.getBaityConfigDir();
-            if (!java.nio.file.Files.exists(baityDir)) {
-                java.nio.file.Files.createDirectories(baityDir);
+            Path baityDir = BaityConfigDir.getBaityConfigDir();
+            if (!Files.exists(baityDir)) {
+                Files.createDirectories(baityDir);
             }
-            
-            java.nio.file.Path oldConfigPath = java.nio.file.Paths.get("baity_config.txt");
-            java.nio.file.Path newConfigPath = baityDir.resolve(CONFIG_FILE_NAME);
-            if (java.nio.file.Files.exists(oldConfigPath) && !java.nio.file.Files.exists(newConfigPath)) {
-                java.nio.file.Files.move(oldConfigPath, newConfigPath);
-                LOGGER.debug("Migrated config to new location: {}", newConfigPath);
+
+            Path jsonPath = baityDir.resolve(CONFIG_JSON_FILE_NAME);
+            Path txtPath = baityDir.resolve(LEGACY_CONFIG_TXT_FILE_NAME);
+            Set<String> seenKeys = new HashSet<>();
+
+            // TODO(v1.6.2): Transitional config.txt migration — remove after v1.6.2 release.
+            if (!Files.exists(jsonPath) && Files.exists(txtPath)) {
+                String content = Files.readString(txtPath, StandardCharsets.UTF_8);
+                seenKeys = applyConfigFromTxt(content);
+                saveConfig();
+                Files.delete(txtPath);
+                LOGGER.info("Migrated {} to {}", txtPath.getFileName(), jsonPath.getFileName());
             }
-            
-            java.nio.file.Path oldBaityConfigPath = java.nio.file.Paths.get("baity/config.txt");
-            if (java.nio.file.Files.exists(oldBaityConfigPath) && !java.nio.file.Files.exists(newConfigPath)) {
-                java.nio.file.Files.move(oldBaityConfigPath, newConfigPath);
-                LOGGER.debug("Migrated config from old baity directory: {}", newConfigPath);
+            // END TODO(v1.6.2)
+
+            if (Files.exists(jsonPath)) {
+                String content = Files.readString(jsonPath, StandardCharsets.UTF_8);
+                seenKeys = applyConfigFromJson(content);
             }
-            
-            java.util.HashSet<String> seenKeys = new java.util.HashSet<>();
-            if (java.nio.file.Files.exists(newConfigPath)) {
-                String content = java.nio.file.Files.readString(newConfigPath).trim();
-                String[] lines = content.split("\n");
-                
-                Map<String, String> legacyKeyAliases = new HashMap<>();
-                legacyKeyAliases.put("  TransparentNormalTag", "  TransparentizeOtherTags");
-                legacyKeyAliases.put("ColorOwnName", "NickTweaks");
-                legacyKeyAliases.put("ColorOwnNameChromaLightness", "NickTweaksChromaLightness");
-                legacyKeyAliases.put("ColorOwnNameChromaChroma", "NickTweaksChromaChroma");
-                legacyKeyAliases.put("ColorOwnNameChromaSize", "NickTweaksChromaSize");
-                legacyKeyAliases.put("ColorOwnNameChromaSpeed", "NickTweaksChromaSpeed");
-                legacyKeyAliases.put("ChromaOwnName", "NickTweaks");
-                legacyKeyAliases.put("ChromaOwnNameChromaLightness", "NickTweaksChromaLightness");
-                legacyKeyAliases.put("ChromaOwnNameChromaChroma", "NickTweaksChromaChroma");
-                legacyKeyAliases.put("ChromaOwnNameChromaSize", "NickTweaksChromaSize");
-                legacyKeyAliases.put("ChromaOwnNameChromaSpeed", "NickTweaksChromaSpeed");
-                legacyKeyAliases.put("Crosshair", "ThirdPersonBackCrosshair");
-                legacyKeyAliases.put("ThirdPersonCrosshair", "ThirdPersonBackCrosshair");
-                
-                legacyKeyAliases.put("FishHookTimerHideArmorStand", "FishHookTimerHideDefaultTimer");
-                legacyKeyAliases.put("KeybindsWardrobeReleaseOnHold", "KeybindsWardrobeHoldToUnequip");
-                legacyKeyAliases.put("KeybindsEquipmentReleaseOnHold", "KeybindsEquipmentHoldToUnequip");
-                legacyKeyAliases.put("FancyDmgSplashActivePresetIndex", "FancyDmgSplashBuiltinPresetMask");
 
-                boolean legacy2dDroppedItemPresent = false;
-                
-                for (String line : lines) {
-                    if (line.trim().isEmpty()) continue;
-                    
-                    int colonIdx = line.indexOf(':');
-                    if (colonIdx <= 0) continue;
-                    
-                    String key = line.substring(0, colonIdx);
-                    String valueStr = line.substring(colonIdx + 1);
+            applyPostLoadLegacyDefaults(seenKeys);
 
-                    if ("2DdroppedItem".equals(key)) {
-                        legacy2dDroppedItemPresent = true;
-                    }
-
-                    if ("NoSwapAnimation".equals(key)) {
-                        Object legacy = parseValue(valueStr, Boolean.class);
-                        if (legacy instanceof Boolean enabled && enabled) {
-                            ConfigManager.heldItemTweaksEnabled = true;
-                            ConfigManager.heldItemTweaksNoItemswapAnimationEnabled = true;
-                        }
-                        seenKeys.add(key);
-                        continue;
-                    }
-                    if ("HandView".equals(key) || "ArmView".equals(key)) {
-                        Object legacy = parseValue(valueStr, Boolean.class);
-                        if (legacy instanceof Boolean enabled && enabled) {
-                            ConfigManager.heldItemTweaksEnabled = true;
-                        }
-                        seenKeys.add(key);
-                        continue;
-                    }
-                    if ("InstantHandFollow".equals(key) || "InstantArmFollow".equals(key) || "instant arm follow".equals(key)) {
-                        Object legacy = parseValue(valueStr, Boolean.class);
-                        if (legacy instanceof Boolean enabled && enabled) {
-                            ConfigManager.heldItemTweaksEnabled = true;
-                            ConfigManager.heldItemTweaksNoArmSwayEnabled = true;
-                        }
-                        seenKeys.add(key);
-                        continue;
-                    }
-                    
-                    if (!CONFIG_FIELDS.containsKey(key) && legacyKeyAliases.containsKey(key)) {
-                        key = legacyKeyAliases.get(key);
-                    }
-                    
-                    SettingField field = CONFIG_FIELDS.get(key);
-                    if (field == null) continue;
-                    seenKeys.add(key);
-                    
-                    ConfigManager instance = null;
-                            Object value = parseValue(valueStr, field.getType());
-                            field.setValue(instance, value);
-                }
-
-                if (legacy2dDroppedItemPresent && !seenKeys.contains("DroppedItem") && ConfigManager.twoDdroppedItemEnabled) {
-                    ConfigManager.droppedItemEnabled = true;
-                }
-                if (ConfigManager.droppedItemEnabled && !seenKeys.contains("DroppedItemRarityScaleEnabled")) {
-                    ConfigManager.droppedItemRarityScaleEnabled = true;
-                }
-            }
             boolean needSave = false;
             if (!seenKeys.contains("BaityPresenceProxyHost")) {
                 ConfigManager.baityPresenceProxyHost = "";
@@ -1169,6 +1118,126 @@ public class ConfigManager {
         } catch (java.io.IOException e) {
             LOGGER.error("Failed to load Baity config: {}", e.toString());
         }
+    }
+
+    private static Set<String> applyConfigFromTxt(String content) {
+        Set<String> seenKeys = new HashSet<>();
+        if (content == null || content.isBlank()) {
+            return seenKeys;
+        }
+        for (String line : content.split("\n")) {
+            if (line.trim().isEmpty()) {
+                continue;
+            }
+            int colonIdx = line.indexOf(':');
+            if (colonIdx <= 0) {
+                continue;
+            }
+            String key = line.substring(0, colonIdx);
+            String valueStr = line.substring(colonIdx + 1);
+            applyConfigEntry(key, valueStr, seenKeys);
+        }
+        return seenKeys;
+    }
+
+    private static Set<String> applyConfigFromJson(String content) {
+        Set<String> seenKeys = new HashSet<>();
+        if (content == null || content.isBlank()) {
+            return seenKeys;
+        }
+        JsonObject root = JsonParser.parseString(content).getAsJsonObject();
+        JsonObject settings = root.has("settings") && root.get("settings").isJsonObject()
+                ? root.getAsJsonObject("settings")
+                : root;
+        for (Map.Entry<String, JsonElement> entry : settings.entrySet()) {
+            String key = entry.getKey();
+            if (key.startsWith("_")) {
+                continue;
+            }
+            applyConfigEntry(key, jsonElementToString(entry.getValue()), seenKeys);
+        }
+        return seenKeys;
+    }
+
+    private static void applyConfigEntry(String key, String valueStr, Set<String> seenKeys) {
+        if ("2DdroppedItem".equals(key)) {
+            seenKeys.add(key);
+        }
+
+        if ("NoSwapAnimation".equals(key)) {
+            Object legacy = parseValue(valueStr, Boolean.class);
+            if (legacy instanceof Boolean enabled && enabled) {
+                ConfigManager.heldItemTweaksEnabled = true;
+                ConfigManager.heldItemTweaksNoItemswapAnimationEnabled = true;
+            }
+            seenKeys.add(key);
+            return;
+        }
+        if ("HandView".equals(key) || "ArmView".equals(key)) {
+            Object legacy = parseValue(valueStr, Boolean.class);
+            if (legacy instanceof Boolean enabled && enabled) {
+                ConfigManager.heldItemTweaksEnabled = true;
+            }
+            seenKeys.add(key);
+            return;
+        }
+        if ("InstantHandFollow".equals(key) || "InstantArmFollow".equals(key) || "instant arm follow".equals(key)) {
+            Object legacy = parseValue(valueStr, Boolean.class);
+            if (legacy instanceof Boolean enabled && enabled) {
+                ConfigManager.heldItemTweaksEnabled = true;
+                ConfigManager.heldItemTweaksNoArmSwayEnabled = true;
+            }
+            seenKeys.add(key);
+            return;
+        }
+
+        SettingField field = CONFIG_FIELDS.get(key);
+        if (field == null) {
+            return;
+        }
+        seenKeys.add(key);
+        ConfigManager instance = null;
+        Object value = parseValue(valueStr, field.getType());
+        field.setValue(instance, value);
+    }
+
+    private static void applyPostLoadLegacyDefaults(Set<String> seenKeys) {
+        if (seenKeys.contains("2DdroppedItem") && !seenKeys.contains("DroppedItem") && ConfigManager.twoDdroppedItemEnabled) {
+            ConfigManager.droppedItemEnabled = true;
+        }
+        if (ConfigManager.droppedItemEnabled && !seenKeys.contains("DroppedItemRarityScaleEnabled")) {
+            ConfigManager.droppedItemRarityScaleEnabled = true;
+        }
+    }
+
+    private static void putJsonValue(JsonObject settings, String key, Object value) {
+        if (value instanceof Boolean boolValue) {
+            settings.addProperty(key, boolValue);
+        } else if (value instanceof Integer intValue) {
+            settings.addProperty(key, intValue);
+        } else if (value instanceof Long longValue) {
+            settings.addProperty(key, longValue);
+        } else if (value instanceof Float floatValue) {
+            settings.addProperty(key, floatValue);
+        } else if (value instanceof Double doubleValue) {
+            settings.addProperty(key, doubleValue);
+        } else {
+            settings.addProperty(key, value == null ? "" : value.toString());
+        }
+    }
+
+    private static String jsonElementToString(JsonElement element) {
+        if (element == null || element.isJsonNull()) {
+            return "";
+        }
+        if (element.isJsonPrimitive()) {
+            JsonPrimitive primitive = element.getAsJsonPrimitive();
+            if (primitive.isString()) {
+                return primitive.getAsString();
+            }
+            return primitive.getAsString();
+        }
+        return element.toString();
     }
 
     private static void seedDefaultCrosshairStaticLayer(java.util.BitSet layer, int size) {

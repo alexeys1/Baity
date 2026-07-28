@@ -51,7 +51,6 @@ public final class FancyDmgSplashPresetStore {
         if (storeInitialized) {
             return;
         }
-        migrateLegacyBuiltinMask();
         if (customPresets.isEmpty()) {
             decodeCustomPresets(ConfigManager.fancyDmgSplashCustomPresets);
         }
@@ -700,13 +699,6 @@ public final class FancyDmgSplashPresetStore {
         }
         Value value = ValueTreeUtils.findByName(module, "color editor");
         return value instanceof FancyDmgSplashColorEditorValue editor ? editor : null;
-    }
-
-    private static void migrateLegacyBuiltinMask() {
-        int mask = getBuiltinMask();
-        if (mask > 0 && mask < BUILTIN_COUNT) {
-            ConfigManager.fancyDmgSplashBuiltinPresetMask = 1 << mask;
-        }
     }
 
     private record PresetCycleEntry(boolean builtin, int index) {

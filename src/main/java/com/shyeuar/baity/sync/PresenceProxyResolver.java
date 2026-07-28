@@ -160,11 +160,12 @@ public final class PresenceProxyResolver {
             }
             int code = connection.getResponseCode();
             if (isReachableStatus(code)) {
-                try (InputStream ignored = connection.getInputStream()) {
+                try (InputStream responseBody = connection.getInputStream()) {
+                    responseBody.transferTo(java.io.OutputStream.nullOutputStream());
                 }
                 return true;
             }
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
         } finally {
             if (connection != null) {
                 connection.disconnect();

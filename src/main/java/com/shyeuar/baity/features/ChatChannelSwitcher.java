@@ -1,4 +1,4 @@
-package com.shyeuar.baity.features.chat;
+package com.shyeuar.baity.features;
 
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.hud.HudElement;

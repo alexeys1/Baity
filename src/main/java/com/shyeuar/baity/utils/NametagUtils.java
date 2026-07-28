@@ -109,11 +109,8 @@ public final class NametagUtils {
         if (player == null) {
             return false;
         }
-        if (AntiBotUtils.isConfirmedBot(player)) {
+        if (AntiBotUtils.isBot(player)) {
             return true;
-        }
-        if (AntiBotUtils.isAntiBotActive() && AntiBotUtils.isPlayerMapEmpty()) {
-            return false;
         }
         return shouldRenderCustomNametag(player);
     }

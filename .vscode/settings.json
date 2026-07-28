@@ -1,0 +1,27 @@
+{
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.import.gradle.enabled": true,
+  "java.import.gradle.wrapper.enabled": true,
+  "java.import.generatesMetadataFilesAtProjectRoot": false,
+  "java.autobuild.enabled": true,
+  "java.maxConcurrentBuilds": 1,
+  "java.compile.nullAnalysis.mode": "disabled",
+  "java.project.importOnFirstTimeStartup": "automatic",
+  "java.import.exclusions": [
+    "**/build/**",
+    "**/.gradle/**",
+    "**/run/**",
+    "**/bin/**"
+  ],
+  "files.watcherExclude": {
+    "**/.gradle/**": true,
+    "**/build/**": true,
+    "**/run/**": true
+  },
+  "files.exclude": {
+    "**/.classpath": true,
+    "**/.project": true,
+    "**/.settings": true,
+    "**/.factorypath": true
+  }
+}

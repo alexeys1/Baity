@@ -1,5 +1,6 @@
 package com.shyeuar.baity.utils;
 
+import com.shyeuar.baity.features.sidepanel.SidePanel;
 import com.shyeuar.baity.mixin.PlayerListHudMixin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
@@ -40,6 +41,8 @@ public final class LocateUtils {
     private static String cachedAreaIslandName = "";
     private static String cachedTabIslandName = "";
     private static String cachedScoreboardSubAreaName = "";
+    private static boolean cachedInRift;
+    private static boolean cachedInSafari;
 
     private LocateUtils() {
     }
@@ -116,6 +119,27 @@ public final class LocateUtils {
         return cachedScoreboardSubAreaName;
     }
 
+    public static boolean isInRift(Minecraft mc) {
+        refresh(mc);
+        return cachedInRift;
+    }
+
+    public static boolean isInSafari(Minecraft mc) {
+        refresh(mc);
+        return cachedInSafari;
+    }
+
+    public static SidePanel.Island panelIsland(Minecraft mc) {
+        refresh(mc);
+        if (cachedInRift) {
+            return SidePanel.Island.RIFT;
+        }
+        if (cachedInSafari) {
+            return SidePanel.Island.SAFARI;
+        }
+        return SidePanel.Island.MAIN;
+    }
+
     public static List<String> readSidebarPlainLines(Minecraft mc) {
         return readSidebarPlainLines(mc, true);
     }
@@ -179,6 +203,8 @@ public final class LocateUtils {
         cachedTabIslandName = "";
         cachedScoreboardSubAreaName = "";
         cachedAreaIslandNameRawLineDungeonPrefix = false;
+        cachedInRift = false;
+        cachedInSafari = false;
 
         if (mc.getCurrentServer() != null && mc.getCurrentServer().ip != null) {
             String ip = mc.getCurrentServer().ip.toLowerCase(Locale.ROOT);
@@ -195,6 +221,31 @@ public final class LocateUtils {
 
         scanTabList(mc);
         cachedScoreboardSubAreaName = parseScoreboardSubArea(mc);
+        updatePanelIslandFlags(mc);
+    }
+
+    private static void updatePanelIslandFlags(Minecraft mc) {
+        String area = normalizeAreaName(cachedAreaIslandName);
+        String tabIsland = normalizeAreaName(cachedTabIslandName);
+        cachedInSafari = "Safari".equalsIgnoreCase(area) || "Safari".equalsIgnoreCase(tabIsland);
+
+        for (String line : readSidebarPlainLines(mc, true)) {
+            if (line.contains("\uE020") || line.startsWith("\u0444 ")) {
+                cachedInRift = true;
+                cachedInSafari = false;
+                return;
+            }
+            if (line.startsWith("Motes:")) {
+                cachedInRift = true;
+                cachedInSafari = false;
+                return;
+            }
+        }
+
+        cachedInRift = "The Rift".equalsIgnoreCase(area) || "The Rift".equalsIgnoreCase(tabIsland);
+        if (cachedInRift) {
+            cachedInSafari = false;
+        }
     }
 
     private static String parseScoreboardSubArea(Minecraft mc) {
@@ -508,5 +559,7 @@ public final class LocateUtils {
         cachedTabIslandName = "";
         cachedScoreboardSubAreaName = "";
         cachedAreaIslandNameRawLineDungeonPrefix = false;
+        cachedInRift = false;
+        cachedInSafari = false;
     }
 }

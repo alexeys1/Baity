@@ -10,6 +10,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.Minecraft;
@@ -116,6 +117,16 @@ public final class SidePanel {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(SidePanel::tick);
+        ClientTickEvents.START_CLIENT_TICK.register(client -> {
+            if (!isModuleEnabled() || client.player == null || !LocateUtils.onHypixel(client)) {
+                return;
+            }
+            SidePanelCache.ensureLookupLoaded(client, profileId(client));
+        });
+        ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
+            SidePanelPets.handleChat(message, overlay);
+            return true;
+        });
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> ensureSessionReady(client));
         ClientLifecycleEvents.CLIENT_STOPPING.register(_ -> {
             SidePanelPets.flushCacheIfDirty();
@@ -186,6 +197,14 @@ public final class SidePanel {
     }
 
     public static boolean isSyncActive(Minecraft client) {
+        return isModuleEnabled() && LocateUtils.inSkyBlock(client);
+    }
+
+    public static boolean isPetChatPassiveActive(Minecraft client) {
+        return isModuleEnabled() && LocateUtils.onHypixel(client);
+    }
+
+    public static boolean isPetMenuPassiveActive(Minecraft client) {
         return isModuleEnabled() && LocateUtils.inSkyBlock(client);
     }
 
@@ -290,7 +309,13 @@ public final class SidePanel {
     }
 
     static void ensureSessionReady(Minecraft client) {
-        if (client.player == null || !isSyncActive(client)) {
+        if (client.player == null || !isModuleEnabled()) {
+            return;
+        }
+        if (LocateUtils.onHypixel(client)) {
+            SidePanelCache.ensureLookupLoaded(client, profileId(client));
+        }
+        if (!isSyncActive(client)) {
             return;
         }
         ensureLoaded(client, profileId(client), LocateUtils.panelIsland(client));
@@ -301,7 +326,7 @@ public final class SidePanel {
     }
 
     static boolean usesGlobalPetCache(Minecraft client) {
-        return !currentPanelIsland().usesSeparateCache();
+        return !LocateUtils.panelIsland(client).usesSeparateCache();
     }
 
     private static void afterIslandCacheLoad(Minecraft client, Island island) {
@@ -610,6 +635,8 @@ public final class SidePanel {
             if (onClose) {
                 SidePanelPets.onPetsMenuClose(screen.getTitle());
                 SidePanelPets.flushCacheIfDirty();
+            } else {
+                SidePanelPets.onPetsMenuInventoryLoaded(menu);
             }
             return;
         }

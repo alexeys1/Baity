@@ -259,14 +259,12 @@ public class SmolFriendsScreen extends Screen {
         if (GuiRenderUtil.isHovered(lobbyListX1, listTop, lobbyListX2, listBottom, (float) lx, (float) ly)) {
             lobbyScroll += verticalAmount > 0 ? -1 : 1;
             lobbyScroll = clampScroll(lobbyScroll, SmolFriendManager.getCurrentLobbyPlayers().size(), listBottom - listTop);
-            SoundUtils.playWoodenButton();
             return true;
         }
 
         if (GuiRenderUtil.isHovered(friendsListX1, listTop, friendsListX2, listBottom, (float) lx, (float) ly)) {
             friendsScroll += verticalAmount > 0 ? -1 : 1;
             friendsScroll = clampScroll(friendsScroll, SmolFriendManager.getFriends().size(), listBottom - listTop);
-            SoundUtils.playWoodenButton();
             return true;
         }
 

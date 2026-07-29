@@ -24,6 +24,56 @@ public final class ComponentTextUtils {
         return buildLegacyFormatted(component, true, false);
     }
 
+    public static String legacyFormatted(Component component) {
+        return trimLegacyResets(getFormattedText(component, false));
+    }
+
+    public static String getFormattedText(Component component) {
+        return getFormattedText(component, false);
+    }
+
+    public static String getFormattedText(Component component, boolean sideBar) {
+        if (component == null) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder(128);
+        boolean[] firstChunk = { true };
+        component.visit((style, string) -> {
+            if (string == null || string.isEmpty()) {
+                return java.util.Optional.empty();
+            }
+            String codes = styleToSectionCodes(style);
+            if (firstChunk[0] && sideBar && "\u00A7f".equals(codes)) {
+                codes = "";
+            }
+            firstChunk[0] = false;
+            out.append(codes).append(string);
+            if (!sideBar) {
+                out.append(ChatFormatting.RESET);
+            }
+            return java.util.Optional.empty();
+        }, Style.EMPTY);
+        return out.toString();
+    }
+
+    public static String stripLegacyResets(String text) {
+        if (text == null || text.isEmpty()) {
+            return text == null ? "" : text;
+        }
+        return text.replace("\u00A7r", "");
+    }
+
+    private static String trimLegacyResets(String text) {
+        String s = text;
+        while (s.endsWith("\u00A7r")) {
+            s = s.substring(0, s.length() - 2);
+        }
+        while (s.startsWith("\u00A7r")) {
+            s = s.substring(2);
+        }
+        return s;
+    }
+
     private static String buildLegacyFormatted(Component component, boolean noExtraResets, boolean leadingWhite) {
         StringBuilder sb = new StringBuilder(50);
         boolean wasFormatted = false;
@@ -45,14 +95,7 @@ public final class ComponentTextUtils {
                 wasFormatted = true;
             }
         }
-        String s = sb.toString();
-        while (s.endsWith("\u00A7r")) {
-            s = s.substring(0, s.length() - 2);
-        }
-        while (s.startsWith("\u00A7r")) {
-            s = s.substring(2);
-        }
-        return s;
+        return trimLegacyResets(sb.toString());
     }
 
     private static List<Component> flattenDepthFirst(Component root) {
@@ -86,8 +129,6 @@ public final class ComponentTextUtils {
             ChatFormatting cf = textColorToNamedFormat(color);
             if (cf != null) {
                 sb.append(cf);
-            } else {
-                sb.append('<').append(Integer.toHexString(color.getValue())).append('>');
             }
         }
         if (s.isBold()) {

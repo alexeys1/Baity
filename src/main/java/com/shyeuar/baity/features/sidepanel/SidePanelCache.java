@@ -192,6 +192,15 @@ final class SidePanelCache {
         loadFromDisk(client, profileId);
     }
 
+    static void ensureLookupLoaded(Minecraft client, String profileId) {
+        if (profileId == null || profileId.isEmpty() || client.level == null) {
+            return;
+        }
+        if (!profileId.equals(loadedProfileId)) {
+            loadIfProfileChanged(client, profileId);
+        }
+    }
+
     static void flush(Minecraft client) {
         if (!diskDirty || loadedProfileId == null || client.level == null) {
             return;

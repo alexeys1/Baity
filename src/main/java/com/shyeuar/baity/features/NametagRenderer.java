@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.config.DevConfig;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
+import com.shyeuar.baity.features.smolpeople.SmolPeopleNametag;
 import com.shyeuar.baity.utils.ClientPickUtils;
 import com.shyeuar.baity.utils.ModuleUtils;
 import com.shyeuar.baity.utils.NickRenderUtils;
@@ -104,13 +104,7 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
                 float partialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
                 heightOffset = ClientPickUtils.getSelfNametagHeightOffset(player, partialTick);
             }
-            
-            Module smolPeopleModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("SmolPeople");
-            if (smolPeopleModule != null && smolPeopleModule.isEnabled()) {
-                if (SmolFriendManager.shouldApplySmolTo(player.getId())) {
-                    heightOffset -= 0.4f;
-                }
-            }
+            heightOffset = SmolPeopleNametag.adjustNametagHeight(heightOffset, player.getId());
             
             matrices.translate(0, heightOffset, 0);
             matrices.mulPose(new org.joml.Quaternionf().rotationY(-cameraYaw * 0.017453292F));

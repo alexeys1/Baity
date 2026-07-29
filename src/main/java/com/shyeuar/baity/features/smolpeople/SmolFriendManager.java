@@ -62,7 +62,7 @@ public final class SmolFriendManager {
             return false;
         }
 
-        if (isLocalPlayerLookalike(targetPlayer) || isLocalPlayerMirror(targetPlayer)) {
+        if (isLocalPlayerMirror(targetPlayer)) {
             return true;
         }
 
@@ -78,7 +78,12 @@ public final class SmolFriendManager {
         return isFriend(targetPlayer.getName().getString());
     }
 
-    private static boolean isLocalPlayerLookalike(Player other) {
+    public static boolean isMirrorSmolEntity(int entityId) {
+        Player player = getPlayerByEntityId(entityId);
+        return player != null && isLocalPlayerMirror(player);
+    }
+
+    private static boolean isLocalPlayerMirror(Player other) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || other == mc.player) {
             return false;
@@ -90,14 +95,15 @@ public final class SmolFriendManager {
 
         String selfName = mc.player.getGameProfile().name();
         String otherName = other.getGameProfile().name();
-        return selfName != null && !selfName.isEmpty() && selfName.equalsIgnoreCase(otherName);
-    }
-
-    private static boolean isLocalPlayerMirror(Player other) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || other == mc.player) {
-            return false;
+        if (selfName != null && !selfName.isEmpty() && otherName != null && !otherName.isEmpty()) {
+            if (selfName.equalsIgnoreCase(otherName)) {
+                return true;
+            }
+            if (otherName.equalsIgnoreCase(reverse(selfName))) {
+                return true;
+            }
         }
+
         if (!(other instanceof net.minecraft.client.player.AbstractClientPlayer otherClient)) {
             return false;
         }
@@ -125,6 +131,10 @@ public final class SmolFriendManager {
             }
         }
         return false;
+    }
+
+    private static String reverse(String value) {
+        return new StringBuilder(value).reverse().toString();
     }
 
     public static Player getPlayerByEntityId(int entityId) {

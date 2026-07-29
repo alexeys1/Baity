@@ -110,7 +110,7 @@ public final class NametagUtils {
             return false;
         }
         if (AntiBotUtils.isBot(player)) {
-            return true;
+            return false;
         }
         return shouldRenderCustomNametag(player);
     }

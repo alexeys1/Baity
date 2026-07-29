@@ -83,7 +83,6 @@
     "KeybindsSlotClickMixin",
     "accessor.AbstractContainerScreenInvoker",
     "SidePanelMixin$ContainerScreenMixin",
-    "SidePanelMixin$ChatMixin",
     "SidePanelMixin$InventoryScreenMixin",
     "SidePanelMixin$PacketMixin",
     "RenderScopeMixin$LivingEntityRenderStateMixin",

@@ -5,12 +5,10 @@ import com.shyeuar.baity.features.sidepanel.SidePanel;
 import com.shyeuar.baity.features.sidepanel.SidePanelPets;
 import com.shyeuar.baity.features.sidepanel.SidePanelSlots;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.multiplayer.ClientPacketListener;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.ContainerInput;
@@ -24,15 +22,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 public class SidePanelMixin {
-
-    @Mixin(ChatComponent.class)
-    public static class ChatMixin {
-
-        @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;)V", at = @At("HEAD"))
-        private void baity$onSidePanelPetChat(Component message, CallbackInfo ci) {
-            SidePanelPets.handleChat(message);
-        }
-    }
 
     @Mixin(ClientPacketListener.class)
     public static class PacketMixin {
@@ -103,7 +92,6 @@ public class SidePanelMixin {
             if (screen instanceof InventoryScreen inventoryScreen && SidePanel.shouldRenderOn(inventoryScreen)) {
                 boolean petPanel = SidePanel.isPetPanelEnabled();
                 SidePanelSlots.renderSlots(screen, graphics, mouseX, mouseY, leftPos, topPos);
-                // extractContents already translated the pose by leftPos/topPos — use local (0,0).
                 SidePanelSlots.renderTopBorderOverlay(graphics, 0, 0, petPanel);
             }
         }

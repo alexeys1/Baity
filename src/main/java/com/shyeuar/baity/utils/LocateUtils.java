@@ -19,6 +19,9 @@ import java.util.regex.Pattern;
 
 public final class LocateUtils {
 
+    private static final Pattern HYPIXEL_SERVER_BRAND = Pattern.compile(
+            ".*Hypixel BungeeCord.*",
+            Pattern.CASE_INSENSITIVE);
     private static final Pattern SCOREBOARD_SKYBLOCK_TITLE = Pattern.compile(
             "SK[YI]BLOCK(?: CO-OP| GUEST)?(?: [♲☀Ⓑ])?",
             Pattern.CASE_INSENSITIVE);
@@ -28,6 +31,12 @@ public final class LocateUtils {
     private static final Pattern SCOREBOARD_GUEST_TITLE = Pattern.compile(
             "SK[YI]BLOCK\\s+GUEST",
             Pattern.CASE_INSENSITIVE);
+    private static final String[] SKYBLOCK_TITLE_PREFIXES = {
+            "SKYBLOCK",
+            "空岛生存",
+            "空島生存"
+    };
+    private static final long SKYBLOCK_LEAVE_GRACE_MS = 10_000L;
     private static final Pattern TAB_AREA_LINE = Pattern.compile(
             "^(?:Area|Island|Dungeon):\\s*(.+)$",
             Pattern.CASE_INSENSITIVE);
@@ -35,6 +44,8 @@ public final class LocateUtils {
     private static final Pattern SB_SUBAREA_RIFT = Pattern.compile("\u0444\\s*(?<area>.+)");
 
     private static long cacheGameTime = Long.MIN_VALUE;
+    private static long lastFoundScoreboardMs = -1L;
+    private static boolean stickyOnSkyblock;
     private static boolean cachedOnHypixel;
     private static boolean cachedScoreboardSkyblock;
     private static boolean cachedSkyblockGuest;
@@ -186,7 +197,7 @@ public final class LocateUtils {
     private static boolean cachedAreaIslandNameRawLineDungeonPrefix;
 
     private static void refresh(Minecraft mc) {
-        if (mc.level == null) {
+        if (mc.level == null || mc.isLocalServer()) {
             clear();
             return;
         }
@@ -196,7 +207,7 @@ public final class LocateUtils {
         }
         cacheGameTime = t;
 
-        cachedOnHypixel = false;
+        cachedOnHypixel = detectOnHypixel(mc);
         cachedScoreboardSkyblock = false;
         cachedSkyblockGuest = false;
         cachedAreaIslandName = "";
@@ -206,22 +217,63 @@ public final class LocateUtils {
         cachedInRift = false;
         cachedInSafari = false;
 
-        if (mc.getCurrentServer() != null && mc.getCurrentServer().ip != null) {
-            String ip = mc.getCurrentServer().ip.toLowerCase(Locale.ROOT);
-            cachedOnHypixel = ip.contains("hypixel.net") || ip.contains("hypixel");
+        boolean foundScoreboard = false;
+        boolean foundSkyblockTitle = false;
+        if (cachedOnHypixel) {
+            String titlePlain = sidebarObjectivePlainTitle(mc);
+            if (titlePlain != null && !titlePlain.isEmpty()) {
+                foundScoreboard = true;
+                lastFoundScoreboardMs = System.currentTimeMillis();
+                String strippedTitle = removeColorCodes(titlePlain).trim();
+                foundSkyblockTitle = isSkyblockScoreboardTitle(strippedTitle);
+                cachedSkyblockGuest = strippedTitle.endsWith("GUEST")
+                        || SCOREBOARD_GUEST_TITLE.matcher(strippedTitle).find();
+            }
         }
 
-        String titlePlain = sidebarObjectivePlainTitle(mc);
-        if (titlePlain != null && !titlePlain.isEmpty()) {
-            String tPlain = removeColorCodes(titlePlain).trim();
-            cachedScoreboardSkyblock = SCOREBOARD_SKYBLOCK_TITLE.matcher(tPlain).matches()
-                    || SCOREBOARD_SKYBLOCK_SHORT.matcher(tPlain).find();
-            cachedSkyblockGuest = SCOREBOARD_GUEST_TITLE.matcher(tPlain).find();
+        if (foundSkyblockTitle) {
+            stickyOnSkyblock = true;
+        } else if (stickyOnSkyblock
+                && (foundScoreboard || System.currentTimeMillis() - lastFoundScoreboardMs > SKYBLOCK_LEAVE_GRACE_MS)) {
+            stickyOnSkyblock = false;
         }
+        cachedScoreboardSkyblock = stickyOnSkyblock && cachedOnHypixel;
 
         scanTabList(mc);
         cachedScoreboardSubAreaName = parseScoreboardSubArea(mc);
         updatePanelIslandFlags(mc);
+    }
+
+    private static boolean detectOnHypixel(Minecraft mc) {
+        if (mc.player != null && mc.player.connection != null) {
+            String brand = mc.player.connection.serverBrand();
+            if (brand != null) {
+                if (HYPIXEL_SERVER_BRAND.matcher(brand).matches()) {
+                    return true;
+                }
+                if (brand.toLowerCase(Locale.ROOT).contains("hypixel")) {
+                    return true;
+                }
+            }
+        }
+        if (mc.getCurrentServer() != null && mc.getCurrentServer().ip != null) {
+            String ip = mc.getCurrentServer().ip.toLowerCase(Locale.ROOT);
+            return ip.contains("hypixel.net") || ip.contains("hypixel");
+        }
+        return false;
+    }
+
+    private static boolean isSkyblockScoreboardTitle(String strippedTitle) {
+        if (strippedTitle == null || strippedTitle.isEmpty()) {
+            return false;
+        }
+        for (String prefix : SKYBLOCK_TITLE_PREFIXES) {
+            if (strippedTitle.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return SCOREBOARD_SKYBLOCK_TITLE.matcher(strippedTitle).matches()
+                || SCOREBOARD_SKYBLOCK_SHORT.matcher(strippedTitle).find();
     }
 
     private static void updatePanelIslandFlags(Minecraft mc) {
@@ -552,6 +604,8 @@ public final class LocateUtils {
 
     private static void clear() {
         cacheGameTime = Long.MIN_VALUE;
+        lastFoundScoreboardMs = -1L;
+        stickyOnSkyblock = false;
         cachedOnHypixel = false;
         cachedScoreboardSkyblock = false;
         cachedSkyblockGuest = false;

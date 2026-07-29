@@ -3,6 +3,7 @@ package com.shyeuar.baity.features.sidepanel;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.shyeuar.baity.features.droppeditem.SkyblockItemRarity;
+import com.shyeuar.baity.utils.ComponentTextUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -17,6 +18,7 @@ import net.minecraft.util.StringUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.component.ItemLore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +29,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -40,9 +43,9 @@ public final class SidePanelPets {
     private static final Pattern PET_LEVEL_PATTERN = Pattern.compile(
             "(§7\\[Lvl )(?<level>\\d+)(] )(§8\\[§.)?(?<cosmeticLevel>\\d+)?(.*)"
     );
-    private static final Pattern STRIP_PET_NAME = Pattern.compile("]\\s(?:§.)*([\\w- ]+(?:§. ✦)?)");
+    private static final Pattern STRIP_PET_NAME = Pattern.compile("]\\s*(?:§.)*([\\w- ]+(?:§. ✦)?)");
     private static final Pattern AUTOPET_PATTERN = Pattern.compile(
-            "§cAutopet §eequipped your §7\\[Lvl (?<level>\\d+)](?: §8\\[§6\\d+§8§.✦§8])? §(?<rarityColor>.)(?<name>.*)§e! §a§lVIEW RULE§r"
+            "§cAutopet §eequipped your §7\\[Lvl (?<level>\\d+)](?: §8\\[§6\\d+§8§.✦§8])? §(?<rarityColor>.)(?<name>.*)§e!(?: §a§lVIEW RULE§r)?"
     );
     private static final Pattern PET_LEVELED_UP_PATTERN = Pattern.compile(
             "§aYour §r§(?<rarityColor>.)(?<name>.*?)(?<cosmetic>§r§. ✦)? §r§aleveled up to level §r(?:§.)*(?<newLevel>\\d+)§r§a!§r"
@@ -58,18 +61,12 @@ public final class SidePanelPets {
     private static boolean cacheDirty;
     private static Integer lastClickedSlot;
     private static Integer lastClickedButton;
-    private static ItemStack lastClickedStack;
 
     private SidePanelPets() {
     }
 
     public static void tick(Minecraft client) {
-        if (!SidePanel.isSyncActive(client)) {
-            updatePetCache = true;
-            previousPage = -1;
-            return;
-        }
-        if (!SidePanel.usesGlobalPetCache(client)) {
+        if (!SidePanel.isPetMenuPassiveActive(client)) {
             updatePetCache = true;
             previousPage = -1;
             return;
@@ -131,19 +128,93 @@ public final class SidePanelPets {
             cacheDirty = true;
         }
         updatePetCache = false;
-        syncActivePetFromScan();
     }
 
-    private static void syncActivePetFromScan() {
-        if (!SidePanel.usesGlobalPetCache(Minecraft.getInstance())) {
+    public static void onPetsMenuInventoryLoaded(net.minecraft.world.inventory.AbstractContainerMenu menu) {
+        syncSelectedPetFromMenu(menu);
+        updatePetCache = true;
+    }
+
+    private static void syncSelectedPetFromMenu(net.minecraft.world.inventory.AbstractContainerMenu menu) {
+        if (menu.slots.size() <= 4) {
             return;
         }
-        for (Map.Entry<Integer, CachedPet> entry : petMap.entrySet()) {
-            if (entry.getValue().info.active) {
-                setCurrentPetIndex(entry.getKey());
-                return;
+        ItemStack bone = menu.getSlot(4).getItem();
+        if (!bone.is(Items.BONE)) {
+            return;
+        }
+        ItemLore lore = bone.get(DataComponents.LORE);
+        if (lore == null) {
+            return;
+        }
+
+        String selectedPetLine = null;
+        for (Component line : lore.lines()) {
+            String text = line.getString();
+            if (text.contains("Selected pet:")) {
+                int colon = text.indexOf(':');
+                if (colon != -1) {
+                    selectedPetLine = text.substring(colon + 2).trim();
+                }
+                break;
             }
         }
+        if (selectedPetLine == null) {
+            return;
+        }
+        if (selectedPetLine.contains("None")) {
+            setCurrentPetIndex(-1);
+            return;
+        }
+        if (isCurrentPetValid(selectedPetLine)) {
+            return;
+        }
+        int bestIndex = findBestPetIndexForSelectedLine(selectedPetLine);
+        if (bestIndex >= 0) {
+            setCurrentPetIndex(bestIndex);
+        }
+    }
+
+    private static boolean isCurrentPetValid(String selectedPetLine) {
+        if (currentPetIdx < 0) {
+            return selectedPetLine.contains("None");
+        }
+        CachedPet currentPet = petMap.get(currentPetIdx);
+        if (currentPet == null) {
+            return false;
+        }
+        String resolved = resolveAncientGoldenDragonException(currentPet, selectedPetLine);
+        String display = SidePanelUtils.stripFormatting(currentPet.displayName);
+        return display.endsWith(SidePanelUtils.stripFormatting(resolved));
+    }
+
+    private static int findBestPetIndexForSelectedLine(String selectedPetLine) {
+        int bestIndex = Integer.MIN_VALUE;
+        for (Map.Entry<Integer, CachedPet> entry : petMap.entrySet()) {
+            CachedPet pet = entry.getValue();
+            String resolved = resolveAncientGoldenDragonException(pet, selectedPetLine);
+            String display = SidePanelUtils.stripFormatting(pet.displayName);
+            if (display.endsWith(SidePanelUtils.stripFormatting(resolved))) {
+                if (bestIndex == Integer.MIN_VALUE) {
+                    bestIndex = entry.getKey();
+                } else {
+                    bestIndex = Integer.MIN_VALUE;
+                    break;
+                }
+            }
+        }
+        return bestIndex == Integer.MIN_VALUE ? -1 : bestIndex;
+    }
+
+    private static String resolveAncientGoldenDragonException(CachedPet pet, String selectedPetLine) {
+        if (pet.info.skin != null && "GOLDEN_DRAGON_ANCIENT".equals(pet.info.skin)) {
+            return selectedPetLine.replace(" ✦", "");
+        }
+        return selectedPetLine;
+    }
+
+    private static boolean isPetGridSlot(int slotId) {
+        return slotId >= 10 && slotId <= 43;
     }
 
     static int findBestPetIndex(String petLine) {
@@ -220,15 +291,20 @@ public final class SidePanelPets {
         return score;
     }
 
-    public static void handleChat(Component message) {
-        Minecraft client = Minecraft.getInstance();
-        if (!SidePanel.isSyncActive(client) || !SidePanel.usesGlobalPetCache(client)) {
+    public static void handleChat(Component message, boolean overlay) {
+        if (overlay) {
             return;
         }
-        String formatted = message.getString();
+        Minecraft client = Minecraft.getInstance();
+        if (!SidePanel.isPetChatPassiveActive(client)) {
+            return;
+        }
+        SidePanelCache.ensureLookupLoaded(client, SidePanel.profileId(client));
+        String formatted = ComponentTextUtils.getFormattedText(message);
+        String autopetFormatted = ComponentTextUtils.stripLegacyResets(formatted);
         Matcher matcher;
 
-        if ((matcher = AUTOPET_PATTERN.matcher(formatted)).find()) {
+        if ((matcher = AUTOPET_PATTERN.matcher(autopetFormatted)).find()) {
             findCurrentPetFromAutopet(matcher.group("level"), matcher.group("rarityColor"), matcher.group("name"));
         } else if ((matcher = PET_LEVELED_UP_PATTERN.matcher(formatted)).find()) {
             int newLevel = Integer.parseInt(matcher.group("newLevel"));
@@ -253,31 +329,25 @@ public final class SidePanelPets {
         if (client.hasShiftDown()) {
             if (button == 0) {
                 updatePetCache = true;
-                lastClickedSlot = null;
-                lastClickedButton = null;
-                lastClickedStack = null;
+                clearLastClick();
             }
             return;
         }
-        if (slotId < 54 && button == 1) {
+        if (slotId < 54 && button == 1 && isPetGridSlot(slotId)) {
             int index = slotId + pageOffset(screen.getTitle());
             if (petMap.remove(index) != null) {
                 updatePetCache = true;
                 cacheDirty = true;
             }
-            lastClickedSlot = null;
-            lastClickedButton = null;
-            lastClickedStack = null;
+            clearLastClick();
+            return;
+        }
+        if (!isPetGridSlot(slotId)) {
+            clearLastClick();
             return;
         }
         lastClickedSlot = slotId;
         lastClickedButton = button;
-        if (slotId >= 0 && slotId < screen.getMenu().slots.size()) {
-            ItemStack stack = screen.getMenu().getSlot(slotId).getItem();
-            lastClickedStack = stack.isEmpty() ? null : stack.copy();
-        } else {
-            lastClickedStack = null;
-        }
     }
 
     public static void onPetsMenuClose(Component title) {
@@ -289,54 +359,24 @@ public final class SidePanelPets {
             return;
         }
         if (lastClickedSlot == null || lastClickedSlot >= 54) {
-            syncActivePetFromScan();
-            clearLastClick();
-            return;
-        }
-
-        if (lastClickedButton != null && lastClickedButton == 1) {
             clearLastClick();
             return;
         }
 
         int index = lastClickedSlot + pageOffset(title);
-        ItemStack clicked = lastClickedStack;
+        Integer clickedButton = lastClickedButton;
         clearLastClick();
 
-        if (clicked == null || clicked.isEmpty()) {
-            CachedPet cached = petMap.get(index);
-            if (cached == null) {
-                return;
-            }
-            if (cached.info.active) {
-                setCurrentPetIndex(-1);
-            } else {
-                setCurrentPetIndex(index);
-            }
+        CachedPet cached = petMap.get(index);
+        if (cached == null) {
             return;
         }
-
-        if (SidePanelUtils.isPlaceholderPane(clicked)) {
+        if (cached.info.active) {
             setCurrentPetIndex(-1);
             return;
         }
-
-        if (!clicked.is(Items.PLAYER_HEAD)) {
+        if (clickedButton != null && clickedButton == 1) {
             return;
-        }
-
-        ItemStack itemCopy = stripTimestamp(clicked.copy());
-        PetInfo info = petInfoFromStack(itemCopy);
-        if (info != null && info.active) {
-            setCurrentPetIndex(-1);
-            return;
-        }
-
-        parsePetItemAndSave(clicked);
-        CachedPet fresh = petFromStack(itemCopy);
-        if (fresh != null) {
-            petMap.put(index, fresh);
-            cacheDirty = true;
         }
         setCurrentPetIndex(index);
     }
@@ -344,7 +384,6 @@ public final class SidePanelPets {
     private static void clearLastClick() {
         lastClickedSlot = null;
         lastClickedButton = null;
-        lastClickedStack = null;
     }
 
     public static void flushCacheIfDirty() {
@@ -432,34 +471,41 @@ public final class SidePanelPets {
 
         CachedPet newPet = petFromStack(itemCopy);
         if (newPet == null) {
-            SidePanel.set(SidePanel.SlotKind.PET, itemCopy);
-            SidePanel.persistNow();
             return;
         }
 
+        int index = upsertPetInMap(newPet, itemCopy);
+        setCurrentPetIndex(index);
+    }
+
+    private static int upsertPetInMap(CachedPet newPet, ItemStack itemCopy) {
         UUID newId = newPet.info.uniqueId;
-        Integer matchedIndex = null;
         if (newId != null) {
             for (Map.Entry<Integer, CachedPet> entry : petMap.entrySet()) {
                 CachedPet existing = entry.getValue();
                 if (newId.equals(existing.info.uniqueId)) {
-                    matchedIndex = entry.getKey();
-                    petMap.put(matchedIndex, newPet);
+                    int index = entry.getKey();
+                    petMap.put(index, newPet);
                     ItemStack oldItem = existing.decodeItem(Minecraft.getInstance());
                     if (oldItem == null || !ItemStack.matches(oldItem, itemCopy)) {
                         cacheDirty = true;
                     }
-                    break;
+                    return index;
                 }
             }
         }
 
-        if (matchedIndex != null) {
-            setCurrentPetIndex(matchedIndex);
-        } else {
-            SidePanel.set(SidePanel.SlotKind.PET, itemCopy);
-            SidePanel.persistNow();
+        int byLine = findBestPetIndex(newPet.displayName);
+        if (byLine >= 0) {
+            petMap.put(byLine, newPet);
+            cacheDirty = true;
+            return byLine;
         }
+
+        int index = petMap.keySet().stream().mapToInt(Integer::intValue).max().orElse(9) + 1;
+        petMap.put(index, newPet);
+        cacheDirty = true;
+        return index;
     }
 
     static void applyLoadedCurrentPet() {
@@ -560,28 +606,49 @@ public final class SidePanelPets {
 
     private static void findCurrentPetFromAutopet(String levelString, String rarityColor, String petName) {
         int level = Integer.parseInt(levelString);
+        if (rarityColor == null || rarityColor.isEmpty()) {
+            return;
+        }
         SkyblockItemRarity rarity = rarityFromColor(rarityColor.charAt(0));
-        String strippedName = stripPetName(petName);
+        String targetName = autopetComparableName(petName);
 
         for (Map.Entry<Integer, CachedPet> entry : petMap.entrySet()) {
             CachedPet pet = entry.getValue();
-            if (stripPetName(pet.displayName).equals(strippedName)
-                    && pet.petLevel == level
-                    && SkyblockItemRarity.fromTierName(pet.info.tier) == rarity) {
-                setCurrentPetIndex(entry.getKey());
+            if (!autopetComparableName(stripPetName(pet.displayName)).equalsIgnoreCase(targetName)) {
+                continue;
+            }
+            if (pet.petLevel != level) {
+                continue;
+            }
+            if (pet.info.petRarity != rarity && rarity != SkyblockItemRarity.UNKNOWN) {
+                continue;
+            }
+            setCurrentPetIndex(entry.getKey());
+            return;
+        }
+
+        String autopetLine = "§7[Lvl " + level + "] §" + rarityColor + petName;
+        int bestIndex = findBestPetIndex(autopetLine);
+        if (bestIndex >= 0) {
+            CachedPet best = petMap.get(bestIndex);
+            if (best != null && best.petLevel == level) {
+                setCurrentPetIndex(bestIndex);
             }
         }
+    }
+
+    private static String autopetComparableName(String rawName) {
+        return SidePanelUtils.stripFormatting(stripPetName(rawName != null ? rawName : "")).trim();
     }
 
     private static void updateAndSetCurrentLevelledPet(int newLevel, String rarityColor, String petName) {
         SkyblockItemRarity rarity = rarityFromColor(rarityColor.charAt(0));
         CachedPet currentPet = currentPetIdx >= 0 ? petMap.get(currentPetIdx) : null;
-        String strippedTarget = stripPetName(petName);
 
         for (Map.Entry<Integer, CachedPet> entry : petMap.entrySet()) {
             CachedPet pet = entry.getValue();
-            if (!stripPetName(pet.displayName).equals(strippedTarget)
-                    || SkyblockItemRarity.fromTierName(pet.info.tier) != rarity) {
+            if (!stripPetName(pet.displayName).equals(petName)
+                    || pet.info.petRarity != rarity) {
                 continue;
             }
 
@@ -629,7 +696,7 @@ public final class SidePanelPets {
         if (name == null) {
             return null;
         }
-        String displayName = FAVORITE_PATTERN.matcher(name.getString()).replaceAll("");
+        String displayName = FAVORITE_PATTERN.matcher(ComponentTextUtils.getFormattedText(name, true)).replaceAll("");
         int petLevel = petLevelFromDisplayName(displayName);
         if (petLevel < 0) {
             return null;
@@ -651,7 +718,7 @@ public final class SidePanelPets {
             JsonObject object = JsonParser.parseString(json).getAsJsonObject();
             PetInfo info = new PetInfo();
             info.active = object.has("active") && object.get("active").getAsBoolean();
-            info.tier = object.has("tier") ? object.get("tier").getAsString() : "COMMON";
+            info.petRarity = parsePetRarity(object);
             if (object.has("uniqueId") && !object.get("uniqueId").isJsonNull()) {
                 try {
                     info.uniqueId = UUID.fromString(object.get("uniqueId").getAsString());
@@ -670,10 +737,31 @@ public final class SidePanelPets {
             if (object.has("type")) {
                 info.petSkyblockId = object.get("type").getAsString();
             }
+            if (object.has("skin") && !object.get("skin").isJsonNull()) {
+                info.skin = object.get("skin").getAsString();
+            }
             return info;
         } catch (RuntimeException exception) {
             return null;
         }
+    }
+
+    private static SkyblockItemRarity parsePetRarity(JsonObject object) {
+        if (!object.has("tier") || object.get("tier").isJsonNull()) {
+            return SkyblockItemRarity.COMMON;
+        }
+        return petRarityFromTierName(object.get("tier").getAsString());
+    }
+
+    private static SkyblockItemRarity petRarityFromTierName(String tier) {
+        if (tier == null || tier.isEmpty()) {
+            return SkyblockItemRarity.COMMON;
+        }
+        return switch (tier.toUpperCase(Locale.ROOT)) {
+            case "SUPREME" -> SkyblockItemRarity.DIVINE;
+            case "UNOBTAINABLE" -> SkyblockItemRarity.ADMIN;
+            default -> SkyblockItemRarity.fromTierName(tier);
+        };
     }
 
     private static ItemStack stripTimestamp(ItemStack stack) {
@@ -782,8 +870,9 @@ public final class SidePanelPets {
     private static final class PetInfo {
         private String petSkyblockId;
         private boolean active;
-        private String tier;
+        private SkyblockItemRarity petRarity = SkyblockItemRarity.COMMON;
         private String heldItemId;
+        private String skin;
         private UUID uuid;
         private UUID uniqueId;
     }
@@ -818,12 +907,15 @@ public final class SidePanelPets {
             tag.putInt("petLevel", petLevel);
             CompoundTag infoTag = new CompoundTag();
             infoTag.putBoolean("active", info.active);
-            infoTag.putString("tier", info.tier == null ? "COMMON" : info.tier);
+            infoTag.putString("tier", info.petRarity.name());
             if (info.petSkyblockId != null) {
                 infoTag.putString("type", info.petSkyblockId);
             }
             if (info.heldItemId != null) {
                 infoTag.putString("heldItem", info.heldItemId);
+            }
+            if (info.skin != null) {
+                infoTag.putString("skin", info.skin);
             }
             if (info.uuid != null) {
                 infoTag.putString("uuid", info.uuid.toString());
@@ -842,12 +934,15 @@ public final class SidePanelPets {
             PetInfo info = new PetInfo();
             CompoundTag infoTag = tag.getCompound("info").orElse(new CompoundTag());
             info.active = infoTag.getBooleanOr("active", false);
-            info.tier = infoTag.getStringOr("tier", "COMMON");
+            info.petRarity = petRarityFromTierName(infoTag.getStringOr("tier", "COMMON"));
             if (infoTag.contains("type")) {
                 info.petSkyblockId = infoTag.getString("type").orElse(null);
             }
             if (infoTag.contains("heldItem")) {
                 info.heldItemId = infoTag.getString("heldItem").orElse(null);
+            }
+            if (infoTag.contains("skin")) {
+                info.skin = infoTag.getString("skin").orElse(null);
             }
             if (infoTag.contains("uuid")) {
                 info.uuid = UUID.fromString(infoTag.getString("uuid").orElse(""));

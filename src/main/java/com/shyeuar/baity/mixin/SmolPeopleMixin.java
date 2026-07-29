@@ -2,6 +2,7 @@ package com.shyeuar.baity.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.config.ConfigManager;
+import com.shyeuar.baity.features.smolpeople.SmolPeopleNametag;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
@@ -33,9 +34,6 @@ public class SmolPeopleMixin {
     @Mixin(AvatarRenderer.class)
     public static class SmolNameTagMixin {
 
-        @Unique
-        private static final float SMOL_NAMETAG_Y_OFFSET = -0.4f;
-
         @Inject(
             method = AVATAR_SUBMIT_NAME_DISPLAY,
             at = @At("HEAD")
@@ -47,12 +45,9 @@ public class SmolPeopleMixin {
             CameraRenderState cameraState,
             CallbackInfo ci
         ) {
-            Module smolPeopleModule = ModuleManager.getModuleByName("SmolPeople");
-            if (smolPeopleModule == null || !smolPeopleModule.isEnabled()) {
-                return;
-            }
-            if (SmolFriendManager.shouldApplySmolTo(state.id)) {
-                matrices.translate(0, SMOL_NAMETAG_Y_OFFSET, 0);
+            float offset = SmolPeopleNametag.getVerticalOffset(state.id);
+            if (offset != 0f) {
+                matrices.translate(0, offset, 0);
             }
         }
     }

@@ -79,6 +79,13 @@ java {
     withSourcesJar()
 }
 
+sourceSets {
+    test {
+        java.setSrcDirs([])
+        resources.setSrcDirs([])
+    }
+}
+
 jar {
     from("LICENSE") {
         rename { "${it}_baity"}

@@ -4,6 +4,7 @@ import com.shyeuar.baity.gui.input.LineTextInput;
 import com.shyeuar.baity.gui.internal.ClickGuiLayout;
 import com.shyeuar.baity.gui.internal.ClickGuiSearchUtils;
 import com.shyeuar.baity.gui.internal.ClickGuiState;
+import com.shyeuar.baity.gui.internal.ClickGuiWatermark;
 import com.shyeuar.baity.gui.theme.Theme;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.render.ModuleStyleRenderer;
@@ -627,30 +628,21 @@ public class ClickGuiRootComponent extends BaseUIComponent {
     }
     
     private void renderWatermark(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
-        String prefix = "Baity by ";
-        String handleName = "@11YearCookieBuff";
+        ClickGuiWatermark.Layout layout = ClickGuiWatermark.layout(client);
+        String prefix = ClickGuiWatermark.PREFIX;
+        String handleName = ClickGuiWatermark.handleName();
+        float wmScale = ClickGuiWatermark.SCALE;
 
-        float wmScale = 0.70f;
-        int prefixWidth = client.font.width(prefix);
-        int handleNameWidth = client.font.width(handleName);
-
-        float totalScaledWidth = wmScale * (prefixWidth + handleNameWidth);
-        float baseX = ClickGuiState.WIDTH - totalScaledWidth - 8;
-        float baseY = 8;
+        float baseX = layout.baseX();
+        float baseY = layout.baseY();
+        float handleX1 = layout.handleX1();
+        float handleX2 = layout.handleX2();
+        float lineY = layout.lineY();
 
         int baseColor = new java.awt.Color(120, 124, 132).getRGB();
         int hoverColor = 0xFFFFFF00;
 
-        float handleX1 = baseX + wmScale * prefixWidth;
-        float handleX2 = handleX1 + wmScale * handleNameWidth;
-
-        float lineY = baseY + (int)(client.font.lineHeight * wmScale) + 1;
-        float handleY1 = baseY;
-        float handleY2 = baseY + (int)(client.font.lineHeight * wmScale);
-
-        boolean isHovered = mouseX >= handleX1 && mouseX <= handleX2 &&
-            ((mouseY >= handleY1 && mouseY <= handleY2) ||
-             (mouseY >= lineY && mouseY <= lineY + 1));
+        boolean isHovered = ClickGuiWatermark.isHandleHovered(mouseX, mouseY, layout);
 
         int prefixTextColor = baseColor;
         int handleTextColor = isHovered ? hoverColor : baseColor;

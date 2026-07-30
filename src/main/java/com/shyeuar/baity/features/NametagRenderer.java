@@ -171,7 +171,7 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
         }
         int prefixWidth = 0;
         if (isDeveloper) {
-            prefixWidth = textRenderer.width(DevConfig.DEV_PREFIX) + 2;
+            prefixWidth = textRenderer.width("[") + textRenderer.width("Dev") + textRenderer.width("]") + 2;
         }
 
         String distanceText = null;
@@ -188,11 +188,16 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
         MultiBufferSource.BufferSource immediate = mc.renderBuffers().bufferSource();
         
         int distanceColorWithAlpha = 0xFF00FFFF;
-        int devColorWithAlpha = DevConfig.DEV_PREFIX_COLOR | 0xFF000000;
-        
+        int bracketColorWithAlpha = DevConfig.DEV_PREFIX_COLOR | 0xFF000000;
+        int devTextColorWithAlpha = DevConfig.DEV_TEXT_COLOR | 0xFF000000;
+
         if (isDeveloper) {
-            textRenderer.drawInBatch(DevConfig.DEV_PREFIX, currentX, 0, devColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
-            currentX += prefixWidth;
+            textRenderer.drawInBatch("[", currentX, 0, bracketColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+            currentX += textRenderer.width("[");
+            textRenderer.drawInBatch("Dev", currentX, 0, devTextColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+            currentX += textRenderer.width("Dev");
+            textRenderer.drawInBatch("]", currentX, 0, bracketColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+            currentX += textRenderer.width("]") + 2;
         }
         
         textRenderer.drawInBatch(nameComponent, currentX, 0, 0xFFFFFFFF, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);

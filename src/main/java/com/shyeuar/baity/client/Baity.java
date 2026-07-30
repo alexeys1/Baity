@@ -49,6 +49,7 @@ public class Baity implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         com.shyeuar.baity.config.BaityConfigDir.init();
+        com.shyeuar.baity.config.DevConfig.initWatermarkHandle();
         RemoteFileFetcher.init();
         BlockAnimationSwordCatalog.init();
         Objects.requireNonNull(CustomTotemItem.CUSTOM_TOTEM);

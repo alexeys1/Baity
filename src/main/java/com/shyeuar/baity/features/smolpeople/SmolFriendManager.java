@@ -95,13 +95,12 @@ public final class SmolFriendManager {
 
         String selfName = mc.player.getGameProfile().name();
         String otherName = other.getGameProfile().name();
-        if (selfName != null && !selfName.isEmpty() && otherName != null && !otherName.isEmpty()) {
-            if (selfName.equalsIgnoreCase(otherName)) {
-                return true;
-            }
-            if (otherName.equalsIgnoreCase(reverse(selfName))) {
-                return true;
-            }
+        if (namesMatchMirror(selfName, otherName)) {
+            return true;
+        }
+
+        if (matchesVisibleName(mc.player, other)) {
+            return true;
         }
 
         if (!(other instanceof net.minecraft.client.player.AbstractClientPlayer otherClient)) {
@@ -131,6 +130,34 @@ public final class SmolFriendManager {
             }
         }
         return false;
+    }
+
+    private static boolean matchesVisibleName(Player self, Player other) {
+        for (String selfVisible : collectVisibleNames(self)) {
+            for (String otherVisible : collectVisibleNames(other)) {
+                if (namesMatchMirror(selfVisible, otherVisible)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static String[] collectVisibleNames(Player player) {
+        String plainName = player.getName().getString();
+        String displayName = player.getDisplayName() != null ? player.getDisplayName().getString() : null;
+        if (plainName != null && displayName != null && plainName.equals(displayName)) {
+            return new String[] { plainName };
+        }
+        return new String[] { plainName, displayName };
+    }
+
+    private static boolean namesMatchMirror(String selfName, String otherName) {
+        if (selfName == null || selfName.isBlank() || otherName == null || otherName.isBlank()) {
+            return false;
+        }
+        return selfName.equalsIgnoreCase(otherName)
+            || otherName.equalsIgnoreCase(reverse(selfName));
     }
 
     private static String reverse(String value) {

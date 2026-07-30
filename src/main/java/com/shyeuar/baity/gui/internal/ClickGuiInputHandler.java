@@ -958,40 +958,22 @@ public class ClickGuiInputHandler {
     
     private boolean handleWatermarkClick(ClickGuiLayout.ScaledCoordinates coords, int button) {
         if (button != 0) return false;
-        
+
         Minecraft client = Minecraft.getInstance();
         if (client == null) return false;
 
-        String prefix = "Baity by ";
-        String handleName = "@11YearCookieBuff";
-        float wmScale = 0.70f;
-
-        int prefixWidth = client.font.width(prefix);
-        int handleNameWidth = client.font.width(handleName);
-
-        float totalScaledWidth = wmScale * (prefixWidth + handleNameWidth);
-        float baseX = ClickGuiState.WIDTH - totalScaledWidth - 8;
-        float baseY = 8;
-
-        float handleX1 = baseX + wmScale * prefixWidth;
-        float handleX2 = handleX1 + wmScale * handleNameWidth;
-        float lineY = baseY + (int)(client.font.lineHeight * wmScale) + 1;
-        float handleY1 = baseY;
-        float handleY2 = baseY + (int)(client.font.lineHeight * wmScale);
-
-        boolean hovered =
-            coords.mouseX >= handleX1 && coords.mouseX <= handleX2 &&
-            ((coords.mouseY >= handleY1 && coords.mouseY <= handleY2) ||
-             (coords.mouseY >= lineY && coords.mouseY <= lineY + 1));
-
-        if (!hovered) return false;
+        ClickGuiWatermark.Layout layout = ClickGuiWatermark.layout(client);
+        if (!ClickGuiWatermark.isHandleHovered(coords.mouseX, coords.mouseY, layout)) {
+            return false;
+        }
 
         try {
-            net.minecraft.util.Util.getPlatform().openUri(new java.net.URI("https://space.bilibili.com/522178337"));
+            net.minecraft.util.Util.getPlatform().openUri(new java.net.URI(com.shyeuar.baity.config.DevConfig.getBilibiliSpaceUrl()));
         } catch (Exception e) {
             if (client.player != null) {
                 client.player.sendSystemMessage(
-                    net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://space.bilibili.com/522178337")
+                    net.minecraft.network.chat.Component.literal(
+                        "无法打开浏览器，请手动访问: " + com.shyeuar.baity.config.DevConfig.getBilibiliSpaceUrl())
                 );
             }
         }

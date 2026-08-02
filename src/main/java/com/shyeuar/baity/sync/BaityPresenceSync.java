@@ -1,5 +1,7 @@
 package com.shyeuar.baity.sync;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -52,6 +54,7 @@ public final class BaityPresenceSync {
     private static final long SOFT_STALE_AFTER_MS = 3L * 24L * 60L * 60L * 1000L;
     private static final long HARD_EXPIRE_AFTER_MS = 3L * 24L * 60L * 60L * 1000L;
     private static final Path CACHE_FILE_PATH = BaityConfigDir.getBaityConfigDir().resolve("remote-users-cache.json");
+    private static final Gson CACHE_GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static final AtomicBoolean FETCHING = new AtomicBoolean(false);
     private static final AtomicBoolean REPORTING = new AtomicBoolean(false);
@@ -1006,6 +1009,11 @@ public final class BaityPresenceSync {
             String json = Files.readString(CACHE_FILE_PATH, StandardCharsets.UTF_8);
             if (json == null || json.isBlank()) return;
             applyPayload(json, false);
+            // TODO(v1.6.3): Transitional remote-users-cache.json pretty-print migration — remove after v1.6.3 release.
+            if (isMinifiedCacheJson(json)) {
+                saveCacheToDisk(json);
+            }
+            // END TODO(v1.6.3)
         } catch (Exception ignored) {
         }
     }
@@ -1017,9 +1025,20 @@ public final class BaityPresenceSync {
             if (parent != null && !Files.exists(parent)) {
                 Files.createDirectories(parent);
             }
-            Files.writeString(CACHE_FILE_PATH, json, StandardCharsets.UTF_8);
+            Files.writeString(CACHE_FILE_PATH, formatPrettyCacheJson(json), StandardCharsets.UTF_8);
         } catch (Exception ignored) {
         }
+    }
+
+    private static String formatPrettyCacheJson(String json) {
+        return CACHE_GSON.toJson(JsonParser.parseString(json));
+    }
+
+    private static boolean isMinifiedCacheJson(String json) {
+        if (json == null || json.isBlank()) {
+            return false;
+        }
+        return !json.contains("\n") && !json.contains("\r");
     }
 
     private static int[] parsePalette(JsonArray array) {

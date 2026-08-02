@@ -52,25 +52,37 @@ public class ShulkerHighlights implements LevelRenderEvents.AfterSolidFeatures {
         if (module == null || !module.isEnabled()) return;
         if (!ConfigManager.highlightsShulkerEnabled) return;
         if (MC.level == null || MC.player == null) return;
-        if (!LocateUtils.isGalatea(MC)) return;
+
+        boolean torrhus = LocateUtils.isTorrhusCanyon(MC);
+        boolean galatea = LocateUtils.isGalatea(MC);
+        if (!torrhus && !galatea) return;
+
+        float r;
+        float g;
+        float b;
+        if (torrhus) {
+            r = 1.0f;
+            g = 0.78f;
+            b = 0.08f;
+        } else {
+            r = 0.7f;
+            g = 1.0f;
+            b = 0.0f;
+        }
+        float a = 0.9f;
 
         Vec3 cameraPos = context.levelState().cameraRenderState.pos;
         PoseStack matrices = context.poseStack();
         MultiBufferSource buffers = context.bufferSource();
         if (matrices == null || buffers == null) return;
 
+        VertexConsumer lines = buffers.getBuffer(NO_DEPTH_LINES);
+
         for (Entity entity : MC.level.entitiesForRendering()) {
             if (!(entity instanceof Shulker shulker)) continue;
             if (!shulker.isAlive()) continue;
 
             AABB box = shulker.getBoundingBox().inflate(0.01);
-
-            float r = 0.7f;
-            float g = 1.0f;
-            float b = 0.0f;
-            float a = 0.9f;
-
-            VertexConsumer lines = buffers.getBuffer(NO_DEPTH_LINES);
             EntityDrawUtils.drawWireBoxAtWorld(matrices, lines, box, cameraPos, r, g, b, a);
         }
 

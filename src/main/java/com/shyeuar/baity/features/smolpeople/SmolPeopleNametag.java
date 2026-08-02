@@ -18,14 +18,17 @@ public final class SmolPeopleNametag {
     }
 
     public static boolean usesSmolNametag(int entityId) {
-        return isSmolPeopleActive() && SmolFriendManager.shouldApplySmolTo(entityId);
+        if (!isSmolPeopleActive()) {
+            return false;
+        }
+        if (SmolFriendManager.isMirrorNametagArmorStand(entityId)) {
+            return true;
+        }
+        return SmolFriendManager.shouldApplySmolTo(entityId);
     }
 
     public static float getVerticalOffset(int entityId) {
         if (!usesSmolNametag(entityId)) {
-            return 0f;
-        }
-        if (SmolFriendManager.isMirrorSmolEntity(entityId)) {
             return 0f;
         }
         return VERTICAL_OFFSET;

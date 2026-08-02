@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "SmolPeopleMixin$SmolNameTagMixin",
+    "SmolPeopleMixin$SmolLivingNameTagMixin",
     "SmolPeopleMixin$SmolPlayerEntityRendererMixin",
     "SmolPeopleMixin$SmolPlayerRendererMixin",
     "SmolPeopleMixin$SmolCameraMixin",

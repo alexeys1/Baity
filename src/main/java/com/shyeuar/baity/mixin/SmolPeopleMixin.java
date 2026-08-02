@@ -6,6 +6,7 @@ import com.shyeuar.baity.features.smolpeople.SmolPeopleNametag;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
+import com.shyeuar.baity.render.RenderScope;
 import com.shyeuar.baity.utils.NoSwimPoseUtils;
 import net.minecraft.client.Camera;
 import net.minecraft.client.CameraType;
@@ -15,6 +16,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -31,6 +33,9 @@ public class SmolPeopleMixin {
     private static final String AVATAR_SUBMIT_NAME_DISPLAY =
         "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V";
 
+    private static final String LIVING_SUBMIT_NAME_DISPLAY =
+        "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V";
+
     @Mixin(AvatarRenderer.class)
     public static class SmolNameTagMixin {
 
@@ -46,6 +51,30 @@ public class SmolPeopleMixin {
             CallbackInfo ci
         ) {
             float offset = SmolPeopleNametag.getVerticalOffset(state.id);
+            if (offset != 0f) {
+                matrices.translate(0, offset, 0);
+            }
+        }
+    }
+
+    @Mixin(LivingEntityRenderer.class)
+    public static class SmolLivingNameTagMixin {
+
+        @Inject(
+            method = LIVING_SUBMIT_NAME_DISPLAY,
+            at = @At("HEAD"),
+            order = 1100
+        )
+        private void baity$adjustMirrorArmorStandNameTagHeight(
+            LivingEntityRenderState state,
+            PoseStack matrices,
+            SubmitNodeCollector queue,
+            CameraRenderState cameraState,
+            int lineOffset,
+            CallbackInfo ci
+        ) {
+            int entityId = RenderScope.getNameTagSubmitEntityId();
+            float offset = SmolPeopleNametag.getVerticalOffset(entityId);
             if (offset != 0f) {
                 matrices.translate(0, offset, 0);
             }

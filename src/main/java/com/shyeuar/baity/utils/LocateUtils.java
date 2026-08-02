@@ -91,6 +91,15 @@ public final class LocateUtils {
         return n.contains("Galatea");
     }
 
+    public static boolean isTorrhusCanyon(Minecraft mc) {
+        refresh(mc);
+        if (!inSkyBlock(mc)) {
+            return false;
+        }
+        String n = normalizeAreaName(cachedAreaIslandName);
+        return n.contains("Torrhus");
+    }
+
     public static boolean isHub(Minecraft mc) {
         refresh(mc);
         if (!inSkyBlock(mc) || isDungeonHub(mc)) {

@@ -16,7 +16,6 @@ import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -36,8 +35,10 @@ public final class SmolFriendManager {
     private static final Map<String, String> FRIENDS = new LinkedHashMap<>();
     private static final String FRIENDS_FILE_NAME = "smol-friends.txt";
     private static final Pattern VALID_PLAYER_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9_]{3,16}$");
+    private static final Pattern MOB_PET_NAMETAG_PREFIX = Pattern.compile("^\\[Lv\\d+]", Pattern.CASE_INSENSITIVE);
     private static final long LOBBY_PLAYERS_REFRESH_INTERVAL_MS = 500L;
-    private static final double MIRROR_ARMOR_STAND_RADIUS = 1.0;
+    private static final double MIRROR_ARMOR_STAND_HORIZONTAL_HALF_EXTENT = 1.0;
+    private static final double MIRROR_ARMOR_STAND_COLUMN_HEIGHT_BLOCKS = 4.0;
     private static List<String> cachedLobbyPlayers = List.of();
     private static long lastLobbyPlayersRefreshTime = 0L;
 
@@ -100,17 +101,21 @@ public final class SmolFriendManager {
         if (!(entity instanceof ArmorStand armorStand)) {
             return false;
         }
-        if (!armorStand.isInvisible()) {
+        if (!isNametagArmorStandCandidate(armorStand)) {
             return false;
         }
-        if (!armorStandNameMatchesLocalPlayer(mc, armorStand)) {
+
+        String standDisplayName = getArmorStandDisplayName(armorStand);
+        String localDisplayName = getLocalPlayerDisplayName(mc.player);
+        if (!nametagDisplayNamesMatch(localDisplayName, standDisplayName)) {
             return false;
         }
-        for (Player player : mc.level.players()) {
-            if (player == mc.player || !isLocalPlayerMirror(player)) {
+
+        for (Player mirrorPlayer : mc.level.players()) {
+            if (mirrorPlayer == mc.player || !isLocalPlayerMirror(mirrorPlayer)) {
                 continue;
             }
-            if (isWithinMirrorArmorStandRadius(player, armorStand)) {
+            if (isWithinMirrorArmorStandRadius(mirrorPlayer, armorStand)) {
                 return true;
             }
         }
@@ -274,39 +279,71 @@ public final class SmolFriendManager {
     }
 
     private static boolean isWithinMirrorArmorStandRadius(Player mirrorPlayer, ArmorStand armorStand) {
-        AABB searchBox = mirrorPlayer.getBoundingBox().inflate(MIRROR_ARMOR_STAND_RADIUS);
-        return searchBox.intersects(armorStand.getBoundingBox());
+        double dx = armorStand.getX() - mirrorPlayer.getX();
+        double dy = armorStand.getY() - mirrorPlayer.getY();
+        double dz = armorStand.getZ() - mirrorPlayer.getZ();
+        if (Math.abs(dx) > MIRROR_ARMOR_STAND_HORIZONTAL_HALF_EXTENT
+                || Math.abs(dz) > MIRROR_ARMOR_STAND_HORIZONTAL_HALF_EXTENT) {
+            return false;
+        }
+        double playerCenterYOffset = 1.0;
+        double halfHeight = MIRROR_ARMOR_STAND_COLUMN_HEIGHT_BLOCKS * 0.5;
+        return dy >= playerCenterYOffset - halfHeight
+            && dy <= playerCenterYOffset + halfHeight;
     }
 
-    private static boolean armorStandNameMatchesLocalPlayer(Minecraft mc, ArmorStand armorStand) {
-        if (!armorStand.hasCustomName() || armorStand.getCustomName() == null) {
-            return false;
-        }
-        String standName = LocateUtils.toPlainText(armorStand.getCustomName().getString());
+    private static boolean isNametagArmorStandCandidate(ArmorStand armorStand) {
+        return armorStand.isInvisible()
+            && armorStand.hasCustomName()
+            && !isExcludedNametagArmorStand(armorStand);
+    }
+
+    private static boolean isExcludedNametagArmorStand(ArmorStand armorStand) {
+        String standName = getArmorStandDisplayName(armorStand);
         if (standName.isBlank()) {
+            return true;
+        }
+        if (standName.equalsIgnoreCase("CLICK")) {
+            return true;
+        }
+        if (standName.equalsIgnoreCase("Armor Stand")) {
+            return true;
+        }
+        return MOB_PET_NAMETAG_PREFIX.matcher(standName).find() || standName.indexOf('\u2764') >= 0;
+    }
+
+    private static String getArmorStandDisplayName(ArmorStand armorStand) {
+        if (armorStand.getCustomName() != null) {
+            return LocateUtils.toPlainText(armorStand.getCustomName().getString()).trim();
+        }
+        return LocateUtils.toPlainText(armorStand.getName().getString()).trim();
+    }
+
+    private static String getLocalPlayerDisplayName(Player player) {
+        if (player.getDisplayName() != null) {
+            return LocateUtils.toPlainText(player.getDisplayName().getString()).trim();
+        }
+        return LocateUtils.toPlainText(player.getName().getString()).trim();
+    }
+
+    private static boolean nametagDisplayNamesMatch(String localDisplayName, String standDisplayName) {
+        if (localDisplayName == null || standDisplayName == null) {
             return false;
         }
-        for (String localName : collectLocalPlayerNames(mc.player)) {
-            if (localName == null || localName.isBlank()) {
-                continue;
-            }
-            if (standName.equalsIgnoreCase(localName) || standName.equalsIgnoreCase(reverse(localName))) {
-                return true;
-            }
+        String local = localDisplayName.trim();
+        String stand = standDisplayName.trim();
+        if (local.isEmpty() || stand.isEmpty()) {
+            return false;
+        }
+        if (local.equalsIgnoreCase(stand)) {
+            return true;
+        }
+        if (local.length() > stand.length()
+                && local.regionMatches(true, 0, stand, 0, stand.length())
+                && !Character.isLetterOrDigit(local.charAt(stand.length()))) {
+            return true;
         }
         return false;
-    }
-
-    private static String[] collectLocalPlayerNames(Player player) {
-        String profileName = player.getGameProfile().name();
-        String plainName = LocateUtils.toPlainText(player.getName().getString());
-        String displayName = player.getDisplayName() != null
-            ? LocateUtils.toPlainText(player.getDisplayName().getString())
-            : null;
-        if (displayName != null && displayName.equals(plainName)) {
-            return new String[] { profileName, plainName };
-        }
-        return new String[] { profileName, plainName, displayName };
     }
 
     public static Player getPlayerByEntityId(int entityId) {
@@ -498,4 +535,5 @@ public final class SmolFriendManager {
         ConfigManager.smolFriendList = String.join(",", FRIENDS.values());
         ConfigManager.requestSave();
     }
+
 }

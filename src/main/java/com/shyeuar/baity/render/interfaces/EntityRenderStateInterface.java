@@ -24,4 +24,11 @@ public interface EntityRenderStateInterface {
 
 	default void baity$setHidePaperDollArmor(boolean hidePaperDollArmor) {
 	}
+
+	default int baity$getEntityId() {
+		return -1;
+	}
+
+	default void baity$setEntityId(int entityId) {
+	}
 }

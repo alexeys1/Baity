@@ -5,6 +5,8 @@ import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.render.RenderScope;
+import com.shyeuar.baity.render.interfaces.EntityRenderStateInterface;
+import com.shyeuar.baity.features.smolpeople.SmolPeopleNametag;
 import com.shyeuar.baity.utils.NametagUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -12,7 +14,6 @@ import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
-import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.feature.NameTagFeatureRenderer;
@@ -34,12 +35,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class NametagMixin {
 
     private static final String SUBMIT_NAME_DISPLAY = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V";
+    private static final String ENTITY_SUBMIT_NAME_DISPLAY = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V";
 
     @Mixin(EntityRenderer.class)
     public abstract static class ExtractMixin<T extends Entity, S extends EntityRenderState> {
 
         @Inject(method = "extractRenderState", at = @At("TAIL"))
         private void baity$ensureOwnNameTagOnExtract(T entity, S state, float tickDelta, CallbackInfo ci) {
+            if (state instanceof EntityRenderStateInterface context) {
+                context.baity$setEntityId(entity.getId());
+            }
             if (RenderScope.isPaperDollRender()) {
                 return;
             }
@@ -141,10 +146,43 @@ public class NametagMixin {
         }
 
         private static int baity$resolveEntityId(LivingEntityRenderState state) {
-            if (state instanceof AvatarRenderState avatarRenderState) {
-                return avatarRenderState.id;
+            return RenderScope.resolveLivingEntityRenderStateId(state);
+        }
+    }
+
+    @Mixin(EntityRenderer.class)
+    public static class EntitySubmitMixin {
+
+        @Inject(
+            method = ENTITY_SUBMIT_NAME_DISPLAY,
+            at = @At("HEAD")
+        )
+        private void baity$offsetMirrorArmorStandNametag(
+            EntityRenderState state,
+            PoseStack matrices,
+            SubmitNodeCollector queue,
+            CameraRenderState cameraState,
+            int lineOffset,
+            CallbackInfo ci
+        ) {
+            if (RenderScope.isPaperDollRender()) {
+                return;
             }
-            return RenderScope.getNameTagSubmitEntityId();
+            int entityId = baity$resolveEntityRenderStateId(state);
+            float offset = SmolPeopleNametag.getMirrorNametagArmorStandOffset(entityId);
+            if (offset != 0f) {
+                matrices.translate(0, offset, 0);
+            }
+        }
+
+        private static int baity$resolveEntityRenderStateId(EntityRenderState state) {
+            if (state instanceof EntityRenderStateInterface context) {
+                int entityId = context.baity$getEntityId();
+                if (entityId >= 0) {
+                    return entityId;
+                }
+            }
+            return -1;
         }
     }
 

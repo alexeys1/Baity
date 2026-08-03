@@ -2,6 +2,7 @@ package com.shyeuar.baity.render;
 
 import com.shyeuar.baity.render.interfaces.CameraRenderStateInterface;
 import com.shyeuar.baity.render.interfaces.EntityRenderStateInterface;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 
@@ -190,6 +191,19 @@ public final class RenderScope {
 
     public static int getNameTagSubmitEntityId() {
         return NAME_TAG_SUBMIT_ENTITY_ID.get();
+    }
+
+    public static int resolveLivingEntityRenderStateId(LivingEntityRenderState state) {
+        if (state instanceof AvatarRenderState avatar) {
+            return avatar.id;
+        }
+        if (state instanceof EntityRenderStateInterface context) {
+            int entityId = context.baity$getEntityId();
+            if (entityId >= 0) {
+                return entityId;
+            }
+        }
+        return getNameTagSubmitEntityId();
     }
 
     public static boolean isWorldNameTagAdd() {

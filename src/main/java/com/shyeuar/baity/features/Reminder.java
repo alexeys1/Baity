@@ -3,6 +3,7 @@ package com.shyeuar.baity.features;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.utils.DurationParseUtils;
 import com.shyeuar.baity.utils.LocateUtils;
@@ -24,9 +25,12 @@ public class Reminder {
 
     private static final int GOD_POTION_WARN_MINUTES = 30;
     private static final int COOKIE_SB_POLL_SECONDS = 30;
+    private static final long KAT_ENTER_NOTIFY_DELAY_MS = 3_000L;
+    private static final long KAT_NOTIFY_COOLDOWN_MS = 10 * 60 * 1000L;
 
     private static Reminder instance;
     private static boolean chatRegistered;
+    private static boolean connectionRegistered;
 
     private static ItemStack cookieDisplayIcon;
     private static ItemStack godPotionDisplayIcon;
@@ -56,17 +60,21 @@ public class Reminder {
     private static final Pattern GOD_POTION_PATTERN = Pattern.compile(
         "You have a God Potion active! (\\d+) (Days?|Hours?|Minutes?|Mins?|Min) Use '/effects' to see the effects!"
     );
+    private static final Pattern CHAT_TIMESTAMP_PREFIX = Pattern.compile(
+        "^\\[\\d{1,2}:\\d{2}(?::\\d{2})?\\]\\s*"
+    );
+    private static final Pattern KAT_NPC_MARKER = Pattern.compile("\\[NPC\\] Kat:");
     private static final Pattern KAT_GIVE_PATTERN = Pattern.compile(
-        "^\\[NPC] Kat: I'll get your (.+?) upgraded to .+ in no time!$"
+        "\\[NPC] Kat: I'll get your (.+?) upgraded to .+ in no time!"
     );
     private static final Pattern KAT_REMIND_PATTERN = Pattern.compile(
-        "^\\[NPC] Kat: I'm currently taking care of your (.+?)!$"
+        "\\[NPC] Kat: I'm currently taking care of your (.+?)!"
     );
     private static final Pattern KAT_DURATION_PATTERN = Pattern.compile(
-        "^\\[NPC] Kat: Come back in (.+) to pick it up!$"
+        "\\[NPC] Kat: Come back in (.+?) to pick it up!"
     );
     private static final Pattern KAT_DURATION_REMIND_PATTERN = Pattern.compile(
-        "^\\[NPC] Kat: You can pick it up in (.+)\\.$"
+        "\\[NPC] Kat: You can pick it up in (.+?)\\.?"
     );
 
     private boolean cookieAlreadyNotified = false;
@@ -77,6 +85,8 @@ public class Reminder {
     private int cookieSbPollTaskId = -1;
     private int godPotionNotifyTaskId = -1;
     private int katNotifyTaskId = -1;
+    private int katEnterNotifyTaskId = -1;
+    private long lastKatNotifyMs = 0L;
 
     public static Reminder getInstance() {
         if (instance == null) {
@@ -91,7 +101,16 @@ public class Reminder {
             reminder.startSkyBlockPresenceWatcher();
             reminder.rescheduleKatNotification();
             reminder.registerChatListener();
+            reminder.registerConnectionListener();
         }
+    }
+
+    private void registerConnectionListener() {
+        if (connectionRegistered) {
+            return;
+        }
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> scheduleKatServerJoinCheck());
+        connectionRegistered = true;
     }
 
     private void registerChatListener() {
@@ -127,7 +146,7 @@ public class Reminder {
     }
 
     private void onSkyBlockEnter() {
-        onKatSkyBlockConnect();
+        scheduleKatServerJoinCheck();
         tryCheckCookieReminder();
         startCookieSbPoll();
         rescheduleGodPotionNotification();
@@ -136,6 +155,7 @@ public class Reminder {
     private void onSkyBlockLeave() {
         cancelCookieSbPoll();
         cancelGodPotionNotification();
+        cancelKatEnterNotify();
     }
 
     private void startCookieSbPoll() {
@@ -250,15 +270,13 @@ public class Reminder {
 
     private void rescheduleKatNotification() {
         cancelKatNotification();
-        if (ConfigManager.reminderKatReadyAtMs <= 0L) {
-            return;
-        }
-        if (ConfigManager.reminderKatPetName == null || ConfigManager.reminderKatPetName.isEmpty()) {
+        if (!hasKatUpgradeScheduled()) {
             return;
         }
 
         long delayMs = ConfigManager.reminderKatReadyAtMs - System.currentTimeMillis();
         if (delayMs <= 0L) {
+            trySendKatTimerNotification();
             return;
         }
 
@@ -268,41 +286,89 @@ public class Reminder {
                 rescheduleKatNotification();
                 return;
             }
-            trySendKatNotification();
+            trySendKatTimerNotification();
         }, delayMs);
     }
 
-    private void trySendKatNotification() {
-        if (!isKatReminderActive() || !isKatUpgradeReady()) {
+    /** Timer reached its real-time deadline while the player is in SkyBlock. */
+    private void trySendKatTimerNotification() {
+        trySendKatNotification(false);
+    }
+
+    /** After joining or switching to a SkyBlock server when the deadline already passed. */
+    private void trySendKatEnterNotification() {
+        trySendKatNotification(true);
+    }
+
+    private void trySendKatNotification(boolean enforceCooldown) {
+        if (!isKatReminderConfigured() || !isInSkyBlock() || !isKatUpgradeReady()) {
             return;
+        }
+        if (enforceCooldown) {
+            long now = System.currentTimeMillis();
+            if (now - lastKatNotifyMs < KAT_NOTIFY_COOLDOWN_MS) {
+                return;
+            }
         }
         sendKatNotification();
     }
 
-    private void onKatSkyBlockConnect() {
-        if (ConfigManager.reminderKatReadyAtMs <= 0L) {
+    private void scheduleKatServerJoinCheck() {
+        cancelKatEnterNotify();
+        if (!hasKatUpgradeScheduled() || !isKatReminderConfigured()) {
+            return;
+        }
+        katEnterNotifyTaskId = TickSchedulerUtils.getInstance().runLaterMillis(() -> {
+            katEnterNotifyTaskId = -1;
+            onKatServerJoin();
+        }, KAT_ENTER_NOTIFY_DELAY_MS);
+    }
+
+    private void onKatServerJoin() {
+        if (!hasKatUpgradeScheduled() || !isKatReminderConfigured() || !isInSkyBlock()) {
             return;
         }
         if (ConfigManager.reminderKatReadyAtMs > System.currentTimeMillis()) {
             rescheduleKatNotification();
             return;
         }
-        TickSchedulerUtils.getInstance().runLater(this::trySendKatNotification, 10);
+        trySendKatEnterNotification();
+    }
+
+    private void onKatReminderReenabled() {
+        if (!hasKatUpgradeScheduled() || !isKatReminderConfigured()) {
+            return;
+        }
+        if (isKatUpgradeReady()) {
+            if (isInSkyBlock()) {
+                trySendKatNotification(true);
+            }
+            return;
+        }
+        rescheduleKatNotification();
+    }
+
+    private void cancelKatEnterNotify() {
+        if (katEnterNotifyTaskId != -1) {
+            TickSchedulerUtils.getInstance().cancelTask(katEnterNotifyTaskId);
+            katEnterNotifyTaskId = -1;
+        }
     }
 
     private void handleKatChat(String raw) {
-        if (!isReminderModuleEnabled()) {
-            return;
-        }
-        Minecraft client = Minecraft.getInstance();
-        if (!LocateUtils.isHub(client)) {
-            return;
-        }
         if (raw == null || !raw.contains("[NPC] Kat:")) {
             return;
         }
 
-        String text = LocateUtils.toPlainText(raw);
+        String text = normalizeKatChatMessage(raw);
+        if (!KAT_NPC_MARKER.matcher(text).find()) {
+            return;
+        }
+
+        // Keep maintaining an existing timer (clear / update) even when the module is off.
+        if (!isKatReminderConfigured() && !hasKatUpgradeScheduled()) {
+            return;
+        }
         if (text.contains("[NPC] Kat: A flower? For me? How sweet!")) {
             reduceKatReadyAt(TimeUnit.DAYS.toMillis(1));
             return;
@@ -371,7 +437,7 @@ public class Reminder {
         ConfigManager.reminderKatReadyAtMs = System.currentTimeMillis();
         ConfigManager.saveConfig();
         cancelKatNotification();
-        trySendKatNotification();
+        trySendKatTimerNotification();
     }
 
     private void clearKatUpgrade() {
@@ -379,21 +445,24 @@ public class Reminder {
         ConfigManager.reminderKatReadyAtMs = 0L;
         ConfigManager.saveConfig();
         cancelKatNotification();
+        cancelKatEnterNotify();
+        lastKatNotifyMs = 0L;
     }
 
-    private boolean isKatUpgradeReady() {
+    private boolean hasKatUpgradeScheduled() {
         if (ConfigManager.reminderKatReadyAtMs <= 0L) {
             return false;
         }
-        if (ConfigManager.reminderKatPetName == null || ConfigManager.reminderKatPetName.isEmpty()) {
-            return false;
-        }
-        return System.currentTimeMillis() >= ConfigManager.reminderKatReadyAtMs;
+        return ConfigManager.reminderKatPetName != null && !ConfigManager.reminderKatPetName.isEmpty();
     }
 
-    private boolean isReminderModuleEnabled() {
-        com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
-        return reminderModule != null && reminderModule.isEnabled();
+    private boolean isKatUpgradeReady() {
+        return hasKatUpgradeScheduled() && System.currentTimeMillis() >= ConfigManager.reminderKatReadyAtMs;
+    }
+
+    private String normalizeKatChatMessage(String raw) {
+        String text = LocateUtils.toPlainText(raw);
+        return CHAT_TIMESTAMP_PREFIX.matcher(text).replaceFirst("");
     }
 
     private boolean isCookieReminderActive() {
@@ -410,11 +479,12 @@ public class Reminder {
         return isInSkyBlock() && subEnabled;
     }
 
-    private boolean isKatReminderActive() {
+    private boolean isKatReminderConfigured() {
         com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
-        if (reminderModule == null || !reminderModule.isEnabled()) return false;
-        boolean subEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "kat reminder", false);
-        return isInSkyBlock() && subEnabled;
+        if (reminderModule == null || !reminderModule.isEnabled()) {
+            return false;
+        }
+        return com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "kat reminder", false);
     }
 
     private void sendCookieNotification() {
@@ -448,7 +518,11 @@ public class Reminder {
 
     private void sendKatNotification() {
         Minecraft client = Minecraft.getInstance();
-        if (client.player == null) return;
+        if (client.player == null) {
+            return;
+        }
+
+        lastKatNotifyMs = System.currentTimeMillis();
 
         String petName = ConfigManager.reminderKatPetName;
         if (petName == null || petName.isEmpty()) {
@@ -527,14 +601,18 @@ public class Reminder {
 
     public static void updateSettings() {
         com.shyeuar.baity.gui.module.Module reminderModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Reminder");
-        if (reminderModule == null) return;
+        if (reminderModule == null) {
+            return;
+        }
 
         Reminder reminder = getInstance();
-        if (reminder == null) return;
-
-        boolean cookieEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "cookie buff reminder", false);
-        boolean godPotionEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "god potion reminder", false);
-        boolean katEnabled = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "kat reminder", false);
+        boolean moduleOn = reminderModule.isEnabled();
+        boolean cookieEnabled = moduleOn
+            && com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "cookie buff reminder", false);
+        boolean godPotionEnabled = moduleOn
+            && com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "god potion reminder", false);
+        boolean katEnabled = moduleOn
+            && com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(reminderModule, "kat reminder", false);
 
         reminder.setCookieReminderEnabled(cookieEnabled);
         reminder.setGodPotionReminderEnabled(godPotionEnabled);
@@ -577,14 +655,11 @@ public class Reminder {
     }
 
     public void setKatReminderEnabled(boolean enabled) {
-        ConfigManager.reminderKatEnabled = enabled;
         if (!enabled) {
             cancelKatNotification();
-        } else {
-            rescheduleKatNotification();
-            if (isInSkyBlock()) {
-                onKatSkyBlockConnect();
-            }
+            cancelKatEnterNotify();
+            return;
         }
+        onKatReminderReenabled();
     }
 }

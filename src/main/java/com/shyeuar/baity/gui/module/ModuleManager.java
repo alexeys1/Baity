@@ -532,17 +532,20 @@ public class ModuleManager {
                 new ModuleRegistry.ValueConfigInfo(
                     "cookie buff reminder",
                     () -> ConfigManager.reminderCookieBuffEnabled,
-                    val -> ConfigManager.reminderCookieBuffEnabled = (Boolean) val
+                    val -> ConfigManager.reminderCookieBuffEnabled = (Boolean) val,
+                    com.shyeuar.baity.features.Reminder::updateSettings
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "god potion reminder",
                     () -> ConfigManager.reminderGodPotionEnabled,
-                    val -> ConfigManager.reminderGodPotionEnabled = (Boolean) val
+                    val -> ConfigManager.reminderGodPotionEnabled = (Boolean) val,
+                    com.shyeuar.baity.features.Reminder::updateSettings
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "kat reminder",
                     () -> ConfigManager.reminderKatEnabled,
-                    val -> ConfigManager.reminderKatEnabled = (Boolean) val
+                    val -> ConfigManager.reminderKatEnabled = (Boolean) val,
+                    com.shyeuar.baity.features.Reminder::updateSettings
                 )
             }
         );

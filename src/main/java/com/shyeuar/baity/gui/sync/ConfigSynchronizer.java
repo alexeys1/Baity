@@ -60,12 +60,15 @@ public class ConfigSynchronizer {
             config.setConfigValue(enabled);
             ConfigManager.saveConfig();
         }
+        if ("Reminder".equals(moduleName)) {
+            com.shyeuar.baity.features.Reminder.updateSettings();
+        }
     }
     
     public static void handleValueUpdate(String moduleName, String valueName, Object value) {
         String key = moduleName + "::" + valueName;
         ConfigLink<Object> config = valueConfigMap.get(key);
-        if (config != null) {
+            if (config != null) {
             config.setConfigValue(value);
             ConfigManager.saveConfig();
 

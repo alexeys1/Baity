@@ -1055,7 +1055,7 @@ public class ConfigManager {
             Path txtPath = baityDir.resolve(LEGACY_CONFIG_TXT_FILE_NAME);
             Set<String> seenKeys = new HashSet<>();
 
-            // TODO(v1.6.2): Transitional config.txt migration — remove after v1.6.2 release.
+            // TODO(v1.6.4): Transitional config.txt migration — remove after v1.6.4 release.
             if (!Files.exists(jsonPath) && Files.exists(txtPath)) {
                 String content = Files.readString(txtPath, StandardCharsets.UTF_8);
                 seenKeys = applyConfigFromTxt(content);
@@ -1063,7 +1063,7 @@ public class ConfigManager {
                 Files.delete(txtPath);
                 LOGGER.info("Migrated {} to {}", txtPath.getFileName(), jsonPath.getFileName());
             }
-            // END TODO(v1.6.2)
+            // END TODO(v1.6.4)
 
             if (Files.exists(jsonPath)) {
                 String content = Files.readString(jsonPath, StandardCharsets.UTF_8);

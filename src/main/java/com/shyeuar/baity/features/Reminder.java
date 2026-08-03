@@ -276,7 +276,7 @@ public class Reminder {
 
         long delayMs = ConfigManager.reminderKatReadyAtMs - System.currentTimeMillis();
         if (delayMs <= 0L) {
-            trySendKatTimerNotification();
+            trySendKatNotification(false);
             return;
         }
 
@@ -286,18 +286,8 @@ public class Reminder {
                 rescheduleKatNotification();
                 return;
             }
-            trySendKatTimerNotification();
+            trySendKatNotification(false);
         }, delayMs);
-    }
-
-    /** Timer reached its real-time deadline while the player is in SkyBlock. */
-    private void trySendKatTimerNotification() {
-        trySendKatNotification(false);
-    }
-
-    /** After joining or switching to a SkyBlock server when the deadline already passed. */
-    private void trySendKatEnterNotification() {
-        trySendKatNotification(true);
     }
 
     private void trySendKatNotification(boolean enforceCooldown) {
@@ -332,7 +322,7 @@ public class Reminder {
             rescheduleKatNotification();
             return;
         }
-        trySendKatEnterNotification();
+        trySendKatNotification(true);
     }
 
     private void onKatReminderReenabled() {
@@ -365,7 +355,6 @@ public class Reminder {
             return;
         }
 
-        // Keep maintaining an existing timer (clear / update) even when the module is off.
         if (!isKatReminderConfigured() && !hasKatUpgradeScheduled()) {
             return;
         }
@@ -437,7 +426,7 @@ public class Reminder {
         ConfigManager.reminderKatReadyAtMs = System.currentTimeMillis();
         ConfigManager.saveConfig();
         cancelKatNotification();
-        trySendKatTimerNotification();
+        trySendKatNotification(false);
     }
 
     private void clearKatUpgrade() {
@@ -648,10 +637,6 @@ public class Reminder {
             godPotionAlreadyNotified = false;
             rescheduleGodPotionNotification();
         }
-    }
-
-    public boolean isKatReminderEnabled() {
-        return ConfigManager.reminderKatEnabled;
     }
 
     public void setKatReminderEnabled(boolean enabled) {

@@ -1009,11 +1009,11 @@ public final class BaityPresenceSync {
             String json = Files.readString(CACHE_FILE_PATH, StandardCharsets.UTF_8);
             if (json == null || json.isBlank()) return;
             applyPayload(json, false);
-            // TODO(v1.6.3): Transitional remote-users-cache.json pretty-print migration — remove after v1.6.3 release.
+            // TODO(v1.6.4): Transitional remote-users-cache.json pretty-print migration — remove after v1.6.4 release.
             if (isMinifiedCacheJson(json)) {
                 saveCacheToDisk(json);
             }
-            // END TODO(v1.6.3)
+            // END TODO(v1.6.4)
         } catch (Exception ignored) {
         }
     }

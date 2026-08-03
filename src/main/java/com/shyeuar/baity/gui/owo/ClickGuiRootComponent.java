@@ -753,7 +753,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             }
         }
         
-        int displayTextWidth = client.font.width(displayText);
+        int displayTextWidth = measureVersionTextWidth(client, displayText);
         float scaledDisplayTextWidth = versionScale * displayTextWidth;
         float renderX = baseX + scaledCurrentVersionWidth - scaledDisplayTextWidth;
         
@@ -772,7 +772,9 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             versionColor = isHovered ? 0xFFFFFF00 : new java.awt.Color(120, 124, 132).getRGB();
         }
         
-        if (showFeedback && "update_available".equals(state.getVersionCheckStatus())) {
+        int textX = (int)(renderX / versionScale);
+        int textY = (int)(baseY / versionScale);
+        if (showFeedback && "update_available".equals(checkStatus)) {
             String latest = state.getLatestVersion();
             if (latest != null) {
                 String prefix = "Available updates！Check ";
@@ -780,34 +782,23 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 int prefixWidth = client.font.width(prefix);
                 int versionWidth = client.font.width(latest);
                 
-                guiGraphics.text(client.font, prefix,
-                                (int)(renderX / versionScale), (int)(baseY / versionScale),
-                                0xFFFFFF00, false);
+                guiGraphics.text(client.font, prefix, textX, textY, 0xFFFFFF00, false);
                 guiGraphics.text(client.font, latest,
-                                (int)((renderX + prefixWidth * versionScale) / versionScale),
-                                (int)(baseY / versionScale),
-                                0xFF00FF00, false);
+                        (int)((renderX + prefixWidth * versionScale) / versionScale), textY, 0xFF00FF00, false);
                 guiGraphics.text(client.font, suffix,
-                                (int)((renderX + (prefixWidth + versionWidth) * versionScale) / versionScale),
-                                (int)(baseY / versionScale),
-                                0xFFFFFF00, false);
+                        (int)((renderX + (prefixWidth + versionWidth) * versionScale) / versionScale), textY, 0xFFFFFF00, false);
             } else {
-                guiGraphics.text(client.font, displayText,
-                                (int)(renderX / versionScale), (int)(baseY / versionScale),
-                                versionColor, false);
+                guiGraphics.text(client.font, displayText, textX, textY, versionColor, false);
             }
         } else if (showFeedback && isError) {
-            guiGraphics.text(client.font, displayText,
-                            (int)(renderX / versionScale), (int)(baseY / versionScale),
-                            com.shyeuar.baity.config.DevConfig.DEV_PREFIX_COLOR, false);
+            guiGraphics.text(client.font, displayText, textX, textY,
+                    0xFFFF6B6B, false);
         } else if (showFeedback) {
-            guiGraphics.text(client.font, displayText,
-                            (int)(renderX / versionScale), (int)(baseY / versionScale),
-                            versionColor, false);
+            guiGraphics.text(client.font, displayText, textX, textY, versionColor, false);
         } else {
             guiGraphics.text(client.font, displayText,
-                            (int)(baseX / versionScale), (int)(baseY / versionScale),
-                            versionColor, false);
+                    (int)(baseX / versionScale), textY,
+                    versionColor, false);
         }
         
         matrices.popMatrix();
@@ -818,7 +809,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             float lineX2 = baseX + scaledCurrentVersionWidth;
             int lineColor = (versionColor & 0xFFFFFF) | 0x64000000;
             guiGraphics.fill((int)lineX1, (int)lineY, (int)lineX2, (int)lineY + 1, lineColor);
-        } else if (showFeedback && "update_available".equals(state.getVersionCheckStatus())) {
+        } else if (showFeedback && "update_available".equals(checkStatus)) {
             String latest = state.getLatestVersion();
             if (latest != null) {
                 String prefix = "Available updates！Check ";
@@ -832,6 +823,20 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 guiGraphics.fill((int)versionLineX1, (int)lineY, (int)versionLineX2, (int)lineY + 1, lineColor);
             }
         }
+    }
+
+    private static int measureVersionTextWidth(Minecraft client, String text) {
+        if (text == null || text.isEmpty()) {
+            return 0;
+        }
+        int measured = client.font.width(text);
+        int perGlyph = 0;
+        for (int i = 0; i < text.length(); ) {
+            int codePoint = text.codePointAt(i);
+            perGlyph += client.font.width(Character.toString(codePoint));
+            i += Character.charCount(codePoint);
+        }
+        return Math.max(measured, perGlyph);
     }
     
     private String getModVersion() {
@@ -852,7 +857,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         long startTime = state.getVersionCheckStartTime();
         boolean isAutoCheck = state.isAutoCheck();
         long displayDuration = (isAutoCheck && "update_available".equals(checkStatus)) ? 6000 : 2000;
-        if (checkStatus != null && startTime > 0 && 
+        if (checkStatus != null && startTime > 0 &&
             currentTime - startTime >= displayDuration) {
             state.setVersionCheckStatus(null);
             state.setLatestVersion(null);

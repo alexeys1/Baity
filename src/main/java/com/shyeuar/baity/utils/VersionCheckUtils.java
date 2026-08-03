@@ -22,26 +22,26 @@ import com.google.gson.JsonParser;
 
 public class VersionCheckUtils {
     private static final String GITHUB_API_URL = "https://api.github.com/repos/raueyhs/Baity/releases";
-    private static final String MC_VERSION_PREFIX = "1.21.11";
+    private static final String MC_VERSION_PREFIX = "26.1";
     private static final Pattern MOD_VERSION_PATTERN = Pattern.compile("(?i)\\bv([0-9]+\\.[0-9]+\\.[0-9]+)\\b");
-    
+
     public static class VersionCheckResult {
         public final boolean isLatest;
         public final String latestVersion;
         public final boolean hasError;
-        
+
         public VersionCheckResult(boolean isLatest, String latestVersion, boolean hasError) {
             this.isLatest = isLatest;
             this.latestVersion = latestVersion;
             this.hasError = hasError;
         }
     }
-    
+
     public static CompletableFuture<VersionCheckResult> checkVersionAsync(String currentVersion) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 URL url = URI.create(GITHUB_API_URL).toURL();
-                
+
                 if (url.getProtocol().equals("https")) {
                     javax.net.ssl.HttpsURLConnection httpsConnection = (javax.net.ssl.HttpsURLConnection) url.openConnection();
                     httpsConnection.setHostnameVerifier((hostname, session) -> true);
@@ -50,12 +50,12 @@ public class VersionCheckUtils {
                     httpsConnection.setRequestProperty("Accept", "application/vnd.github.v3+json");
                     httpsConnection.setConnectTimeout(5000);
                     httpsConnection.setReadTimeout(5000);
-                    
+
                     int responseCode = httpsConnection.getResponseCode();
                     if (responseCode != HttpURLConnection.HTTP_OK) {
                         return new VersionCheckResult(true, null, true);
                     }
-                    
+
                     BufferedReader reader = new BufferedReader(
                         new InputStreamReader(httpsConnection.getInputStream()));
                     StringBuilder response = new StringBuilder();
@@ -64,9 +64,8 @@ public class VersionCheckUtils {
                         response.append(line);
                     }
                     reader.close();
-                    
-                    String jsonResponse = response.toString();
 
+                    String jsonResponse = response.toString();
                     String latestVersion = findLatestMatchingReleaseVersion(jsonResponse);
                     if (latestVersion == null) {
                         return new VersionCheckResult(true, null, false);
@@ -79,12 +78,12 @@ public class VersionCheckUtils {
                     connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
                     connection.setConnectTimeout(5000);
                     connection.setReadTimeout(5000);
-                
+
                     int responseCode = connection.getResponseCode();
                     if (responseCode != HttpURLConnection.HTTP_OK) {
                         return new VersionCheckResult(true, null, true);
                     }
-                    
+
                     BufferedReader reader = new BufferedReader(
                         new InputStreamReader(connection.getInputStream()));
                     StringBuilder response = new StringBuilder();
@@ -93,9 +92,8 @@ public class VersionCheckUtils {
                         response.append(line);
                     }
                     reader.close();
-                    
-                    String jsonResponse = response.toString();
 
+                    String jsonResponse = response.toString();
                     String latestVersion = findLatestMatchingReleaseVersion(jsonResponse);
                     if (latestVersion == null) {
                         return new VersionCheckResult(true, null, false);
@@ -103,16 +101,16 @@ public class VersionCheckUtils {
 
                     return compareWithLatest(currentVersion, latestVersion);
                 }
-                
+
             } catch (Exception e) {
                 return new VersionCheckResult(true, null, true);
             }
         });
     }
-    
+
     private static String extractVersionFromTag(String tagName) {
         if (tagName == null || tagName.isEmpty()) return null;
-        
+
         Matcher matcher = MOD_VERSION_PATTERN.matcher(tagName);
         while (matcher.find()) {
             String version = matcher.group(1);
@@ -121,7 +119,7 @@ public class VersionCheckUtils {
             }
             return "v" + version;
         }
-        
+
         return null;
     }
 
@@ -245,7 +243,7 @@ public class VersionCheckUtils {
             return null;
         }
     }
-    
+
     private static String normalizeVersion(String version) {
         if (version == null) return "";
         version = version.trim();
@@ -254,7 +252,7 @@ public class VersionCheckUtils {
         }
         return version;
     }
-    
+
     private static SSLSocketFactory createTrustAllSocketFactory() {
         try {
             TrustManager[] trustAllCerts = new TrustManager[] {

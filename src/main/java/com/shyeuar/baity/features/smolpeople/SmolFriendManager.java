@@ -535,5 +535,4 @@ public final class SmolFriendManager {
         ConfigManager.smolFriendList = String.join(",", FRIENDS.values());
         ConfigManager.requestSave();
     }
-
 }

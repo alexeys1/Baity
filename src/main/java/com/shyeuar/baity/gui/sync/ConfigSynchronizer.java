@@ -68,7 +68,7 @@ public class ConfigSynchronizer {
     public static void handleValueUpdate(String moduleName, String valueName, Object value) {
         String key = moduleName + "::" + valueName;
         ConfigLink<Object> config = valueConfigMap.get(key);
-            if (config != null) {
+        if (config != null) {
             config.setConfigValue(value);
             ConfigManager.saveConfig();
 
@@ -81,15 +81,13 @@ public class ConfigSynchronizer {
                     || "separator".equals(valueName))) {
                 com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.onAppearanceSettingChanged();
             }
-            
+
             Module module = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName(moduleName);
             if (module != null) {
                 com.shyeuar.baity.gui.value.Value found = com.shyeuar.baity.gui.value.ValueTreeUtils.findByName(module, valueName);
-                if (found instanceof com.shyeuar.baity.gui.value.ButtonValue) {
-                        com.shyeuar.baity.gui.value.ButtonValue buttonValue = (com.shyeuar.baity.gui.value.ButtonValue) found;
-                        if (buttonValue.getButtonValueType() == com.shyeuar.baity.gui.value.ButtonValue.ButtonValueType.KEYBIND) {
-                            com.shyeuar.baity.managers.KeybindManager.markCacheDirty();
-                        }
+                if (found instanceof com.shyeuar.baity.gui.value.ButtonValue buttonValue
+                        && buttonValue.getButtonValueType() == com.shyeuar.baity.gui.value.ButtonValue.ButtonValueType.KEYBIND) {
+                    com.shyeuar.baity.managers.KeybindManager.markCacheDirty();
                 }
             }
         }

@@ -757,8 +757,8 @@ public class ClickGuiInputHandler {
         if (button != 0) return false;
         
         long currentTime = System.currentTimeMillis();
-        boolean inFeedback = state.getVersionCheckStatus() != null && 
-                           currentTime - state.getVersionCheckStartTime() < 2000;
+        boolean inFeedback = state.getVersionCheckStatus() != null &&
+                           currentTime - state.getVersionCheckStartTime() < versionFeedbackDisplayMs();
         
         if (inFeedback) {
             return false;
@@ -833,9 +833,10 @@ public class ClickGuiInputHandler {
         if (button != 0) return false;
         
         long currentTime = System.currentTimeMillis();
-        if (state.getVersionCheckStatus() == null || 
+        long displayMs = versionFeedbackDisplayMs();
+        if (state.getVersionCheckStatus() == null ||
             !"update_available".equals(state.getVersionCheckStatus()) ||
-            currentTime - state.getVersionCheckStartTime() >= 2000) {
+            currentTime - state.getVersionCheckStartTime() >= displayMs) {
             return false;
         }
         
@@ -872,13 +873,13 @@ public class ClickGuiInputHandler {
                 if (!latestTag.startsWith("v") && !latestTag.startsWith("V")) {
                     latestTag = "v" + latestTag;
                 }
-                String releaseTag = "baity-1.21.11-" + latestTag;
+                String releaseTag = "baity-26.1-" + latestTag;
                 net.minecraft.util.Util.getPlatform().openUri(new java.net.URI("https://github.com/raueyhs/Baity/releases/tag/" + releaseTag));
                 return true;
             } catch (Exception e) {
                 if (client.player != null) {
                     client.player.sendSystemMessage(
-                        net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://github.com/raueyhs/Baity/releases/tag/baity-1.21.11-" + latest)
+                        net.minecraft.network.chat.Component.literal("无法打开浏览器，请手动访问: https://github.com/raueyhs/Baity/releases/tag/baity-26.1-" + latest)
                     );
                 }
                 return true;
@@ -886,6 +887,11 @@ public class ClickGuiInputHandler {
         }
         
         return false;
+    }
+    
+    private long versionFeedbackDisplayMs() {
+        String status = state.getVersionCheckStatus();
+        return state.isAutoCheck() && "update_available".equals(status) ? 6000L : 2000L;
     }
     
     private String getModVersion() {

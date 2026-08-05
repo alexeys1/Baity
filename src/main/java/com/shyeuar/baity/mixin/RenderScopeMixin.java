@@ -83,7 +83,7 @@ public class RenderScopeMixin {
 			if (livingEntityRenderState instanceof AvatarRenderState avatarState) {
 				Minecraft mc = Minecraft.getInstance();
 				if (mc.player != null && NoSwimPoseUtils.isSelfPlayerById(avatarState.id)) {
-					if (worldContext && NoSwimPoseUtils.shouldForceStandingModelAppearance(avatarState)) {
+					if (worldContext && NoSwimPoseUtils.shouldForceStandingModelAppearance()) {
 						NoSwimPoseUtils.clearSwimRenderState(avatarState);
 					} else if (!worldContext) {
 						if (RenderScope.isPaperDollRender()) {

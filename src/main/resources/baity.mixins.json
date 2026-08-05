@@ -64,6 +64,7 @@
     "ImmuneReactionMixin$ChatDetectorMixin",
     "NickTweaksMixin$FontMixin",
     "NickTweaksMixin$ScreenGuiTextScopeMixin",
+    "ModMenuNickTweaksMixin$ModMenuScreenMixin",
     "ImmuneReactionMixin$PlayerTickMixin",
     "InvisibugHighlightsMixin$ParticlePacketMixin",
     "InvisibugHighlightsMixin$EntityRemovalMixin",

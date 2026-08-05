@@ -83,6 +83,18 @@ public final class FancyDmgSplashSettings {
         return STYLE_GENSHIN.equalsIgnoreCase(getAnimationStyle());
     }
 
+    public static boolean isGenshinReactionEnabled() {
+        Module module = ModuleManager.getModuleByName("FancyDmgSplash");
+        if (module != null) {
+            return ModuleUtils.getOptionBoolean(
+                module,
+                "genshin elemental reaction",
+                ConfigManager.fancyDmgSplashGenshinReaction
+            );
+        }
+        return ConfigManager.fancyDmgSplashGenshinReaction;
+    }
+
     public static String cycleStyle(String current, boolean forward) {
         String normalized = current == null || current.isBlank() ? STYLE_DEFAULT : current;
         for (int i = 0; i < STYLE_ORDER.length; i++) {

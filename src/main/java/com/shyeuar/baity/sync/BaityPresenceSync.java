@@ -189,19 +189,8 @@ public final class BaityPresenceSync {
                 if (success) {
                     lastReportedSignature = signature;
                     updateCacheForSelfFromLocalState(state);
-                    setAutoStartupResultIfUnset(1);
-                    if (MANUAL_SYNC_PENDING.get() && !MANUAL_RESULT_SENT.get()) {
-                        MANUAL_RESULT_SENT.set(true);
-                        MANUAL_SYNC_PENDING.set(false);
-                        MessageUtils.sendSyncResult(true, false);
-                    }
                 } else {
                     setAutoStartupResultIfUnset(-1);
-                    if (MANUAL_SYNC_PENDING.get() && !MANUAL_RESULT_SENT.get()) {
-                        MANUAL_RESULT_SENT.set(true);
-                        MANUAL_SYNC_PENDING.set(false);
-                        MessageUtils.sendSyncResult(false, false);
-                    }
                 }
             } finally {
                 REPORTING.set(false);
@@ -360,6 +349,20 @@ public final class BaityPresenceSync {
         autoStartupResultSetAt = System.currentTimeMillis();
     }
 
+    private static void completeManualSyncIfPending(boolean fetchOk) {
+        if (!MANUAL_SYNC_PENDING.get() || MANUAL_RESULT_SENT.get()) {
+            return;
+        }
+        MANUAL_RESULT_SENT.set(true);
+        MANUAL_SYNC_PENDING.set(false);
+        if (fetchOk) {
+            setAutoStartupResultIfUnset(1);
+        } else {
+            setAutoStartupResultIfUnset(-1);
+        }
+        MessageUtils.sendSyncResult(fetchOk, false);
+    }
+
     private static void startReadThenWrite(long now, boolean forceUpload) {
         startReadThenWrite(now, forceUpload, false);
     }
@@ -380,6 +383,9 @@ public final class BaityPresenceSync {
         String fetchUrl = resolveFetchUrl();
         if (fetchUrl == null || fetchUrl.isBlank()) {
             CompletableFuture.runAsync(() -> {
+                if (forceRemoteSync) {
+                    completeManualSyncIfPending(false);
+                }
                 runPresenceConnectivityProbe();
                 attemptReport(now, forceUpload, forceRemoteSync);
             });
@@ -389,6 +395,9 @@ public final class BaityPresenceSync {
         String trimmed = fetchUrl.trim();
         if (!FETCHING.compareAndSet(false, true)) {
             CompletableFuture.runAsync(() -> {
+                if (forceRemoteSync) {
+                    completeManualSyncIfPending(false);
+                }
                 runPresenceConnectivityProbe();
                 attemptReport(now, forceUpload, forceRemoteSync);
             });
@@ -396,11 +405,15 @@ public final class BaityPresenceSync {
         }
 
         CompletableFuture.runAsync(() -> {
+            boolean fetchOk = false;
             try {
                 runPresenceConnectivityProbe();
-                fetchAndReplace(trimmed, forceRemoteSync);
+                fetchOk = fetchAndReplace(trimmed, forceRemoteSync);
             } finally {
                 FETCHING.set(false);
+                if (forceRemoteSync) {
+                    completeManualSyncIfPending(fetchOk);
+                }
                 attemptReport(System.currentTimeMillis(), forceUpload, forceRemoteSync);
             }
         });

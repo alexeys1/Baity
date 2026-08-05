@@ -103,12 +103,7 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
         damageNumbers.add(new DamageNumber(damage, finalTargetPos, formattedText, color,
                 System.currentTimeMillis(), preserveComponentColors, arcDriftX, arcDriftZ, kind, motionPhase));
 
-        boolean genshinReaction = com.shyeuar.baity.utils.ModuleUtils.getOptionBoolean(
-                moduleRef,
-                "genshin elemental reaction",
-                com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction
-        );
-        if (genshinReaction) {
+        if (FancyDmgSplashSettings.isGenshinReactionEnabled()) {
             Integer reactionColor = resolveReactionColor(kind, style, syncEnabled);
             if (reactionColor != null) {
                 ElementalReactionDetector.ReactionResult reaction = kind == FancyDmgSplashSettings.DamageKind.BURN
@@ -146,7 +141,7 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
     public static void addImmuneReaction(Vec3 targetPos) {
         Module m = ModuleManager.getModuleByName("FancyDmgSplash");
         if (m == null || !m.isEnabled()) return;
-        if (!com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction) return;
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) return;
         
         ElementalReactionDetector.ReactionResult result = 
             ElementalReactionDetector.checkImmuneReaction(targetPos, false);
@@ -159,7 +154,7 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
         Module m = ModuleManager.getModuleByName("FancyDmgSplash");
         if (m == null || !m.isEnabled()) return;
         if (mc.player == null) return;
-        if (!com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction) return;
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) return;
         
         Vec3 playerPos = new Vec3(mc.player.getX(), mc.player.getY() + mc.player.getBbHeight() * 0.5, mc.player.getZ());
         ElementalReactionDetector.ReactionResult result = 
@@ -172,8 +167,9 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
     public static void addWitherCloakImmuneReaction(ElementalReactionDetector.ReactionResult result) {
         Module m = ModuleManager.getModuleByName("FancyDmgSplash");
         if (m == null || !m.isEnabled()) return;
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) return;
         if (result == null || result.position == null) return;
-        
+
         reactionTexts.add(new ReactionText(result.name, result.position, result.color, System.currentTimeMillis()));
     }
     
@@ -234,7 +230,7 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
 
     private static void checkWetAndHealReactions() {
         if (mc.level == null || mc.player == null) return;
-        if (!com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction) return;
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) return;
         
         Vec3 playerPos = new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ());
         double range = 32.0;

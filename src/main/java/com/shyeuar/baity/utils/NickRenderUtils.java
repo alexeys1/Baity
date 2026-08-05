@@ -33,6 +33,7 @@ public final class NickRenderUtils {
     private static volatile List<Target> cachedTargets = List.of();
     private static final ThreadLocal<Boolean> PREVIEW_OVERRIDE = ThreadLocal.withInitial(() -> Boolean.FALSE);
     private static final ThreadLocal<Boolean> CLICK_GUI_RENDER_SCOPE = ThreadLocal.withInitial(() -> Boolean.FALSE);
+    private static final ThreadLocal<Boolean> MOD_MENU_TEXT_RENDER_SCOPE = ThreadLocal.withInitial(() -> Boolean.FALSE);
     private static final ThreadLocal<Integer> GUI_TEXT_RENDER_DEPTH = ThreadLocal.withInitial(() -> 0);
     private static final int MATCH_CACHE_MAX = 2048;
     private static final Object MATCH_CACHE_LOCK = new Object();
@@ -73,6 +74,9 @@ public final class NickRenderUtils {
         if (Boolean.TRUE.equals(CLICK_GUI_RENDER_SCOPE.get())) {
             return true;
         }
+        if (Boolean.TRUE.equals(MOD_MENU_TEXT_RENDER_SCOPE.get())) {
+            return true;
+        }
         recoverGuiTextRenderScopeIfStale();
         if (GUI_TEXT_RENDER_DEPTH.get() > 0) {
             return true;
@@ -106,10 +110,21 @@ public final class NickRenderUtils {
         if (screen instanceof AbstractContainerScreen<?> || screen instanceof ChatScreen) {
             return false;
         }
+        if (isModMenuScreen(screen)) {
+            return false;
+        }
         if (screen.isPauseScreen()) {
             return true;
         }
-        return isThirdPartyConfigScreen(screen);
+        String className = screen.getClass().getName();
+        return className.startsWith("me.shedaniel.clothconfig")
+            || className.startsWith("me.shedaniel.autoconfig")
+            || className.startsWith("dev.isxander.yacl")
+            || className.startsWith("io.wispforest.owo.config");
+    }
+
+    private static boolean isModMenuScreen(Screen screen) {
+        return screen.getClass().getName().startsWith("com.terraformersmc.modmenu");
     }
 
     public static void enterGuiTextRenderScope() {
@@ -125,23 +140,14 @@ public final class NickRenderUtils {
         }
     }
 
-    public static boolean isThirdPartyConfigScreen(Screen screen) {
-        if (screen == null) {
-            return false;
-        }
-        if (screen instanceof AbstractContainerScreen<?> || screen instanceof ChatScreen) {
-            return false;
-        }
-        if (screen.isPauseScreen()) {
-            return false;
-        }
-        String cn = screen.getClass().getName();
-        return cn.startsWith("com.terraformersmc.modmenu")
-            || cn.startsWith("me.shedaniel.clothconfig")
-            || cn.startsWith("me.shedaniel.autoconfig")
-            || cn.startsWith("dev.isxander.yacl")
-            || cn.startsWith("io.wispforest.owo.config");
+    public static void beginModMenuTextRenderScope() {
+        MOD_MENU_TEXT_RENDER_SCOPE.set(Boolean.TRUE);
     }
+
+    public static void endModMenuTextRenderScope() {
+        MOD_MENU_TEXT_RENDER_SCOPE.set(Boolean.FALSE);
+    }
+
     public static String handleString(String text) {
         if (text == null || text.isEmpty()) return text;
         if (shouldSkipNickTweakSubstitution()) return text;
@@ -205,14 +211,6 @@ public final class NickRenderUtils {
 
     public static void endClickGuiRenderScope() {
         CLICK_GUI_RENDER_SCOPE.set(Boolean.FALSE);
-    }
-
-    public static void beginThirdPartyGuiRenderScope() {
-        enterGuiTextRenderScope();
-    }
-
-    public static void endThirdPartyGuiRenderScope() {
-        exitGuiTextRenderScope();
     }
 
     public static FormattedText handleFormattedText(FormattedText text) {

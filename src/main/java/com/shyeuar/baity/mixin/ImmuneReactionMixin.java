@@ -36,7 +36,7 @@ public class ImmuneReactionMixin {
         private void baity$checkWitherCloakImmune(CallbackInfo ci) {
             Module m = ModuleManager.getModuleByName("FancyDmgSplash");
             if (m == null || !m.isEnabled()) return;
-            if (!com.shyeuar.baity.config.ConfigManager.fancyDmgSplashGenshinReaction) return;
+            if (!com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashSettings.isGenshinReactionEnabled()) return;
 
             Minecraft mc = Minecraft.getInstance();
             LocalPlayer self = (LocalPlayer) (Object) this;

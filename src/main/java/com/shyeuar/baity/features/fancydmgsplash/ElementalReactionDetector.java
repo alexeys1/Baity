@@ -1,6 +1,5 @@
 package com.shyeuar.baity.features.fancydmgsplash;
 
-import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.value.ColorPaletteValue;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -76,7 +75,7 @@ public class ElementalReactionDetector {
     }
     
     public static ReactionResult recordDamageAndCheckReaction(int color, Vec3 targetPos) {
-        if (!ConfigManager.fancyDmgSplashGenshinReaction) {
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) {
             return null;
         }
         if (!FancyDmgSplashPresetStore.isActiveReactionColor(color)) {
@@ -86,7 +85,7 @@ public class ElementalReactionDetector {
     }
 
     public static ReactionResult recordForcedElementDamage(int color, Vec3 targetPos) {
-        if (!ConfigManager.fancyDmgSplashGenshinReaction) {
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) {
             return null;
         }
         return recordElementDamage(color, targetPos);
@@ -303,7 +302,7 @@ public class ElementalReactionDetector {
     }
     
     public static ReactionResult checkEntityWetState(Entity entity, Vec3 playerPos) {
-        if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) return null;
         if (entity == null) return null;
         
         if (!shouldTriggerReaction(entity)) return null;
@@ -359,7 +358,7 @@ public class ElementalReactionDetector {
     }
     
     public static ReactionResult checkEntityBurningState(Entity entity, Vec3 playerPos) {
-        if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) return null;
         if (entity == null) return null;
         
         if (!shouldTriggerReaction(entity)) return null;
@@ -400,7 +399,7 @@ public class ElementalReactionDetector {
     }
     
     public static ReactionResult checkImmuneReaction(Vec3 targetPos, boolean hasDamage) {
-        if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) return null;
         
         long currentTime = System.currentTimeMillis();
         
@@ -415,7 +414,7 @@ public class ElementalReactionDetector {
     }
     
     public static ReactionResult checkPlayerImmuneItem(Vec3 playerPos) {
-        if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) return null;
         
         long currentTime = System.currentTimeMillis();
         
@@ -428,7 +427,7 @@ public class ElementalReactionDetector {
     }
     
     public static ReactionResult checkHealReaction(LivingEntity entity) {
-        if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) return null;
         if (entity == null) return null;
         
         UUID entityId = entity.getUUID();
@@ -486,7 +485,7 @@ public class ElementalReactionDetector {
     }
    
     public static ReactionResult checkWitherCloakImmune() {
-        if (!ConfigManager.fancyDmgSplashGenshinReaction) return null;
+        if (!FancyDmgSplashSettings.isGenshinReactionEnabled()) return null;
         
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return null;

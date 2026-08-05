@@ -2,13 +2,12 @@ package com.shyeuar.baity.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.config.ConfigManager;
-import com.shyeuar.baity.features.smolpeople.SmolPeopleNametag;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
+import com.shyeuar.baity.features.smolpeople.SmolPeopleCamera;
+import com.shyeuar.baity.features.smolpeople.SmolPeopleNametag;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
-import com.shyeuar.baity.utils.NoSwimPoseUtils;
 import net.minecraft.client.Camera;
-import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.player.PlayerModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -21,7 +20,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -126,28 +124,13 @@ public class SmolPeopleMixin {
         @Shadow
         private Entity entity;
 
-        @Unique
-        private static final float SMOL_CAMERA_Y_OFFSET = -0.65f;
-
         @Inject(method = "alignWithEntity", at = @At("TAIL"))
         private void baity$adjustCameraForSmolPeople(float tickDelta, CallbackInfo ci) {
-            Module smolPeopleModule = ModuleManager.getModuleByName("SmolPeople");
-            if (smolPeopleModule == null || !smolPeopleModule.isEnabled()) {
-                return;
-            }
-
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null || this.entity != mc.player) {
                 return;
             }
-            if (mc.options.getCameraType() != CameraType.THIRD_PERSON_FRONT) {
-                return;
-            }
-            if (NoSwimPoseUtils.isAbnormalDrySwimPose()) {
-                return;
-            }
-
-            this.position = new Vec3(this.position.x, this.position.y + SMOL_CAMERA_Y_OFFSET, this.position.z);
+            this.position = SmolPeopleCamera.applyThirdPersonFrontOffset(this.position);
         }
     }
 }

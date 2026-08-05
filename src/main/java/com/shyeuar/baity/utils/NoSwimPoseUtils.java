@@ -1,6 +1,7 @@
 package com.shyeuar.baity.utils;
 
 import com.shyeuar.baity.config.ConfigManager;
+import com.shyeuar.baity.features.smolpeople.SmolPeopleCamera;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.render.RenderScope;
@@ -103,10 +104,13 @@ public final class NoSwimPoseUtils {
     }
 
     public static boolean shouldApplyCameraEyeHeightChange() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.player != null && shouldApplySmolThirdPersonFrontDryExitCamera(mc.player)) {
+            return true;
+        }
         if (!shouldApplyEyeHeightChange()) {
             return false;
         }
-        Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null) {
             return false;
         }
@@ -114,6 +118,16 @@ public final class NoSwimPoseUtils {
             return true;
         }
         return isSwimmingPose(mc.player);
+    }
+
+    private static boolean shouldApplySmolThirdPersonFrontDryExitCamera(Player player) {
+        if (!isFeatureActive() || !SmolPeopleCamera.isThirdPersonFrontActive()) {
+            return false;
+        }
+        if (isInWaterSwimVisualContext()) {
+            return false;
+        }
+        return !isSwimmingPose(player) && hasResidualSwimVisual(player);
     }
 
     public static boolean isGroundedInWater(Player player) {
@@ -127,6 +141,9 @@ public final class NoSwimPoseUtils {
     }
 
     public static boolean shouldSnapCameraEyeHeight(Player player) {
+        if (shouldApplySmolThirdPersonFrontDryExitCamera(player)) {
+            return true;
+        }
         return shouldApplyCameraEyeHeightChange()
             && isSwimmingPose(player)
             && !usesGroundedPoolBottomSneakCamera(player)
@@ -193,6 +210,9 @@ public final class NoSwimPoseUtils {
     }
 
     public static float getCameraEyeHeight(Player player) {
+        if (shouldApplySmolThirdPersonFrontDryExitCamera(player)) {
+            return STANDING_EYE_HEIGHT;
+        }
         if (!shouldApplyEyeHeightChange() || !shouldApplyCameraEyeHeightChange()) {
             return player.getEyeHeight();
         }
@@ -251,32 +271,8 @@ public final class NoSwimPoseUtils {
         return isFeatureActive() && isInWaterSwimVisualContext();
     }
 
-    /**
-     * Keep forcing standing model appearance while in water swim context, or while the local
-     * player (or their extracted render state) still carries swim animation fields.
-     */
     public static boolean shouldForceStandingModelAppearance() {
-        if (!isFeatureActive()) {
-            return false;
-        }
-        if (isInWaterSwimVisualContext()) {
-            return true;
-        }
-        Minecraft mc = Minecraft.getInstance();
-        return mc.player != null && hasResidualSwimVisual(mc.player);
-    }
-
-    public static boolean shouldForceStandingModelAppearance(AvatarRenderState state) {
-        if (!isFeatureActive()) {
-            return false;
-        }
-        if (shouldForceStandingModelAppearance()) {
-            return true;
-        }
-        if (state == null) {
-            return false;
-        }
-        return state.swimAmount > SWIM_AMOUNT_EPSILON || state.isVisuallySwimming;
+        return isFeatureActive() && isInWaterSwimVisualContext();
     }
 
     private static boolean hasResidualSwimVisual(Player player) {
@@ -307,11 +303,6 @@ public final class NoSwimPoseUtils {
         return mc.player != null && mc.player.getId() == entityId;
     }
 
-    public static boolean isSelfPlayer(Object entity) {
-        Minecraft mc = Minecraft.getInstance();
-        return mc.player != null && entity == mc.player;
-    }
-
     public static boolean isSneaking() {
         Minecraft mc = Minecraft.getInstance();
         return mc.player != null && mc.options.keyShift.isDown();
@@ -337,14 +328,6 @@ public final class NoSwimPoseUtils {
         return isLevelRenderContext(state);
     }
 
-    public static boolean isAbnormalDrySwimPose() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || !isFeatureActive()) {
-            return false;
-        }
-        return !isInWaterSwimVisualContext() && hasResidualSwimVisual(mc.player);
-    }
-
     public static void clearSwimRenderState(AvatarRenderState state) {
         if (RenderScope.isPaperDollRender()) {
             if (!isFeatureActive() || state == null) {
@@ -357,7 +340,7 @@ public final class NoSwimPoseUtils {
             }
             return;
         }
-        if (!shouldForceStandingModelAppearance(state)) {
+        if (!shouldForceStandingModelAppearance()) {
             return;
         }
         state.isVisuallySwimming = false;

@@ -134,8 +134,11 @@ public final class RadialIconLibrary {
             return null;
         }
         String normalized = normalizeIconName(icon);
-        Path file = iconDir.resolve(normalized + ".png");
-        if (!Files.isRegularFile(file)) {
+        if (!isSafeLocalIconFileKey(normalized)) {
+            return null;
+        }
+        Path file = iconDir.resolve(normalized + ".png").normalize();
+        if (!file.startsWith(iconDir.normalize()) || !Files.isRegularFile(file)) {
             return null;
         }
         return DYNAMIC_TEXTURES.computeIfAbsent(normalized, key -> registerTexture(key, file));
@@ -169,10 +172,24 @@ public final class RadialIconLibrary {
         if (normalized == null || normalized.isEmpty()) {
             return null;
         }
-        if (normalized.indexOf(':') >= 0) {
-            return Identifier.tryParse(normalized);
+        Identifier id = Identifier.tryParse(normalized);
+        if (id != null) {
+            return id;
         }
-        return Identifier.withDefaultNamespace(normalized);
+        if (normalized.indexOf(':') < 0) {
+            return Identifier.tryParse(Identifier.DEFAULT_NAMESPACE + ":" + normalized);
+        }
+        return null;
+    }
+
+    private static boolean isSafeLocalIconFileKey(String key) {
+        if (key == null || key.isEmpty()) {
+            return false;
+        }
+        return key.indexOf('/') < 0
+                && key.indexOf('\\') < 0
+                && key.indexOf(':') < 0
+                && !key.contains("..");
     }
 
     private static boolean isMissingSprite(TextureAtlasSprite sprite) {
@@ -185,7 +202,11 @@ public final class RadialIconLibrary {
 
     private static Identifier registerTexture(String key, Path file) {
         Minecraft mc = Minecraft.getInstance();
-        Identifier id = Identifier.fromNamespaceAndPath("baity", "radial_icon/" + key);
+        Identifier id = Identifier.tryParse("baity:radial_icon/" + key);
+        if (id == null) {
+            LOGGER.warn("Skipping radial icon with invalid id key: {}", key);
+            return null;
+        }
         try (InputStream in = Files.newInputStream(file)) {
             NativeImage image = NativeImage.read(in);
             DynamicTexture texture = new DynamicTexture(() -> "baity_radial_icon_" + key, image);

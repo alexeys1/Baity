@@ -664,6 +664,24 @@ public final class LineTextInput {
             return new Policy(maxCodePoints, (text, cp) -> !Character.isISOControl(cp));
         }
 
+        public static Policy radialIconId(int maxCodePoints) {
+            return new Policy(maxCodePoints, (text, cp) -> {
+                if (Character.isISOControl(cp)) {
+                    return false;
+                }
+                if (cp >= 'A' && cp <= 'Z') {
+                    return true;
+                }
+                if (cp >= 'a' && cp <= 'z') {
+                    return true;
+                }
+                if (cp >= '0' && cp <= '9') {
+                    return true;
+                }
+                return cp == '_' || cp == '-' || cp == '.' || cp == '/' || cp == ':' || cp == ' ';
+            });
+        }
+
         public static Policy forSlider(SliderValue slider) {
             return new Policy(-1, (text, cp) -> isSliderCharAllowed(slider, text, cp));
         }

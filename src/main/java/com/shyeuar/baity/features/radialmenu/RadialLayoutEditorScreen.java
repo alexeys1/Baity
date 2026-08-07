@@ -56,7 +56,7 @@ public class RadialLayoutEditorScreen extends Screen {
 
     private final LineTextInput commandInput = new LineTextInput(LineTextInput.Policy.freeText(-1));
     private final LineTextInput displayNameInput = new LineTextInput(LineTextInput.Policy.freeText(-1));
-    private final LineTextInput iconInput = new LineTextInput(LineTextInput.Policy.freeText(64));
+    private final LineTextInput iconInput = new LineTextInput(LineTextInput.Policy.radialIconId(64));
     private final LineTextInput unicodeInput = new LineTextInput(
             LineTextInput.Policy.freeText(RadialMenuModels.MAX_UNICODE_ICON_CODE_POINTS));
 

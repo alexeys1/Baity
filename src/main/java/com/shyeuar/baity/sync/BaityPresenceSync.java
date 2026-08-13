@@ -42,10 +42,10 @@ public final class BaityPresenceSync {
     private static final long REMOTE_READ_COOLDOWN_MS = 20_000L;
     private static volatile long nextRemoteReadAllowedAt = 0L;
     private static final long REPORT_CHANGE_DEBOUNCE_MS = 3_000L;
-    private static final long SYNC_TIMEOUT_MS = 60_000L;
     private static final long SYNC_MESSAGE_DELAY_MS = 3_000L;
     private static final int CONNECT_TIMEOUT_MS = 10_000;
     private static final int READ_TIMEOUT_MS = 10_000;
+    private static final int FETCH_READ_TIMEOUT_MS = 120_000;
     private static final int NETWORK_RETRY_COUNT = 0;
     private static final long NETWORK_RETRY_BACKOFF_MS = 350L;
     private static final long NETWORK_WARN_THROTTLE_MS = 60_000L;
@@ -71,11 +71,9 @@ public final class BaityPresenceSync {
 
     private static final AtomicBoolean MANUAL_SYNC_PENDING = new AtomicBoolean(false);
     private static final AtomicBoolean MANUAL_RESULT_SENT = new AtomicBoolean(false);
-    private static final AtomicLong MANUAL_SYNC_SEQ = new AtomicLong(0L);
     private static volatile int autoStartupSyncResult = 0;
     private static volatile long autoStartupResultSetAt = 0L;
     private static volatile boolean autoStartupResultShownInWorld = false;
-    private static volatile boolean firstWorldSyncMsgShown = false;
     private static volatile boolean autoSyncTriggeredInWorld = false;
 
     private static final Map<UUID, RemoteUserState> USERS_BY_UUID = new ConcurrentHashMap<>();
@@ -91,7 +89,6 @@ public final class BaityPresenceSync {
         lastReportedSignature = "";
         lastSeenLocalPlayerUuid = null;
         nextTokenProvisionAllowedAt = 0L;
-        firstWorldSyncMsgShown = false;
         autoStartupSyncResult = 0;
         autoStartupResultSetAt = 0L;
         autoStartupResultShownInWorld = false;
@@ -118,29 +115,9 @@ public final class BaityPresenceSync {
         long now = System.currentTimeMillis();
         nextReportAllowedAt = 0L;
         nextTokenProvisionAllowedAt = 0L;
-        long syncSeq = MANUAL_SYNC_SEQ.incrementAndGet();
         MANUAL_SYNC_PENDING.set(true);
         MANUAL_RESULT_SENT.set(false);
         startReadThenWrite(now, true, true);
-        CompletableFuture.runAsync(() -> {
-            try {
-                Thread.sleep(SYNC_TIMEOUT_MS);
-            } catch (InterruptedException ignored) {
-                Thread.currentThread().interrupt();
-            }
-            if (syncSeq != MANUAL_SYNC_SEQ.get()) return;
-            if (MANUAL_SYNC_PENDING.get() && !MANUAL_RESULT_SENT.get()) {
-                MANUAL_SYNC_PENDING.set(false);
-                MANUAL_RESULT_SENT.set(true);
-                try {
-                    Thread.sleep(SYNC_MESSAGE_DELAY_MS);
-                } catch (InterruptedException ignored) {
-                    Thread.currentThread().interrupt();
-                }
-                if (syncSeq != MANUAL_SYNC_SEQ.get()) return;
-                MessageUtils.sendSyncTimeoutForCommand();
-            }
-        });
     }
 
     static String syncReadToken() {
@@ -318,10 +295,6 @@ public final class BaityPresenceSync {
             lastSeenLocalPlayerUuid = currentUuid;
         }
 
-        boolean enteredWorld = inWorld && (lastSeenLocalPlayerUuid != null) && !lastInWorld;
-        if (enteredWorld && !firstWorldSyncMsgShown) {
-            firstWorldSyncMsgShown = true;
-        }
         if (inWorld && ConfigManager.baityPresenceSyncEnabled && !autoSyncTriggeredInWorld) {
             autoSyncTriggeredInWorld = true;
             startReadThenWrite(System.currentTimeMillis(), true);
@@ -521,7 +494,7 @@ public final class BaityPresenceSync {
                 connection = openHttpConnection(url, attempt);
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-                connection.setReadTimeout(READ_TIMEOUT_MS);
+                connection.setReadTimeout(FETCH_READ_TIMEOUT_MS);
                 connection.setUseCaches(false);
                 connection.setRequestProperty("Accept", "application/json");
                 connection.setRequestProperty("x-baity-token", DEFAULT_SYNC_ACCESS_TOKEN);

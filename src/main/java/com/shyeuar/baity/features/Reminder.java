@@ -2,7 +2,6 @@ package com.shyeuar.baity.features;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.utils.DurationParseUtils;
@@ -29,7 +28,6 @@ public class Reminder {
     private static final long KAT_NOTIFY_COOLDOWN_MS = 10 * 60 * 1000L;
 
     private static Reminder instance;
-    private static boolean chatRegistered;
     private static boolean connectionRegistered;
 
     private static ItemStack cookieDisplayIcon;
@@ -63,7 +61,6 @@ public class Reminder {
     private static final Pattern CHAT_TIMESTAMP_PREFIX = Pattern.compile(
         "^\\[\\d{1,2}:\\d{2}(?::\\d{2})?\\]\\s*"
     );
-    private static final Pattern KAT_NPC_MARKER = Pattern.compile("\\[NPC\\] Kat:");
     private static final Pattern KAT_GIVE_PATTERN = Pattern.compile(
         "\\[NPC] Kat: I'll get your (.+?) upgraded to .+ in no time!"
     );
@@ -97,12 +94,9 @@ public class Reminder {
 
     public static void init() {
         Reminder reminder = getInstance();
-        if (reminder != null) {
-            reminder.startSkyBlockPresenceWatcher();
-            reminder.rescheduleKatNotification();
-            reminder.registerChatListener();
-            reminder.registerConnectionListener();
-        }
+        reminder.startSkyBlockPresenceWatcher();
+        reminder.rescheduleKatNotification();
+        reminder.registerConnectionListener();
     }
 
     private void registerConnectionListener() {
@@ -113,17 +107,11 @@ public class Reminder {
         connectionRegistered = true;
     }
 
-    private void registerChatListener() {
-        if (chatRegistered) {
+    public static void onSystemChat(Component content, boolean overlay) {
+        if (overlay || content == null) {
             return;
         }
-        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            if (overlay) {
-                return;
-            }
-            getInstance().handleKatChat(message.getString());
-        });
-        chatRegistered = true;
+        getInstance().handleKatChat(content.getString());
     }
 
     private void startSkyBlockPresenceWatcher() {
@@ -346,12 +334,12 @@ public class Reminder {
     }
 
     private void handleKatChat(String raw) {
-        if (raw == null || !raw.contains("[NPC] Kat:")) {
+        if (raw == null) {
             return;
         }
 
         String text = normalizeKatChatMessage(raw);
-        if (!KAT_NPC_MARKER.matcher(text).find()) {
+        if (!text.contains("[NPC] Kat:")) {
             return;
         }
 

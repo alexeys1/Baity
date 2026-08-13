@@ -62,7 +62,6 @@ public final class BaityPresenceSync {
     private static volatile long nextReportAllowedAt = 0L;
     private static volatile String lastReportedSignature = "";
     private static volatile UUID lastSeenLocalPlayerUuid = null;
-    private static volatile boolean lastInWorld = false;
     private static volatile long nextTokenProvisionAllowedAt = 0L;
     private static final AtomicBoolean TOKEN_PROVISIONING = new AtomicBoolean(false);
     private static final AtomicLong LAST_FETCH_EXCEPTION_WARN_AT = new AtomicLong(0L);
@@ -313,7 +312,6 @@ public final class BaityPresenceSync {
                 }
             }
         }
-        lastInWorld = inWorld;
     }
 
     private static void setAutoStartupResultIfUnset(int result) {

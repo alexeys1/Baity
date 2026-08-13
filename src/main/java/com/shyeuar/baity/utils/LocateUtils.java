@@ -87,8 +87,9 @@ public final class LocateUtils {
         if (!inSkyBlock(mc)) {
             return false;
         }
-        String n = normalizeAreaName(cachedAreaIslandName);
-        return n.contains("Galatea");
+        String area = normalizeAreaName(cachedAreaIslandName);
+        String island = normalizeAreaName(cachedTabIslandName);
+        return area.contains("Galatea") || island.contains("Galatea");
     }
 
     public static boolean isTorrhusCanyon(Minecraft mc) {
@@ -96,8 +97,9 @@ public final class LocateUtils {
         if (!inSkyBlock(mc)) {
             return false;
         }
-        String n = normalizeAreaName(cachedAreaIslandName);
-        return n.contains("Torrhus");
+        String area = normalizeAreaName(cachedAreaIslandName);
+        String island = normalizeAreaName(cachedTabIslandName);
+        return area.contains("Torrhus") || island.contains("Torrhus");
     }
 
     public static boolean isHub(Minecraft mc) {

@@ -4,12 +4,11 @@ import com.shyeuar.baity.features.radialmenu.data.RadialMenuModels;
 import com.shyeuar.baity.features.radialmenu.data.RadialPresetStore;
 import com.shyeuar.baity.gui.input.LineTextInput;
 import com.shyeuar.baity.gui.internal.ClickGuiState;
-import com.shyeuar.baity.gui.owo.RadialMenuComponent;
+import com.shyeuar.baity.gui.radial.RadialWheelRenderer;
 import com.shyeuar.baity.gui.render.GuiRenderUtil;
 import com.shyeuar.baity.gui.theme.LinearTheme;
 import com.shyeuar.baity.utils.MessageUtils;
 import com.shyeuar.baity.utils.SoundUtils;
-import io.wispforest.owo.ui.core.OwoUIGraphics;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
@@ -205,35 +204,34 @@ public class RadialLayoutEditorScreen extends Screen {
             }
         }
 
-        OwoUIGraphics owo = OwoUIGraphics.of(g);
-        float scale = EDITOR_OUTER_RADIUS / (float) RadialMenuComponent.OUTER_RADIUS;
+        float scale = EDITOR_OUTER_RADIUS / (float) RadialWheelRenderer.OUTER_RADIUS;
         var pose = g.pose();
         pose.pushMatrix();
         pose.translate(centerX, centerY);
         pose.scale(scale, scale);
         pose.translate(-centerX, -centerY);
-        RadialMenuComponent.drawWheel(owo, centerX, centerY);
+        RadialWheelRenderer.drawWheel(g, centerX, centerY);
 
         int count = layer.slots.size();
         if (count > 0) {
             double anglePerSection = 360.0 / count;
-            double startAngle = RadialMenuComponent.getStartAngle(count);
-            RadialMenuComponent.drawSectorDividers(owo, centerX, centerY, count, startAngle, anglePerSection);
+            double startAngle = RadialWheelRenderer.getStartAngle(count);
+            RadialWheelRenderer.drawSectorDividers(g, centerX, centerY, count, startAngle, anglePerSection);
 
             int highlight = dragSlotIndex >= 0 && dragHoverSlotIndex >= 0
                     ? dragHoverSlotIndex
                     : RadialPresetStore.getBundle().editor.selectedSlotIndex;
             if (highlight >= 0 && highlight < count) {
                 double sectionStart = startAngle + highlight * anglePerSection;
-                RadialMenuComponent.drawHoveredSector(owo, centerX, centerY, sectionStart, sectionStart + anglePerSection);
+                RadialWheelRenderer.drawHoveredSector(g, centerX, centerY, sectionStart, sectionStart + anglePerSection);
             }
 
             List<RadialMenuModels.RadialSlot> displaySlots = previewSlots(layer.slots, dragSlotIndex, dragHoverSlotIndex);
 
             for (int i = 0; i < count; i++) {
                 RadialMenuModels.RadialSlot slot = displaySlots.get(i);
-                float[] iconPos = RadialMenuComponent.sectorCenter(centerX, centerY, startAngle, anglePerSection, i,
-                        RadialMenuComponent.INNER_RADIUS, RadialMenuComponent.OUTER_RADIUS);
+                float[] iconPos = RadialWheelRenderer.sectorCenter(centerX, centerY, startAngle, anglePerSection, i,
+                        RadialWheelRenderer.INNER_RADIUS, RadialWheelRenderer.OUTER_RADIUS);
                 RadialSlotRenderer.drawSlotIcon(g, this.font, slot, iconPos[0], iconPos[1]);
             }
 
@@ -782,7 +780,7 @@ public class RadialLayoutEditorScreen extends Screen {
         if (degrees < 0) {
             degrees += 360;
         }
-        return RadialMenuComponent.getSectionFromAngle(degrees, count);
+        return RadialWheelRenderer.getSectionFromAngle(degrees, count);
     }
 
     private int slotIndexAt(int centerX, int centerY, int mouseX, int mouseY, int count) {
@@ -792,7 +790,7 @@ public class RadialLayoutEditorScreen extends Screen {
         double dx = mouseX - centerX;
         double dy = mouseY - centerY;
         double dist = Math.sqrt(dx * dx + dy * dy);
-        double scaledInner = RadialMenuComponent.INNER_RADIUS * EDITOR_OUTER_RADIUS / (float) RadialMenuComponent.OUTER_RADIUS;
+        double scaledInner = RadialWheelRenderer.INNER_RADIUS * EDITOR_OUTER_RADIUS / (float) RadialWheelRenderer.OUTER_RADIUS;
         double scaledOuter = EDITOR_OUTER_RADIUS;
         if (dist <= scaledInner || dist > scaledOuter + 8) {
             return -1;
@@ -801,7 +799,7 @@ public class RadialLayoutEditorScreen extends Screen {
         if (degrees < 0) {
             degrees += 360;
         }
-        return RadialMenuComponent.getSectionFromAngle(degrees, count);
+        return RadialWheelRenderer.getSectionFromAngle(degrees, count);
     }
 
     private List<RadialMenuModels.RadialSlot> previewSlots(List<RadialMenuModels.RadialSlot> slots, int from, int to) {

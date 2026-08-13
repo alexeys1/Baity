@@ -84,6 +84,7 @@
     "PaperDollArmorMixin$CustomHeadLayerMixin",
     "KeybindsSlotClickMixin",
     "accessor.AbstractContainerScreenInvoker",
+    "accessor.GuiGraphicsExtractorAccessor",
     "SidePanelMixin$ContainerScreenMixin",
     "SidePanelMixin$InventoryScreenMixin",
     "SidePanelMixin$PacketMixin",
@@ -98,6 +99,9 @@
     "accessor.PostRenderAccessors$PostChainAccessor",
     "accessor.PostRenderAccessors$PostPassAccessor",
     "accessor.PostRenderAccessors$ShaderManagerAccessor"
+  ],
+  "client": [
+    "GuiRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 0

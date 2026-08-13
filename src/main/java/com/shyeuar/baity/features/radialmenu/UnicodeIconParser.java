@@ -1,6 +1,6 @@
 package com.shyeuar.baity.features.radialmenu;
 
-import com.shyeuar.baity.gui.owo.RadialMenuComponent;
+import com.shyeuar.baity.gui.radial.RadialWheelRenderer;
 import com.shyeuar.baity.utils.NickRenderUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -12,7 +12,7 @@ public final class UnicodeIconParser {
     }
 
     public record Parsed(String glyph, int colorArgb) {
-        public static final Parsed EMPTY = new Parsed("", RadialMenuComponent.SYMBOL_ICON_COLOR);
+        public static final Parsed EMPTY = new Parsed("", RadialWheelRenderer.SYMBOL_ICON_COLOR);
     }
 
     public static Parsed parse(String raw) {
@@ -35,7 +35,7 @@ public final class UnicodeIconParser {
             }
             String glyph = new String(Character.toChars(cp));
             int color = explicitColor == null
-                    ? RadialMenuComponent.SYMBOL_ICON_COLOR
+                    ? RadialWheelRenderer.SYMBOL_ICON_COLOR
                     : (0xFF000000 | explicitColor);
             return new Parsed(glyph, color);
         }

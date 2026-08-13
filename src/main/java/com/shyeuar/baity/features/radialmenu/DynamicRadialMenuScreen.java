@@ -2,7 +2,7 @@ package com.shyeuar.baity.features.radialmenu;
 
 import com.shyeuar.baity.features.radialmenu.data.RadialMenuModels;
 import com.shyeuar.baity.gui.internal.ClickGuiState;
-import com.shyeuar.baity.gui.owo.RadialMenuComponent;
+import com.shyeuar.baity.gui.radial.RadialWheelRenderer;
 import com.shyeuar.baity.utils.KeyMappingUtils;
 import com.shyeuar.baity.utils.SoundUtils;
 import net.fabricmc.api.EnvType;
@@ -82,21 +82,20 @@ public class DynamicRadialMenuScreen extends Screen {
         try {
             updateHover(centerX, centerY, mouseX, mouseY, layer.slots.size());
 
-            final var owo = io.wispforest.owo.ui.core.OwoUIGraphics.of(context);
-            RadialMenuComponent.drawWheel(owo, centerX, centerY);
+            RadialWheelRenderer.drawWheel(context, centerX, centerY);
             int sectionCount = layer.slots.size();
             if (sectionCount > 0) {
                 double anglePerSection = 360.0 / sectionCount;
-                double startAngle = RadialMenuComponent.getStartAngle(sectionCount);
-                RadialMenuComponent.drawSectorDividers(owo, centerX, centerY, sectionCount, startAngle, anglePerSection);
+                double startAngle = RadialWheelRenderer.getStartAngle(sectionCount);
+                RadialWheelRenderer.drawSectorDividers(context, centerX, centerY, sectionCount, startAngle, anglePerSection);
                 if (hoveredSection >= 0 && hoveredSection < sectionCount) {
                     double sectionStart = startAngle + hoveredSection * anglePerSection;
-                    RadialMenuComponent.drawHoveredSector(owo, centerX, centerY, sectionStart, sectionStart + anglePerSection);
+                    RadialWheelRenderer.drawHoveredSector(context, centerX, centerY, sectionStart, sectionStart + anglePerSection);
                 }
                 for (int i = 0; i < sectionCount; i++) {
-                    float[] iconPos = RadialMenuComponent.sectorCenter(
+                    float[] iconPos = RadialWheelRenderer.sectorCenter(
                             centerX, centerY, startAngle, anglePerSection, i,
-                            RadialMenuComponent.INNER_RADIUS, RadialMenuComponent.OUTER_RADIUS);
+                            RadialWheelRenderer.INNER_RADIUS, RadialWheelRenderer.OUTER_RADIUS);
                     RadialSlotRenderer.drawSlotIcon(context, this.font, layer.slots.get(i), iconPos[0], iconPos[1]);
                 }
                 RadialSlotRenderer.drawSlotLabels(context, this.font, centerX, centerY, startAngle, anglePerSection,
@@ -104,12 +103,12 @@ public class DynamicRadialMenuScreen extends Screen {
             }
 
             if (parentScreen == null) {
-                RadialMenuComponent.drawCenterAvatarHub(owo, centerX, centerY);
-                RadialMenuComponent.drawCenterPlayerHead(context, centerX, centerY);
+                RadialWheelRenderer.drawCenterAvatarHub(context, centerX, centerY);
+                RadialWheelRenderer.drawCenterPlayerHead(context, centerX, centerY);
             } else if (isSecondLevel()) {
-                RadialMenuComponent.drawCenter(owo, centerX, centerY, RadialMenuComponent.CenterStyle.EXIT);
+                RadialWheelRenderer.drawCenter(context, centerX, centerY, RadialWheelRenderer.CenterStyle.EXIT);
             } else {
-                RadialMenuComponent.drawCenter(owo, centerX, centerY, RadialMenuComponent.CenterStyle.BACK);
+                RadialWheelRenderer.drawCenter(context, centerX, centerY, RadialWheelRenderer.CenterStyle.BACK);
             }
         } finally {
             pose.popMatrix();
@@ -178,7 +177,7 @@ public class DynamicRadialMenuScreen extends Screen {
         double dx = mouse[0] - centerX;
         double dy = mouse[1] - centerY;
         double distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance <= RadialMenuComponent.INNER_RADIUS + 2) {
+        if (distance <= RadialWheelRenderer.INNER_RADIUS + 2) {
             if (fromMouseClick) {
                 SoundUtils.playWoodenButton();
             }
@@ -244,12 +243,12 @@ public class DynamicRadialMenuScreen extends Screen {
         if (sectionCount <= 0) {
             return;
         }
-        if (distance > RadialMenuComponent.INNER_RADIUS && distance < RadialMenuComponent.OUTER_RADIUS + 20) {
+        if (distance > RadialWheelRenderer.INNER_RADIUS && distance < RadialWheelRenderer.OUTER_RADIUS + 20) {
             double degrees = Math.toDegrees(Math.atan2(dy, dx));
             if (degrees < 0) {
                 degrees += 360;
             }
-            hoveredSection = RadialMenuComponent.getSectionFromAngle(degrees, sectionCount);
+            hoveredSection = RadialWheelRenderer.getSectionFromAngle(degrees, sectionCount);
         }
     }
 

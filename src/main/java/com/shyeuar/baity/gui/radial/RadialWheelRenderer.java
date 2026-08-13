@@ -1,8 +1,7 @@
-package com.shyeuar.baity.gui.owo;
+package com.shyeuar.baity.gui.radial;
 
+import com.shyeuar.baity.gui.render.UiShapeRenderer;
 import com.shyeuar.baity.gui.theme.LinearTheme;
-import io.wispforest.owo.ui.core.Color;
-import io.wispforest.owo.ui.core.OwoUIGraphics;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -13,15 +12,19 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.PlayerSkin;
 
-public final class RadialMenuComponent {
+public final class RadialWheelRenderer {
 
-    private RadialMenuComponent() {
+    private RadialWheelRenderer() {
     }
 
     public static final int OUTER_RADIUS = 80;
     public static final int INNER_RADIUS = 30;
     public static final int CENTER_RADIUS = 30;
-    public static final int RING_SEGMENTS = 220;
+
+    /** Target arc length per segment (~1 GUI px); capped to keep wheel cost bounded. */
+    private static final double ARC_STEP_PX = 1.0;
+    private static final int MIN_ARC_SEGMENTS = 6;
+    private static final int MAX_ARC_SEGMENTS = 512;
 
     public static final float ICON_BASE_SCALE = 3f;
     public static final int WARP_ICON_BASE_SIZE = 24;
@@ -43,7 +46,7 @@ public final class RadialMenuComponent {
         BACK
     }
 
-    private static final int CENTER_HUB_SEGMENTS = 40;
+    private static final int CENTER_HUB_RADIUS = 11;
 
     private static final int BG = LinearTheme.BG_PRIMARY.getRGB();
     private static final int BG3 = LinearTheme.BG_TERTIARY.getRGB();
@@ -122,8 +125,7 @@ public final class RadialMenuComponent {
         return -font.lineHeight / 2f + 1f;
     }
 
-    public static void drawWheel(OwoUIGraphics context, int centerX, int centerY) {
-        final int segments = RING_SEGMENTS;
+    public static void drawWheel(GuiGraphicsExtractor context, int centerX, int centerY) {
         final int baseOuter = OUTER_RADIUS;
         final int baseInner = OUTER_RADIUS - 7;
 
@@ -131,39 +133,46 @@ public final class RadialMenuComponent {
         int ringFace = lerpArgb(BG3, BG, 0.15f);
         int ringDepth = lerpArgb(BG, 0x000000, 0.22f);
 
-        context.drawCircle(centerX, centerY, segments, baseOuter, Color.ofArgb(withAlpha(shellEdge, 0xFF)));
-        context.drawCircle(centerX, centerY, segments, baseInner, Color.ofArgb(withAlpha(ringFace, 0xF8)));
+        UiShapeRenderer.drawCircle(context, centerX, centerY,
+                segmentsForRadius(baseOuter), baseOuter, withAlpha(shellEdge, 0xFF));
+        UiShapeRenderer.drawCircle(context, centerX, centerY,
+                segmentsForRadius(baseInner), baseInner, withAlpha(ringFace, 0xF8));
 
         int depthInner = withAlpha(ringDepth, 0x55);
         int depthOuter = withAlpha(ringDepth, 0x00);
-        drawRingSplit(context, centerX, centerY, 0, 360, segments,
-                baseInner, baseOuter - 2, Color.ofArgb(depthInner), Color.ofArgb(depthOuter));
+        drawRingSplit(context, centerX, centerY, 0, 360,
+                baseInner, baseOuter - 2, depthInner, depthOuter);
 
         int highlight = withAlpha(lerpArgb(ringFace, 0xFFFFFF, 0.35f), 0x70);
         int shadow = withAlpha(lerpArgb(ringFace, 0x000000, 0.45f), 0x85);
-        drawLayoutRing(context, centerX, centerY, -140, -40, baseOuter - 1.5, baseOuter + 1.2, Color.ofArgb(highlight), Color.ofArgb(highlight));
-        drawLayoutRing(context, centerX, centerY, 40, 140, baseOuter - 1.5, baseOuter + 1.2, Color.ofArgb(shadow), Color.ofArgb(shadow));
+        drawLayoutRing(context, centerX, centerY, -140, -40, baseOuter - 1.5, baseOuter + 1.2, highlight, highlight);
+        drawLayoutRing(context, centerX, centerY, 40, 140, baseOuter - 1.5, baseOuter + 1.2, shadow, shadow);
 
         int accentRim = withAlpha(lerpArgb(ACCENT, ACCENT2, 0.4f), 0x45);
-        drawRingSplit(context, centerX, centerY, 0, 360, segments,
-                baseOuter - 1, baseOuter + 0.75, Color.ofArgb(accentRim), Color.ofArgb(withAlpha(accentRim, 0x00)));
+        drawRingSplit(context, centerX, centerY, 0, 360,
+                baseOuter - 1, baseOuter + 0.75, accentRim, withAlpha(accentRim, 0x00));
+
+        int fringeColor = withAlpha(shellEdge, 0x55);
+        drawRingSplit(context, centerX, centerY, 0, 360,
+                baseOuter - 0.2, baseOuter + 1.1, fringeColor, withAlpha(fringeColor, 0x00));
 
         int innerRadius = CENTER_RADIUS - 2;
         int innerFace = lerpArgb(BG, BG3, 0.25f);
         int innerRimHi = withAlpha(lerpArgb(innerFace, 0xFFFFFF, 0.28f), 0xA8);
         int innerRimLo = withAlpha(lerpArgb(innerFace, 0x000000, 0.35f), 0x90);
 
-        context.drawCircle(centerX, centerY, segments, innerRadius, Color.ofArgb(withAlpha(innerFace, 0xFF)));
+        UiShapeRenderer.drawCircle(context, centerX, centerY,
+                segmentsForRadius(innerRadius), innerRadius, withAlpha(innerFace, 0xFF));
         drawLayoutRing(context, centerX, centerY, -130, -50, innerRadius - 1, innerRadius + 1,
-                Color.ofArgb(innerRimHi), Color.ofArgb(innerRimHi));
+                innerRimHi, innerRimHi);
         drawLayoutRing(context, centerX, centerY, 50, 130, innerRadius - 1, innerRadius + 1,
-                Color.ofArgb(innerRimLo), Color.ofArgb(innerRimLo));
+                innerRimLo, innerRimLo);
     }
 
-    public static void drawSectorDividers(OwoUIGraphics context, int centerX, int centerY,
+    public static void drawSectorDividers(GuiGraphicsExtractor context, int centerX, int centerY,
                                           int sectionCount, double startAngle, double anglePerSection) {
         if (sectionCount <= 1) return;
-        Color c = Color.ofArgb(withAlpha(lerpArgb(BORDER, 0x000000, 0.25f), 0x65));
+        int c = withAlpha(lerpArgb(BORDER, 0x000000, 0.25f), 0x65);
         double inner = INNER_RADIUS + 1;
         double outer = OUTER_RADIUS - 8;
         for (int i = 0; i < sectionCount; i++) {
@@ -172,47 +181,48 @@ public final class RadialMenuComponent {
         }
     }
 
-    public static void drawHoveredSector(OwoUIGraphics context, int centerX, int centerY,
+    public static void drawHoveredSector(GuiGraphicsExtractor context, int centerX, int centerY,
                                          double layoutStartDeg, double layoutEndDeg) {
-        Color inner = Color.ofArgb(withAlpha(ACCENT, 0xE8));
-        Color outer = Color.ofArgb(withAlpha(ACCENT2, 0xF8));
+        int inner = withAlpha(ACCENT, 0xE8);
+        int outer = withAlpha(ACCENT2, 0xF8);
         drawLayoutRing(context, centerX, centerY, layoutStartDeg, layoutEndDeg,
                 INNER_RADIUS, OUTER_RADIUS - 7, inner, outer);
 
-        Color hi = Color.ofArgb(withAlpha(lerpArgb(ACCENT2, 0xFFFFFF, 0.4f), 0x90));
-        Color hiOut = Color.ofArgb(withAlpha(lerpArgb(ACCENT2, 0xFFFFFF, 0.4f), 0x00));
+        int hi = withAlpha(lerpArgb(ACCENT2, 0xFFFFFF, 0.4f), 0x90);
+        int hiOut = withAlpha(lerpArgb(ACCENT2, 0xFFFFFF, 0.4f), 0x00);
         drawLayoutRing(context, centerX, centerY, layoutStartDeg, layoutEndDeg,
                 OUTER_RADIUS - 9, OUTER_RADIUS - 5, hi, hiOut);
     }
 
-    public static void drawCenterAvatarHub(OwoUIGraphics context, int centerX, int centerY) {
+    public static void drawCenterAvatarHub(GuiGraphicsExtractor context, int centerX, int centerY) {
         int hubFace = withAlpha(lerpArgb(BG3, BG, 0.2f), 0xFF);
         int hubRim = withAlpha(lerpArgb(BG3, BORDER, 0.35f), 0xEE);
         drawCenterHub(context, centerX, centerY, hubFace, hubRim);
     }
 
-    public static void drawCenter(OwoUIGraphics context, int centerX, int centerY, CenterStyle style) {
+    public static void drawCenter(GuiGraphicsExtractor context, int centerX, int centerY, CenterStyle style) {
         switch (style) {
             case EXIT -> {
                 int hubFace = withAlpha(lerpArgb(BG3, 0xFF6A5C, 0.35f), 0xFF);
                 int hubRim = withAlpha(lerpArgb(0xFF8A7A, 0xFFB0A8, 0.5f), 0xEE);
                 drawCenterHub(context, centerX, centerY, hubFace, hubRim);
-                drawCenterCloseIcon(context, centerX, centerY, Color.ofArgb(0xFFFFECEA));
+                drawCenterCloseIcon(context, centerX, centerY, 0xFFFFECEA);
             }
             case BACK -> {
                 int hubFace = withAlpha(lerpArgb(BG3, YELLOW_DARK, 0.45f), 0xFF);
                 int hubRim = YELLOW_RIM;
                 drawCenterHub(context, centerX, centerY, hubFace, hubRim);
-                drawCenterBackIcon(context, centerX, centerY, Color.ofArgb(YELLOW));
+                drawCenterBackIcon(context, centerX, centerY, YELLOW);
             }
         }
     }
 
-    private static void drawCenterHub(OwoUIGraphics context, int centerX, int centerY, int hubFace, int hubRim) {
-        context.drawCircle(centerX, centerY, CENTER_HUB_SEGMENTS, 11, Color.ofArgb(hubRim));
-        context.drawCircle(centerX, centerY, CENTER_HUB_SEGMENTS, 9.5, Color.ofArgb(hubFace));
+    private static void drawCenterHub(GuiGraphicsExtractor context, int centerX, int centerY, int hubFace, int hubRim) {
+        int hubSegments = segmentsForRadius(CENTER_HUB_RADIUS);
+        UiShapeRenderer.drawCircle(context, centerX, centerY, hubSegments, CENTER_HUB_RADIUS, hubRim);
+        UiShapeRenderer.drawCircle(context, centerX, centerY, hubSegments, 9.5, hubFace);
         int hubHi = withAlpha(lerpArgb(hubFace, 0xFFFFFF, 0.35f), 0x80);
-        drawLayoutRing(context, centerX, centerY, -120, -60, 8.5, 10.5, Color.ofArgb(hubHi), Color.ofArgb(hubHi));
+        drawLayoutRing(context, centerX, centerY, -120, -60, 8.5, 10.5, hubHi, hubHi);
     }
 
     public static void drawCenterPlayerHead(GuiGraphicsExtractor graphics, int centerX, int centerY) {
@@ -274,14 +284,14 @@ public final class RadialMenuComponent {
         return Math.max(innerRadius + 4, mid - ICON_RADIUS_INSET);
     }
 
-    private static void drawCenterCloseIcon(OwoUIGraphics context, int centerX, int centerY, Color color) {
+    private static void drawCenterCloseIcon(GuiGraphicsExtractor context, int centerX, int centerY, int color) {
         float half = 4.6f;
         float stroke = 2.15f;
         drawThickRoundLine(context, centerX - half, centerY - half, centerX + half, centerY + half, stroke, color);
         drawThickRoundLine(context, centerX - half, centerY + half, centerX + half, centerY - half, stroke, color);
     }
 
-    private static void drawCenterBackIcon(OwoUIGraphics context, int centerX, int centerY, Color color) {
+    private static void drawCenterBackIcon(GuiGraphicsExtractor context, int centerX, int centerY, int color) {
         float stroke = 2.05f;
         float pad = stroke * 0.52f;
         float tailX = 3.6f;
@@ -297,18 +307,18 @@ public final class RadialMenuComponent {
         drawThickRoundLineCentered(context, centerX, centerY, geoX, geoY, tipX, midY, headX, midY + headSpread, stroke, color);
     }
 
-    private static void drawThickRoundLineCentered(OwoUIGraphics context, int hubX, int hubY,
+    private static void drawThickRoundLineCentered(GuiGraphicsExtractor context, int hubX, int hubY,
                                                    float geoX, float geoY,
                                                    float x0, float y0, float x1, float y1,
-                                                   float thickness, Color color) {
+                                                   float thickness, int color) {
         drawThickRoundLine(context,
                 hubX + x0 - geoX, hubY + y0 - geoY,
                 hubX + x1 - geoX, hubY + y1 - geoY,
                 thickness, color);
     }
 
-    private static void drawThickRoundLine(OwoUIGraphics context, float x0, float y0, float x1, float y1,
-                                           float thickness, Color color) {
+    private static void drawThickRoundLine(GuiGraphicsExtractor context, float x0, float y0, float x1, float y1,
+                                           float thickness, int color) {
         float dx = x1 - x0;
         float dy = y1 - y0;
         float len = (float) Math.sqrt(dx * dx + dy * dy);
@@ -322,37 +332,57 @@ public final class RadialMenuComponent {
             float t = i / (float) segments;
             float x = x0 + dx * t;
             float y = y0 + dy * t;
-            context.drawCircle(Math.round(x), Math.round(y), 10, radius, color);
+            UiShapeRenderer.drawCircle(context, (int) x, (int) y, 10, radius, color);
         }
     }
 
-    private static void drawLayoutRing(OwoUIGraphics context, int centerX, int centerY,
+    private static void drawLayoutRing(GuiGraphicsExtractor context, int centerX, int centerY,
                                        double layoutFromDeg, double layoutToDeg,
                                        double innerRadius, double outerRadius,
-                                       Color innerColor, Color outerColor) {
-        double owoFrom = toOwoAngle(layoutFromDeg);
-        double owoTo = toOwoAngle(layoutToDeg);
-        drawRingSplit(context, centerX, centerY, owoFrom, owoTo, RING_SEGMENTS,
+                                       int innerColor, int outerColor) {
+        double renderFrom = toRenderAngle(layoutFromDeg);
+        double renderTo = toRenderAngle(layoutToDeg);
+        drawRingSplit(context, centerX, centerY, renderFrom, renderTo,
                 innerRadius, outerRadius, innerColor, outerColor);
     }
 
-    private static void drawRingSplit(OwoUIGraphics context, int centerX, int centerY,
-                                      double fromDeg, double toDeg, int segments,
+    private static void drawRingSplit(GuiGraphicsExtractor context, int centerX, int centerY,
+                                      double fromDeg, double toDeg,
                                       double innerRadius, double outerRadius,
-                                      Color innerColor, Color outerColor) {
+                                      int innerColor, int outerColor) {
         double f = normalizeDeg(fromDeg);
         double t = normalizeDeg(toDeg);
         if (t <= f) t += 360d;
 
+        double edgeRadius = Math.max(innerRadius, outerRadius);
         if (t <= 360d) {
-            context.drawRing(centerX, centerY, f, t, segments, innerRadius, outerRadius, innerColor, outerColor);
+            int segments = segmentsForArc(edgeRadius, t - f);
+            UiShapeRenderer.drawRing(context, centerX, centerY, f, t, segments,
+                    innerRadius, outerRadius, innerColor, outerColor);
         } else {
-            context.drawRing(centerX, centerY, f, 360d, segments, innerRadius, outerRadius, innerColor, outerColor);
-            context.drawRing(centerX, centerY, 0d, t - 360d, segments, innerRadius, outerRadius, innerColor, outerColor);
+            int firstSegments = segmentsForArc(edgeRadius, 360d - f);
+            UiShapeRenderer.drawRing(context, centerX, centerY, f, 360d, firstSegments,
+                    innerRadius, outerRadius, innerColor, outerColor);
+            int secondSegments = segmentsForArc(edgeRadius, t - 360d);
+            UiShapeRenderer.drawRing(context, centerX, centerY, 0d, t - 360d, secondSegments,
+                    innerRadius, outerRadius, innerColor, outerColor);
         }
     }
 
-    private static double toOwoAngle(double layoutDegrees) {
+    private static int segmentsForRadius(double radius) {
+        return segmentsForArc(radius, 360d);
+    }
+
+    private static int segmentsForArc(double radius, double angleDegrees) {
+        if (angleDegrees <= 0d) {
+            return MIN_ARC_SEGMENTS;
+        }
+        double clampedAngle = Math.min(360d, angleDegrees);
+        double arcPx = Math.toRadians(clampedAngle) * Math.max(1d, radius);
+        return Math.min(MAX_ARC_SEGMENTS, Math.max(MIN_ARC_SEGMENTS, (int) Math.ceil(arcPx / ARC_STEP_PX)));
+    }
+
+    private static double toRenderAngle(double layoutDegrees) {
         return normalizeDeg(layoutDegrees + 180.0);
     }
 

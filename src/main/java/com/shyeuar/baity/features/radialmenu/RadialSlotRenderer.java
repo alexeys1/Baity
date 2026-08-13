@@ -1,7 +1,7 @@
 package com.shyeuar.baity.features.radialmenu;
 
 import com.shyeuar.baity.features.radialmenu.data.RadialMenuModels;
-import com.shyeuar.baity.gui.owo.RadialMenuComponent;
+import com.shyeuar.baity.gui.radial.RadialWheelRenderer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.Font;
@@ -26,7 +26,7 @@ public final class RadialSlotRenderer {
         if (slot.icon != null && !slot.icon.isBlank()) {
             Identifier texture = RadialIconLibrary.resolveFileTexture(slot.icon);
             if (texture != null) {
-                int iconSize = RadialMenuComponent.WARP_ICON_BASE_SIZE;
+                int iconSize = RadialWheelRenderer.WARP_ICON_BASE_SIZE;
                 graphics.blit(RenderPipelines.GUI_TEXTURED, texture,
                         Math.round(centerX - iconSize / 2f), Math.round(centerY - iconSize / 2f),
                         0.0f, 0.0f, iconSize, iconSize, iconSize, iconSize);
@@ -47,8 +47,8 @@ public final class RadialSlotRenderer {
         if (slot.unicodeIcon != null && !slot.unicodeIcon.isEmpty()) {
             UnicodeIconParser.Parsed parsed = UnicodeIconParser.parse(slot.unicodeIcon);
             if (!parsed.glyph().isEmpty()) {
-                RadialMenuComponent.drawUnicodeSymbol(graphics, font, parsed.glyph(), centerX, centerY,
-                        RadialMenuComponent.ICON_BASE_SCALE, parsed.colorArgb());
+                RadialWheelRenderer.drawUnicodeSymbol(graphics, font, parsed.glyph(), centerX, centerY,
+                        RadialWheelRenderer.ICON_BASE_SCALE, parsed.colorArgb());
             }
         }
     }
@@ -69,18 +69,18 @@ public final class RadialSlotRenderer {
             if (label.isEmpty()) {
                 continue;
             }
-            float[] labelPos = RadialMenuComponent.sectorLabelPosition(
-                    centerX, centerY, startAngle, anglePerSection, i, RadialMenuComponent.OUTER_RADIUS + 25, font, label);
+            float[] labelPos = RadialWheelRenderer.sectorLabelPosition(
+                    centerX, centerY, startAngle, anglePerSection, i, RadialWheelRenderer.OUTER_RADIUS + 25, font, label);
             if (i == hoveredIndex) {
-                RadialMenuComponent.drawRadialLabel(graphics, font, label, labelPos[0], labelPos[1]);
+                RadialWheelRenderer.drawRadialLabel(graphics, font, label, labelPos[0], labelPos[1]);
             } else {
-                RadialMenuComponent.drawLabel(graphics, font, label, labelPos[0], labelPos[1], RadialMenuComponent.textSecondary());
+                RadialWheelRenderer.drawLabel(graphics, font, label, labelPos[0], labelPos[1], RadialWheelRenderer.textSecondary());
             }
         }
     }
 
     private static void drawItemIcon(GuiGraphicsExtractor graphics, ItemStack stack, float centerX, float centerY) {
-        int size = RadialMenuComponent.WARP_ICON_BASE_SIZE;
+        int size = RadialWheelRenderer.WARP_ICON_BASE_SIZE;
         float scale = size / 16f;
         int drawX = Math.round(centerX - 8);
         int drawY = Math.round(centerY - 8);
@@ -95,7 +95,7 @@ public final class RadialSlotRenderer {
 
     private static void drawBlockSpriteIcon(GuiGraphicsExtractor graphics, TextureAtlasSprite sprite,
                                            float centerX, float centerY) {
-        int size = RadialMenuComponent.WARP_ICON_BASE_SIZE;
+        int size = RadialWheelRenderer.WARP_ICON_BASE_SIZE;
         int x = Math.round(centerX - size / 2f);
         int y = Math.round(centerY - size / 2f);
         graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, x, y, size, size);

@@ -53,7 +53,8 @@ public class Baity implements ClientModInitializer {
         RemoteFileFetcher.init();
         BlockAnimationSwordCatalog.init();
         Objects.requireNonNull(CustomTotemItem.CUSTOM_TOTEM);
-        
+        com.shyeuar.baity.gui.render.BaityUiPipelines.register();
+
         ConfigManager.loadConfig();
         SmolFriendManager.reloadFromConfig();
 

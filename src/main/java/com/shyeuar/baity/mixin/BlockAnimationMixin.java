@@ -45,7 +45,7 @@ public abstract class BlockAnimationMixin {
         @Invoker("applyItemArmTransform")
         public abstract void baity$callApplyItemArmTransform(com.mojang.blaze3d.vertex.PoseStack poseStack, HumanoidArm hand, float equippedProgress);
 
-        @Inject(method = "itemUsed", at = @At("HEAD"), cancellable = true)
+        @Inject(method = "itemUsed(Lnet/minecraft/world/InteractionHand;)V", at = @At("HEAD"), cancellable = true)
         private void baity$itemUsed(InteractionHand interactionHand, CallbackInfo callback) {
             if (!BlockAnimationUtils.isFeatureActive()) return;
             if (!BlockAnimationUtils.isNoReequipWhenUsingEnabled()) return;
@@ -60,7 +60,7 @@ public abstract class BlockAnimationMixin {
         }
 
         @WrapOperation(
-            method = "renderArmWithItem",
+            method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;isUsingItem()Z")
         )
         private boolean baity$wrapIsUsingItem(net.minecraft.client.player.AbstractClientPlayer player, Operation<Boolean> original) {
@@ -74,7 +74,7 @@ public abstract class BlockAnimationMixin {
         }
 
         @WrapOperation(
-            method = "renderArmWithItem",
+            method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;getUseItemRemainingTicks()I")
         )
         private int baity$wrapGetItemUseTimeLeft(net.minecraft.client.player.AbstractClientPlayer player, Operation<Integer> original) {
@@ -88,7 +88,7 @@ public abstract class BlockAnimationMixin {
         }
 
         @WrapOperation(
-            method = "renderArmWithItem",
+            method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;getUsedItemHand()Lnet/minecraft/world/InteractionHand;")
         )
         private InteractionHand baity$wrapGetActiveHand(net.minecraft.client.player.AbstractClientPlayer player, Operation<InteractionHand> original) {
@@ -104,8 +104,8 @@ public abstract class BlockAnimationMixin {
             return original.call(player);
         }
 
-        @Inject(method = "renderArmWithItem", at = @At("HEAD"), cancellable = true)
-        private void baity$renderArmWithItem(net.minecraft.client.player.AbstractClientPlayer player, float partialTicks, float pitch, 
+        @Inject(method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V", at = @At("HEAD"), cancellable = true)
+        private void baity$submitArmWithItem(net.minecraft.client.player.AbstractClientPlayer player, float partialTicks, float pitch,
                 InteractionHand interactionHand, float swingProgress, net.minecraft.world.item.ItemStack stack, float equippedProgress, 
                 com.mojang.blaze3d.vertex.PoseStack poseStack, net.minecraft.client.renderer.SubmitNodeCollector submitNodeCollector, 
                 int combinedLight, CallbackInfo callback) {
@@ -133,7 +133,7 @@ public abstract class BlockAnimationMixin {
         }
 
         @Inject(
-            method = "renderArmWithItem",
+            method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At(
                 value = "INVOKE",
                 target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
@@ -154,7 +154,7 @@ public abstract class BlockAnimationMixin {
         }
 
         @Inject(
-            method = "renderArmWithItem",
+            method = "submitArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
             at = @At(
                 value = "INVOKE",
                 target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V"

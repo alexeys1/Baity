@@ -89,7 +89,7 @@ public final class NickRenderUtils {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        Screen screen = mc == null ? null : mc.screen;
+        Screen screen = mc == null ? null : mc.gui.screen();
         if (screen == null) {
             GUI_TEXT_RENDER_DEPTH.remove();
             return;
@@ -111,7 +111,7 @@ public final class NickRenderUtils {
             return false;
         }
         if (isModMenuScreen(screen)) {
-            return false;
+            return true;
         }
         if (screen.isPauseScreen()) {
             return true;
@@ -745,4 +745,3 @@ public final class NickRenderUtils {
     private record ReplacementCodepoint(int codepoint, Integer explicitColor) {
     }
 }
-

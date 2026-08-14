@@ -4,6 +4,8 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.references.BlockItemIds;
+import net.minecraft.references.ItemIds;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemLore;
@@ -87,7 +89,9 @@ public final class SidePanelMenus {
         if (stack == null || stack.isEmpty()) {
             return false;
         }
-        if (stack.is(Items.GRAY_DYE) || stack.is(Items.RED_DYE) || stack.is(Items.BLACK_STAINED_GLASS_PANE)) {
+        if (stack.typeHolder().is(ItemIds.DYE.gray())
+                || stack.typeHolder().is(ItemIds.DYE.red())
+                || stack.typeHolder().is(BlockItemIds.STAINED_GLASS_PANE.black().item())) {
             return false;
         }
         ItemLore lore = stack.get(DataComponents.LORE);

@@ -284,7 +284,7 @@ public class SmolFriendsScreen extends Screen {
     @Override
     public void onClose() {
         if (this.minecraft != null && this.parentScreen != null) {
-            this.minecraft.setScreen(this.parentScreen);
+            this.minecraft.gui.setScreen(this.parentScreen);
             return;
         }
         super.onClose();

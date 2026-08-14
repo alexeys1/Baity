@@ -9,10 +9,10 @@ import com.shyeuar.baity.render.interfaces.EntityRenderStateInterface;
 import com.shyeuar.baity.features.smolpeople.SmolPeopleNametag;
 import com.shyeuar.baity.utils.NametagUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
@@ -27,14 +27,14 @@ import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 public class NametagMixin {
 
-    private static final String SUBMIT_NAME_DISPLAY = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V";
+    private static final String SUBMIT_NAME_DISPLAY = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V";
     private static final String ENTITY_SUBMIT_NAME_DISPLAY = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V";
 
     @Mixin(EntityRenderer.class)
@@ -56,7 +56,7 @@ public class NametagMixin {
         }
     }
 
-    @Mixin(LivingEntityRenderer.class)
+    @Mixin(EntityRenderer.class)
     public static class SubmitMixin {
 
         @Inject(
@@ -64,7 +64,7 @@ public class NametagMixin {
             at = @At("HEAD")
         )
         private void baity$beginNameTagSubmit(
-            LivingEntityRenderState state,
+            EntityRenderState state,
             PoseStack matrices,
             SubmitNodeCollector queue,
             CameraRenderState cameraState,
@@ -86,7 +86,7 @@ public class NametagMixin {
             cancellable = true
         )
         private void baity$hideOriginalNameTag(
-            LivingEntityRenderState state,
+            EntityRenderState state,
             PoseStack matrices,
             SubmitNodeCollector queue,
             CameraRenderState cameraState,
@@ -125,12 +125,15 @@ public class NametagMixin {
             }
         }
 
-        @ModifyVariable(
+        @ModifyArg(
             method = SUBMIT_NAME_DISPLAY,
-            at = @At("STORE"),
-            ordinal = 0
+            at = @At(
+                value = "INVOKE",
+                target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitNameTag(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZILnet/minecraft/client/renderer/state/level/CameraRenderState;)V"
+            ),
+            index = 3
         )
-        private Component baity$applyNickTweaksBeforeLayout(Component originalComponent, LivingEntityRenderState state) {
+        private Component baity$applyNickTweaksBeforeLayout(Component originalComponent) {
             if (!NametagUtils.shouldProcessNametagText()) {
                 return originalComponent;
             }
@@ -145,8 +148,17 @@ public class NametagMixin {
             RenderScope.exitNameTagSubmit();
         }
 
-        private static int baity$resolveEntityId(LivingEntityRenderState state) {
-            return RenderScope.resolveLivingEntityRenderStateId(state);
+        private static int baity$resolveEntityId(EntityRenderState state) {
+            if (state instanceof LivingEntityRenderState livingState) {
+                return RenderScope.resolveLivingEntityRenderStateId(livingState);
+            }
+            if (state instanceof EntityRenderStateInterface context) {
+                int entityId = context.baity$getEntityId();
+                if (entityId >= 0) {
+                    return entityId;
+                }
+            }
+            return RenderScope.getNameTagSubmitEntityId();
         }
     }
 
@@ -243,11 +255,11 @@ public class NametagMixin {
         }
     }
 
-    @Mixin(NameTagFeatureRenderer.Storage.class)
-    public static class StorageMixin {
+    @Mixin(SubmitNodeCollection.class)
+    public static class SubmitNodeCollectionMixin {
 
         @Inject(
-            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
+            method = "submitNameTag(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZILnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At("HEAD")
         )
         private void baity$beginNameTagAdd(
@@ -257,7 +269,6 @@ public class NametagMixin {
             Component component,
             boolean seeThrough,
             int light,
-            double distanceSq,
             CameraRenderState cameraState,
             CallbackInfo ci
         ) {
@@ -265,7 +276,7 @@ public class NametagMixin {
         }
 
         @Inject(
-            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
+            method = "submitNameTag(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZILnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At("RETURN")
         )
         private void baity$endNameTagAdd(
@@ -275,60 +286,20 @@ public class NametagMixin {
             Component component,
             boolean seeThrough,
             int light,
-            double distanceSq,
             CameraRenderState cameraState,
             CallbackInfo ci
         ) {
             RenderScope.exitNameTagAdd();
         }
 
-        @ModifyVariable(
-            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
-            at = @At("HEAD"),
-            argsOnly = true
-        )
-        private Component baity$useProcessedTextForLayout(Component originalComponent) {
-            if (!NametagUtils.shouldApplyNametagLayoutCompat()) {
-                return originalComponent;
-            }
-            return NametagUtils.applyNickProcessedText(originalComponent);
-        }
-
-        @ModifyVariable(
-            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
-            at = @At("STORE"),
-            ordinal = 0
-        )
-        private float baity$recalculateCenteredOffset(
-            float originalOffset,
-            PoseStack poseStack,
-            net.minecraft.world.phys.Vec3 vec3,
-            int lineOffset,
-            Component component,
-            boolean seeThrough,
-            int light,
-            double distanceSq,
-            CameraRenderState cameraState
-        ) {
-            if (!NametagUtils.shouldApplyNametagLayoutCompat() || component == null) {
-                return originalOffset;
-            }
-            Minecraft mc = Minecraft.getInstance();
-            if (mc == null || mc.font == null) {
-                return originalOffset;
-            }
-            Component target = NametagUtils.applyNickProcessedText(component);
-            return -mc.font.width(target.getVisualOrderText()) / 2.0F;
-        }
-
         @Redirect(
-            method = "add(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZIDLnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
+            method = "submitNameTag(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZILnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At(
                 value = "NEW",
-                target = "net/minecraft/client/renderer/SubmitNodeStorage$NameTagSubmit"
+                target = "net/minecraft/client/renderer/feature/NameTagFeatureRenderer$Submit"
             )
         )
-        private SubmitNodeStorage.NameTagSubmit baity$createNameTagSubmit(
+        private NameTagFeatureRenderer.Submit baity$createNameTagSubmit(
             Matrix4fc pose,
             float x,
             float y,
@@ -336,14 +307,20 @@ public class NametagMixin {
             int lightCoords,
             int color,
             int backgroundColor,
-            double distanceToCameraSq
+            Font.DisplayMode displayMode
         ) {
+            if (NametagUtils.shouldApplyNametagLayoutCompat() && text != null) {
+                Minecraft mc = Minecraft.getInstance();
+                if (mc != null && mc.font != null) {
+                    x = -mc.font.width(text.getVisualOrderText()) / 2.0F;
+                }
+            }
             int finalBackgroundColor = backgroundColor;
             if (NametagUtils.isNametagModuleActive() && ConfigManager.nametagTransparentizeOtherTags) {
                 finalBackgroundColor = 0;
             }
 
-            return new SubmitNodeStorage.NameTagSubmit(
+            return new NameTagFeatureRenderer.Submit(
                 pose,
                 x,
                 y,
@@ -351,7 +328,7 @@ public class NametagMixin {
                 lightCoords,
                 color,
                 finalBackgroundColor,
-                distanceToCameraSq
+                displayMode
             );
         }
     }

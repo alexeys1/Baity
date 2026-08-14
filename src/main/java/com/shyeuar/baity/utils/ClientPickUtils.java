@@ -58,7 +58,7 @@ public final class ClientPickUtils {
 
     public static float getCameraEyeHeightLerped(float partialTick) {
         Minecraft mc = Minecraft.getInstance();
-        Camera camera = mc.gameRenderer.getMainCamera();
+        Camera camera = mc.gameRenderer.mainCamera();
         CameraAccessor accessor = (CameraAccessor) camera;
         return Mth.lerp(partialTick, accessor.baity$getOldEyeHeight(), accessor.baity$getEyeHeight());
     }
@@ -84,7 +84,7 @@ public final class ClientPickUtils {
     }
 
     public static Vec3 getCrosshairEyePosition() {
-        return Minecraft.getInstance().gameRenderer.getMainCamera().position();
+        return Minecraft.getInstance().gameRenderer.mainCamera().position();
     }
 
     public static Vec3 getPhysicalEyePosition(Entity entity, float tickDelta) {

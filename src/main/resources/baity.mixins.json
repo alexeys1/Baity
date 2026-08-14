@@ -12,7 +12,7 @@
     "NametagMixin$SubmitMixin",
     "NametagMixin$EntitySubmitMixin",
     "NametagMixin$HideMixin",
-    "NametagMixin$StorageMixin",
+    "NametagMixin$SubmitNodeCollectionMixin",
     "BlockAnimationMixin$ItemInHandRendererMixin",
     "BlockAnimationMixin$LivingEntitySwingMixin",
     "BlockAnimationMixin$MinecraftMixin",
@@ -27,7 +27,6 @@
     "CustomHandHoldingMixin$SwingDurationMixin",
     "CustomHandHoldingMixin$AttackCooldownMixin",
     "CustomHandHoldingMixin$HeldItemTransformMixin",
-    "CustomHandHoldingMixin$LevelRendererTickMixin",
     "RadialMenuMouseMixin",
     "ChatChannelSwitcherMixin",
     "NumInputerMixin",
@@ -57,14 +56,13 @@
     "Skin3DMixin$ModelPartMixin",
     "MufflerMixin",
     "NodebuffMixin$GameRendererMixin",
-    "NodebuffMixin$GuiMixin",
+    "NodebuffMixin$HudMixin",
     "accessor.FogRendererAccessor",
     "NoSwapAnimationMixin",
     "NoArmSwayMixin",
     "ImmuneReactionMixin$ChatDetectorMixin",
     "NickTweaksMixin$FontMixin",
     "NickTweaksMixin$ScreenGuiTextScopeMixin",
-    "ModMenuNickTweaksMixin$ModMenuScreenMixin",
     "ImmuneReactionMixin$PlayerTickMixin",
     "InvisibugHighlightsMixin$ParticlePacketMixin",
     "InvisibugHighlightsMixin$EntityRemovalMixin",
@@ -82,11 +80,14 @@
     "InGameHudMixin",
     "PaperDollArmorMixin$HumanoidArmorLayerMixin",
     "PaperDollArmorMixin$CustomHeadLayerMixin",
-    "KeybindsSlotClickMixin",
+    "KeybindsMixin$ContainerScreenMixin",
+    "KeybindsMixin$GameModeMixin",
     "accessor.AbstractContainerScreenInvoker",
+    "accessor.GuiGraphicsExtractorAccessor",
     "SidePanelMixin$ContainerScreenMixin",
     "SidePanelMixin$InventoryScreenMixin",
     "SidePanelMixin$PacketMixin",
+    "ReminderMixin$SystemChatMixin",
     "RenderScopeMixin$LivingEntityRenderStateMixin",
     "RenderScopeMixin$LivingEntityRendererScopeMixin",
     "accessor.PlayerAccessor",
@@ -96,10 +97,9 @@
     "accessor.AvatarRendererInvoker",
     "accessor.CameraRenderStateAccessor",
     "accessor.PostRenderAccessors$PostChainAccessor",
-    "accessor.PostRenderAccessors$PostPassAccessor",
-    "accessor.PostRenderAccessors$ShaderManagerAccessor"
+    "accessor.PostRenderAccessors$PostPassAccessor"
   ],
   "injectors": {
-    "defaultRequire": 0
+    "defaultRequire": 1
   }
 }

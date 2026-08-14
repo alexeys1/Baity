@@ -20,7 +20,7 @@ public abstract class GameRendererMixin {
     @Final
     private Camera mainCamera;
 
-    @Inject(method = "extractCamera", at = @At("TAIL"))
+    @Inject(method = "extractCamera(Lnet/minecraft/client/DeltaTracker;FF)V", at = @At("TAIL"), require = 1)
     private void baity$populateCameraRenderState(CallbackInfo ci, @Local CameraRenderState cameraRenderState) {
         CameraRenderStateAccessor cameraAccessor = (CameraRenderStateAccessor) cameraRenderState;
         cameraAccessor.baity$setId(this.mainCamera.entity().getId());
@@ -30,17 +30,17 @@ public abstract class GameRendererMixin {
         cameraAccessor.baity$setWorldCamera(true);
     }
 
-    @Inject(method = "renderLevel", at = @At("HEAD"))
+    @Inject(method = "renderLevel(Lnet/minecraft/client/DeltaTracker;)V", at = @At("HEAD"), require = 1)
     private void baity$beginWorldRenderPhase(CallbackInfo ci) {
         com.shyeuar.baity.render.RenderScope.enterWorldRenderPhase();
     }
 
-    @Inject(method = "renderLevel", at = @At("RETURN"))
+    @Inject(method = "renderLevel(Lnet/minecraft/client/DeltaTracker;)V", at = @At("RETURN"), require = 1)
     private void baity$endWorldRenderPhase(CallbackInfo ci) {
         com.shyeuar.baity.render.RenderScope.exitWorldRenderPhase();
     }
 
-    @Inject(method = "renderLevel", at = @At("TAIL"))
+    @Inject(method = "renderLevel(Lnet/minecraft/client/DeltaTracker;)V", at = @At("TAIL"), require = 1)
     private void baity$clearMotionBlurAllocator(CallbackInfo ci) {
         MotionBlur.clearFrameAllocator();
     }

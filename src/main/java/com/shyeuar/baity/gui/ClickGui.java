@@ -6,7 +6,7 @@ import com.shyeuar.baity.gui.smol.SmolFriendsScreen;
 import com.shyeuar.baity.gui.internal.ClickGuiState;
 import com.shyeuar.baity.gui.internal.ClickGuiLayout;
 import com.shyeuar.baity.gui.internal.ClickGuiInputHandler;
-import com.shyeuar.baity.gui.owo.ClickGuiRootComponent;
+import com.shyeuar.baity.gui.internal.ClickGuiRenderer;
 import com.shyeuar.baity.gui.sync.ConfigSynchronizer;
 import com.shyeuar.baity.gui.theme.Theme;
 import com.shyeuar.baity.gui.module.Module;
@@ -16,28 +16,24 @@ import com.shyeuar.baity.gui.value.ButtonValue;
 import com.shyeuar.baity.gui.value.ValueCycleUtils;
 import com.shyeuar.baity.sync.BaityPresenceSync;
 import com.shyeuar.baity.utils.TimerUtils;
-import io.wispforest.owo.ui.base.BaseOwoScreen;
-import io.wispforest.owo.ui.container.UIContainers;
-import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.core.OwoUIAdapter;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.jetbrains.annotations.NotNull;
 
 @Environment(EnvType.CLIENT)
-public class ClickGui extends BaseOwoScreen<FlowLayout> {
+public class ClickGui extends Screen {
     
     private final ClickGuiState state;
     private final boolean restoredFromSession;
     private final TimerUtils valuetimer;
     private ClickGuiInputHandler inputHandler;
-    private ClickGuiRootComponent rootComponent;
+    private ClickGuiRenderer rootComponent;
     
     public static Theme theme = new Theme();
     private final com.shyeuar.baity.gui.render.ModuleStyleRenderer.TooltipInfo tooltipInfo = 
@@ -76,14 +72,16 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     }
     
     @Override
-    protected @NotNull OwoUIAdapter<FlowLayout> createAdapter() {
-        return OwoUIAdapter.create(this, UIContainers::horizontalFlow);
-    }
-    
-    @Override
     protected void init() {
         inputHandler();
         super.init();
+        if (rootComponent == null) {
+            rootComponent = new ClickGuiRenderer(state, theme,
+                    this::getTooltipText,
+                    this::getTooltipTextWithColors,
+                    this::getDisplayTextFormatter,
+                    tooltipInfo);
+        }
         theme.setDark();
         
         if (ModuleManager.getModules().isEmpty()) {
@@ -181,26 +179,14 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
     }
     
     @Override
-    protected void build(FlowLayout rootComponent) {
-        this.rootComponent = new ClickGuiRootComponent(state, theme,
-            this::getTooltipText,
-            this::getTooltipTextWithColors,
-            this::getDisplayTextFormatter,
-            tooltipInfo);
-        this.rootComponent.configureRootLayout();
-        rootComponent.child(this.rootComponent);
-    }
-    
-    @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         syncDragPositionFromMouse();
-        if (rootComponent != null) {
-            rootComponent.setGuiGraphics(graphics);
+        if (rootComponent == null || graphics == null) {
+            return;
         }
-        
-        if (graphics != null) {
-            super.extractRenderState(graphics, mouseX, mouseY, delta);
-        }
+        rootComponent.setGuiGraphics(graphics);
+        rootComponent.update(delta, mouseX, mouseY);
+        rootComponent.draw(mouseX, mouseY, delta, delta);
     }
 
     private void syncDragPositionFromMouse() {
@@ -410,7 +396,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         if ("SmolPeople".equals(module.getName()) && "friends".equals(buttonValue.getName())) {
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {
-                mc.setScreen(new SmolFriendsScreen(this));
+                mc.gui.setScreen(new SmolFriendsScreen(this));
             }
             return;
         }
@@ -418,7 +404,7 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         if ("RadialMenu".equals(module.getName()) && "layout".equals(buttonValue.getName())) {
             Minecraft mc = Minecraft.getInstance();
             if (mc != null) {
-                mc.setScreen(new com.shyeuar.baity.features.radialmenu.RadialLayoutEditorScreen(this));
+                mc.gui.setScreen(new com.shyeuar.baity.features.radialmenu.RadialLayoutEditorScreen(this));
             }
             return;
         }
@@ -433,4 +419,3 @@ public class ClickGui extends BaseOwoScreen<FlowLayout> {
         return state.isListeningForInput();
     }
 }
-

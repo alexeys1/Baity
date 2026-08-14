@@ -3,7 +3,6 @@ package com.shyeuar.baity.mixin.accessor;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.PostPass;
-import net.minecraft.client.renderer.ShaderManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
@@ -26,9 +25,4 @@ public final class PostRenderAccessors {
         Map<String, GpuBuffer> baity$getCustomUniforms();
     }
 
-    @Mixin(ShaderManager.class)
-    public interface ShaderManagerAccessor {
-        @Accessor("compilationCache")
-        ShaderManager.CompilationCache baity$getCompilationCache();
-    }
 }

@@ -4,7 +4,6 @@ import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
@@ -15,7 +14,6 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.OutputTarget;
@@ -73,21 +71,19 @@ public class ShulkerHighlights implements LevelRenderEvents.AfterSolidFeatures {
 
         Vec3 cameraPos = context.levelState().cameraRenderState.pos;
         PoseStack matrices = context.poseStack();
-        MultiBufferSource buffers = context.bufferSource();
-        if (matrices == null || buffers == null) return;
-
-        VertexConsumer lines = buffers.getBuffer(NO_DEPTH_LINES);
+        var submits = context.submitNodeCollector();
+        if (matrices == null || submits == null) return;
 
         for (Entity entity : MC.level.entitiesForRendering()) {
             if (!(entity instanceof Shulker shulker)) continue;
             if (!shulker.isAlive()) continue;
 
             AABB box = shulker.getBoundingBox().inflate(0.01);
-            EntityDrawUtils.drawWireBoxAtWorld(matrices, lines, box, cameraPos, r, g, b, a);
-        }
-
-        if (buffers instanceof MultiBufferSource.BufferSource bufferSource) {
-            bufferSource.endBatch(NO_DEPTH_LINES);
+            submits.submitCustomGeometry(
+                    matrices,
+                    NO_DEPTH_LINES,
+                    (pose, lines) -> EntityDrawUtils.drawWireBoxAtWorld(pose, lines, box, cameraPos, r, g, b, a)
+            );
         }
     }
 }

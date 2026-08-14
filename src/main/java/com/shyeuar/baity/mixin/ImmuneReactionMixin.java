@@ -5,9 +5,12 @@ import com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplash;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.chat.GuiMessageSource;
+import net.minecraft.client.multiplayer.chat.GuiMessageTag;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MessageSignature;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,8 +21,17 @@ public class ImmuneReactionMixin {
 
     @Mixin(ChatComponent.class)
     public static class ChatDetectorMixin {
-        @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;)V", at = @At("HEAD"))
-        private void baity$onChatMessage(Component message, CallbackInfo ci) {
+        @Inject(
+            method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V",
+            at = @At("HEAD")
+        )
+        private void baity$onChatMessage(
+            Component message,
+            MessageSignature signature,
+            GuiMessageSource source,
+            GuiMessageTag tag,
+            CallbackInfo ci
+        ) {
             ElementalReactionDetector.handleWitherCloakChat(message);
         }
     }

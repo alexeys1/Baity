@@ -2,6 +2,7 @@ package com.shyeuar.baity.client;
 
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.ClickGui;
+import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.gui.smol.SmolFriendsScreen;
 import com.shyeuar.baity.managers.KeybindManager;
@@ -53,7 +54,8 @@ public class Baity implements ClientModInitializer {
         RemoteFileFetcher.init();
         BlockAnimationSwordCatalog.init();
         Objects.requireNonNull(CustomTotemItem.CUSTOM_TOTEM);
-        
+        com.shyeuar.baity.gui.render.BaityUiPipelines.register();
+
         ConfigManager.loadConfig();
         SmolFriendManager.reloadFromConfig();
 
@@ -73,6 +75,7 @@ public class Baity implements ClientModInitializer {
         com.shyeuar.baity.features.enchantlore.EnchantLore.init();
         com.shyeuar.baity.features.Keybinds.init();
         com.shyeuar.baity.features.sidepanel.SidePanel.init();
+        com.shyeuar.baity.utils.LocateUtils.registerClientEvents();
         
         registerCustomSounds();
         
@@ -80,24 +83,29 @@ public class Baity implements ClientModInitializer {
             long windowHandle = client.getWindow().handle();
             ConfigManager.flushPendingSave();
             HypixelFishingRodCatalog.clientTickRefreshMainHandIfSkyblock(client);
+
+            Module customHandHoldingModule = ModuleManager.getModuleByName("CustomHandHolding");
+            if (customHandHoldingModule != null && customHandHoldingModule.isEnabled()) {
+                com.shyeuar.baity.features.CustomHandHoldingManager.getInstance().update();
+            }
             
             if (openGuiNextTick) {
                 openGuiNextTick = false;
-                Minecraft.getInstance().setScreen(new ClickGui());
+                Minecraft.getInstance().gui.setScreen(new ClickGui());
                 return;
             }
 
             if (openSmolFriendsNextTick) {
                 openSmolFriendsNextTick = false;
-                Minecraft.getInstance().setScreen(new SmolFriendsScreen(null));
+                Minecraft.getInstance().gui.setScreen(new SmolFriendsScreen(null));
                 return;
             }
             
-            if (client.screen == null && ConfigManager.guiKeyCode != 0) {
+            if (client.gui.screen() == null && ConfigManager.guiKeyCode != 0) {
                 boolean currentGuiKeyState = KeyMappingUtils.isKeyPressed(windowHandle, ConfigManager.guiKeyCode);
                 if (currentGuiKeyState) {
                     if (System.currentTimeMillis() - lastKeyPressTime > 200) {
-                        Minecraft.getInstance().setScreen(new ClickGui());
+                        Minecraft.getInstance().gui.setScreen(new ClickGui());
                         lastKeyPressTime = System.currentTimeMillis();
                     }
                 }

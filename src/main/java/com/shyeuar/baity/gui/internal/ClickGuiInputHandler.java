@@ -60,7 +60,7 @@ public class ClickGuiInputHandler {
         
         if (button == 0 && state.isHudButtonHovered(coords.mouseX, coords.mouseY)) {
             SoundUtils.playBubble();
-            Minecraft.getInstance().setScreen(new com.shyeuar.baity.gui.hud.HudPositionEditor());
+            Minecraft.getInstance().gui.setScreen(new com.shyeuar.baity.gui.hud.HudPositionEditor());
             return true;
         }
 
@@ -311,7 +311,7 @@ public class ClickGuiInputHandler {
                 state.setListeningButtonValueName(null);
                 return true;
             }
-            Minecraft.getInstance().setScreen(null);
+            Minecraft.getInstance().gui.setScreen(null);
             return true;
         }
         
@@ -2147,4 +2147,3 @@ public class ClickGuiInputHandler {
         state.setCurrentKeyDisplay(KeyMappingUtils.formatKeyDisplay(ConfigManager.guiKeyCode, ""));
     }
 }
-

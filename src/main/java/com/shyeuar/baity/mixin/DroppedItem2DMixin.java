@@ -54,7 +54,7 @@ public class DroppedItem2DMixin {
         if (mc == null || mc.player == null) {
             return;
         }
-        net.minecraft.client.Camera camera = mc.gameRenderer.getMainCamera();
+        net.minecraft.client.Camera camera = mc.gameRenderer.mainCamera();
         if (camera == null) {
             return;
         }

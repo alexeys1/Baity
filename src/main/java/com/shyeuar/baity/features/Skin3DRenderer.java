@@ -80,7 +80,7 @@ public class Skin3DRenderer {
     public static boolean inRange(AvatarRenderState state) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return false;
-        var cameraPos = ((com.shyeuar.baity.mixin.accessor.CameraAccessor) mc.gameRenderer.getMainCamera()).baity$getPosition();
+        var cameraPos = ((com.shyeuar.baity.mixin.accessor.CameraAccessor) mc.gameRenderer.mainCamera()).baity$getPosition();
         double dx = state.x - cameraPos.x;
         double dy = state.y - cameraPos.y;
         double dz = state.z - cameraPos.z;

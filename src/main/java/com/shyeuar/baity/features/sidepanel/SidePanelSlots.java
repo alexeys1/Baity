@@ -46,6 +46,14 @@ public final class SidePanelSlots {
     private static final Identifier SLOT_HIGHLIGHT_BACK = Identifier.withDefaultNamespace("container/slot_highlight_back");
     private static final Identifier SLOT_HIGHLIGHT_FRONT = Identifier.withDefaultNamespace("container/slot_highlight_front");
     private static final Minecraft MC = Minecraft.getInstance();
+    private static final Identifier[] EMPTY_SLOT_TEXTURES = {
+            Identifier.fromNamespaceAndPath("baity", "textures/gui/sidepanel/empty_necklace.png"),
+            Identifier.fromNamespaceAndPath("baity", "textures/gui/sidepanel/empty_cloak.png"),
+            Identifier.fromNamespaceAndPath("baity", "textures/gui/sidepanel/empty_belt.png"),
+            Identifier.fromNamespaceAndPath("baity", "textures/gui/sidepanel/empty_gloves.png"),
+            Identifier.fromNamespaceAndPath("baity", "textures/gui/sidepanel/empty_pet.png"),
+    };
+
     private static final SidePanel.SlotKind[] KINDS = SidePanel.SlotKind.values();
     private static final Container BACKING = new SlotContainer();
     private static final List<DisplaySlot> SLOTS = Arrays.stream(KINDS).map(DisplaySlot::new).toList();
@@ -101,12 +109,17 @@ public final class SidePanelSlots {
         }
 
         for (DisplaySlot slot : visibleSlots()) {
-            ((AbstractContainerScreenInvoker) screen).baity$invokeExtractSlot(graphics, slot, mouseX, mouseY);
+            ItemStack stack = slot.getItem();
+            if (stack.isEmpty()) {
+                drawEmptySlotIcon(graphics, slot);
+            } else {
+                ((AbstractContainerScreenInvoker) screen).baity$invokeExtractSlot(graphics, slot, mouseX, mouseY);
+            }
         }
 
         if (hoveredSlot != null) {
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_HIGHLIGHT_FRONT, hoveredSlot.x - 4, hoveredSlot.y - 4, 24, 24);
-            ItemStack stack = hoveredSlot.getDisplayStack();
+            ItemStack stack = hoveredSlot.getItem();
             if (!stack.isEmpty()) {
                 graphics.setTooltipForNextFrame(MC.font, stack, mouseX, mouseY);
             }
@@ -154,6 +167,21 @@ public final class SidePanelSlots {
     private static boolean isHovering(DisplaySlot slot, int slotMouseX, int slotMouseY) {
         return slotMouseX >= slot.x - 1 && slotMouseX < slot.x + 17
                 && slotMouseY >= slot.y - 1 && slotMouseY < slot.y + 17;
+    }
+
+    private static void drawEmptySlotIcon(GuiGraphicsExtractor graphics, DisplaySlot slot) {
+        graphics.blit(
+                RenderPipelines.GUI_TEXTURED,
+                EMPTY_SLOT_TEXTURES[slot.kind.ordinal()],
+                slot.x,
+                slot.y,
+                0.0f,
+                0.0f,
+                16,
+                16,
+                16,
+                16
+        );
     }
 
     private static int slotX() {
@@ -299,10 +327,6 @@ public final class SidePanelSlots {
 
         @Override
         public @NonNull ItemStack getItem() {
-            return SidePanel.displayStack(kind);
-        }
-
-        ItemStack getDisplayStack() {
             return SidePanel.get(kind);
         }
     }
@@ -325,7 +349,7 @@ public final class SidePanelSlots {
 
         @Override
         public @NonNull ItemStack getItem(int slot) {
-            return slot >= 0 && slot < KINDS.length ? SidePanel.displayStack(KINDS[slot]) : ItemStack.EMPTY;
+            return slot >= 0 && slot < KINDS.length ? SidePanel.get(KINDS[slot]) : ItemStack.EMPTY;
         }
 
         @Override

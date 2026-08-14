@@ -28,8 +28,10 @@ Sync Protocol：see [docs/sync-protocol.md](docs/sync-protocol.md).
 
 ## Acknowledgements / 致谢
 
-This project makes use of the excellent [owo-lib](https://github.com/wisp-forest/owo-lib) by Wisp Forest for modern UI tooling and rendering utilities.  
-We would like to thank the owo-lib maintainers and contributors for their work.
+Some of the GUI geometry rendering in this project was partially based on implementation ideas from [owo-lib](https://github.com/wisp-forest/owo-lib); the related GPU helper code has since been internalized into Baity (13/08/2026).
 
-本项目使用了 Wisp Forest 提供的优秀 UI 与渲染工具库 [owo-lib](https://github.com/wisp-forest/owo-lib)。  
-在此对 owo-lib 的维护者和贡献者表示感谢。
+We thank the owo-lib maintainers and contributors for their work on this rendering approach.
+
+项目中有关gui的几何绘制最初有部分基于 [owo-lib](https://github.com/wisp-forest/owo-lib) 的实现思路；现相关 GPU 辅助代码已内化到 Baity 中(13/08/2026)。
+
+在此感谢 owo-lib 维护者与贡献者在该渲染方案上的工作。

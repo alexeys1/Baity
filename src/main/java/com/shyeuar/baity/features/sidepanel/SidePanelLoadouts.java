@@ -338,7 +338,7 @@ public final class SidePanelLoadouts {
     }
 
     static void tickIfOpen(Minecraft client) {
-        if (!(client.screen instanceof AbstractContainerScreen<?> screen)) {
+        if (!(client.gui.screen() instanceof AbstractContainerScreen<?> screen)) {
             return;
         }
         Component title = screen.getTitle();

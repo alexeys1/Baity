@@ -35,7 +35,7 @@ public final class FocusPlayerNametag {
                 return false;
             }
             Minecraft mc = Minecraft.getInstance();
-            if (mc == null || mc.getWindow() == null || mc.screen != null) {
+            if (mc == null || mc.getWindow() == null || mc.gui.screen() != null) {
                 return false;
             }
             return KeyMappingUtils.isKeyPressed(mc.getWindow().handle(), keybind);
@@ -63,7 +63,7 @@ public final class FocusPlayerNametag {
         }
 
         int keybind = ConfigManager.nametagFocusPlayerKeybind;
-        if (keybind == 0 || client.screen != null) {
+        if (keybind == 0 || client.gui.screen() != null) {
             wasKeyPressed = false;
             return;
         }

@@ -30,8 +30,8 @@ public final class RadialMenu {
     }
 
     public static void tick(Minecraft client) {
-        if (client.screen != null) {
-            if (client.screen instanceof DynamicRadialMenuScreen) {
+        if (client.gui.screen() != null) {
+            if (client.gui.screen() instanceof DynamicRadialMenuScreen) {
                 return;
             }
             if (isOpen) {
@@ -81,7 +81,7 @@ public final class RadialMenu {
         double centerX = client.getWindow().getScreenWidth() / 2.0;
         double centerY = client.getWindow().getScreenHeight() / 2.0;
         GLFW.glfwSetCursorPos(windowHandle, centerX, centerY);
-        client.setScreen(new DynamicRadialMenuScreen(keybind, preset, preset.rootLayerId, null));
+        client.gui.setScreen(new DynamicRadialMenuScreen(keybind, preset, preset.rootLayerId, null));
     }
 
     public static void forceClose(Minecraft client) {

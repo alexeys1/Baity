@@ -20,7 +20,7 @@ public class WarpMenuMovementMixin extends ClientInput {
     @Inject(method = "tick", at = @At("TAIL"))
     private void allowMovementInWarpMenu(CallbackInfo ci) {
         Minecraft client = Minecraft.getInstance();
-        if (client.screen instanceof DynamicRadialMenuScreen) {
+        if (client.gui.screen() instanceof DynamicRadialMenuScreen) {
             long window = client.getWindow().handle();
             Options options = client.options;
 

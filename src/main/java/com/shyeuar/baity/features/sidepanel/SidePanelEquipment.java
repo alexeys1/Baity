@@ -20,7 +20,7 @@ public final class SidePanelEquipment {
             reset();
             return;
         }
-        if (!(client.screen instanceof AbstractContainerScreen<?> screen)) {
+        if (!(client.gui.screen() instanceof AbstractContainerScreen<?> screen)) {
             reset();
             return;
         }

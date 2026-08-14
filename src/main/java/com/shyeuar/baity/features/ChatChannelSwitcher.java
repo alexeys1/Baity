@@ -351,7 +351,7 @@ public final class ChatChannelSwitcher implements HudElement {
         setLastSelectedChannel(clickedChannel);
         trySendChannelCommand(client, clickedChannel, beforeActiveChannel);
 
-        client.setScreen(new ChatScreen(restoredText, false));
+        client.gui.setScreen(new ChatScreen(restoredText, false));
     }
 
     private void maybeSendSkyblockChatAllReset(Minecraft client) {
@@ -739,7 +739,7 @@ public final class ChatChannelSwitcher implements HudElement {
 
     @Override
     public boolean shouldRender() {
-        return ConfigManager.chatChannelSwitcherEnabled && Minecraft.getInstance().screen instanceof ChatScreen;
+        return ConfigManager.chatChannelSwitcherEnabled && Minecraft.getInstance().gui.screen() instanceof ChatScreen;
     }
 
     private void renderTooltip(GuiGraphicsExtractor guiGraphics, Font font, ChannelButton button, int originX, int originY, float scale) {

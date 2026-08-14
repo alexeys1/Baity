@@ -5,6 +5,7 @@ import com.shyeuar.baity.features.sidepanel.SidePanel;
 import com.shyeuar.baity.features.sidepanel.SidePanelEquipment;
 import com.shyeuar.baity.features.sidepanel.SidePanelMenus;
 import com.shyeuar.baity.gui.module.ModuleManager;
+import com.shyeuar.baity.utils.LocateUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
@@ -12,6 +13,7 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.references.ItemIds;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -57,7 +59,7 @@ public final class Keybinds {
             if (title == null) {
                 return NONE;
             }
-            String plain = title.getString().trim();
+            String plain = LocateUtils.toPlainText(title.getString());
             for (MenuType type : values()) {
                 if (type.titlePattern != null && type.titlePattern.matcher(plain).matches()) {
                     return type;
@@ -94,57 +96,95 @@ public final class Keybinds {
         return module != null && module.isEnabled() && ConfigManager.keybindsEnabled;
     }
 
-    public static boolean shouldPreventUnequip(MenuType menuType, ItemStack stack, long windowHandle) {
+    public static boolean isUnequipBlockedAction(ContainerInput actionType) {
+        return actionType == ContainerInput.PICKUP
+                || actionType == ContainerInput.QUICK_MOVE
+                || actionType == ContainerInput.SWAP
+                || actionType == ContainerInput.THROW
+                || actionType == ContainerInput.PICKUP_ALL
+                || actionType == ContainerInput.QUICK_CRAFT;
+    }
+
+    public static boolean shouldBlockUnequipContainerInput(int containerId, int slotIndex) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.gui.screen() == null || !(client.gui.screen() instanceof AbstractContainerScreen<?> screen)) {
+            return false;
+        }
+        if (screen.getMenu().containerId != containerId) {
+            return false;
+        }
+        MenuType menuType = MenuType.fromTitle(screen.getTitle());
+        if (menuType != MenuType.WARDROBE && menuType != MenuType.EQUIPMENT) {
+            return false;
+        }
+        if (slotIndex < 0 || slotIndex >= screen.getMenu().slots.size()) {
+            return false;
+        }
+        ItemStack stack = screen.getMenu().getSlot(slotIndex).getItem();
+        if (!isEquippedSetButton(stack)) {
+            return false;
+        }
+        return shouldPreventUnequip(menuType, stack);
+    }
+
+    public static boolean shouldPreventUnequip(MenuType menuType, ItemStack stack) {
         if (!isActive() || stack == null || !isEquippedSetButton(stack)) {
             return false;
         }
         boolean enabled;
         boolean prevent;
-        String releaseMode;
+        String holdMode;
         if (menuType == MenuType.WARDROBE) {
             enabled = ConfigManager.keybindsWardrobeEnabled;
             prevent = ConfigManager.keybindsWardrobePreventUnequip;
-            releaseMode = ConfigManager.keybindsWardrobeHoldToUnequip;
+            holdMode = ConfigManager.keybindsWardrobeHoldToUnequip;
         } else if (menuType == MenuType.EQUIPMENT) {
             enabled = ConfigManager.keybindsEquipmentEnabled;
             prevent = ConfigManager.keybindsEquipmentPreventUnequip;
-            releaseMode = ConfigManager.keybindsEquipmentHoldToUnequip;
+            holdMode = ConfigManager.keybindsEquipmentHoldToUnequip;
         } else {
             return false;
         }
         if (!enabled || !prevent) {
             return false;
         }
-        return !isModifierHeld(windowHandle, releaseMode);
+        return !isHoldToUnequipModifierHeld(holdMode);
     }
 
     public static boolean isEquippedSetButton(ItemStack stack) {
-        return stack != null && !stack.isEmpty() && stack.is(Items.LIME_DYE);
+        return stack != null && !stack.isEmpty() && stack.typeHolder().is(ItemIds.DYE.lime());
     }
 
     private static boolean handleKeyboard(Minecraft client, AbstractContainerScreen<?> screen, KeyEvent keyInput) {
         if (!handlePaginationKeyPress(screen, keyInput)) {
             return false;
         }
-        if (!isActive() || !tryConsumeClickCooldown()) {
+        if (!isActive()) {
             return true;
         }
 
         MenuType menuType = MenuType.fromTitle(screen.getTitle());
+
         return switch (menuType) {
-            case WARDROBE -> handleSetMenu(client, screen, keyInput, menuType);
-            case EQUIPMENT -> handleSetMenu(client, screen, keyInput, menuType);
-            case LOADOUT -> handleLoadoutMenu(client, screen, keyInput);
+            case WARDROBE -> handleSetMenu(client, screen, binding -> binding.matches(keyInput), menuType);
+            case EQUIPMENT -> handleSetMenu(client, screen, binding -> binding.matches(keyInput), menuType);
+            case LOADOUT -> {
+                if (!tryConsumeClickCooldown()) {
+                    yield false;
+                }
+                yield handleLoadoutMenu(client, screen, keyInput);
+            }
             case NONE -> true;
         };
     }
 
     private static boolean handleMouseClick(Minecraft client, AbstractContainerScreen<?> screen, MouseButtonEvent click) {
-        if (!isActive() || !tryConsumeClickCooldown()) {
+        if (!isActive()) {
             return true;
         }
 
         MenuType menuType = MenuType.fromTitle(screen.getTitle());
+
         if (menuType == MenuType.WARDROBE && ConfigManager.keybindsWardrobeEnabled) {
             return handleSetMenu(client, screen, binding -> binding.matchesMouse(click), menuType);
         }
@@ -152,6 +192,9 @@ public final class Keybinds {
             return handleSetMenu(client, screen, binding -> binding.matchesMouse(click), menuType);
         }
         if (menuType == MenuType.LOADOUT && ConfigManager.keybindsLoadoutEnabled) {
+            if (!tryConsumeClickCooldown()) {
+                return false;
+            }
             return handleLoadoutMenu(client, screen, binding -> binding.matchesMouse(click));
         }
         return true;
@@ -184,13 +227,6 @@ public final class Keybinds {
         return false;
     }
 
-    private static boolean handleSetMenu(Minecraft client, AbstractContainerScreen<?> screen, KeyEvent keyInput, MenuType menuType) {
-        if (!isSetMenuEnabled(menuType)) {
-            return true;
-        }
-        return handleSetMenu(client, screen, binding -> binding.matches(keyInput), menuType);
-    }
-
     private static boolean handleSetMenu(
             Minecraft client,
             AbstractContainerScreen<?> screen,
@@ -209,8 +245,11 @@ public final class Keybinds {
             return true;
         }
 
-        long windowHandle = client.getWindow().handle();
-        if (shouldPreventUnequip(menuType, stack, windowHandle)) {
+        if (shouldPreventUnequip(menuType, stack)) {
+            return false;
+        }
+
+        if (!tryConsumeClickCooldown()) {
             return false;
         }
 
@@ -356,14 +395,6 @@ public final class Keybinds {
         return -1;
     }
 
-    private static boolean isSetMenuEnabled(MenuType menuType) {
-        return switch (menuType) {
-            case WARDROBE -> ConfigManager.keybindsWardrobeEnabled;
-            case EQUIPMENT -> ConfigManager.keybindsEquipmentEnabled;
-            default -> false;
-        };
-    }
-
     private static boolean isAutoCloseEnabled(MenuType menuType) {
         return switch (menuType) {
             case WARDROBE -> ConfigManager.keybindsWardrobeAutoCloseOnUse;
@@ -414,10 +445,15 @@ public final class Keybinds {
         }
     }
 
-    private static boolean isModifierHeld(long windowHandle, String mode) {
+    private static boolean isHoldToUnequipModifierHeld(String mode) {
         if (mode == null) {
             return false;
         }
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.getWindow() == null) {
+            return false;
+        }
+        long windowHandle = client.getWindow().handle();
         return switch (mode.toLowerCase()) {
             case "ctrl" -> isCtrlDown(windowHandle);
             case "shift" -> isShiftDown(windowHandle);
@@ -483,7 +519,7 @@ public final class Keybinds {
         if (stack == null || stack.isEmpty()) {
             return false;
         }
-        return stack.is(Items.LIME_DYE) || stack.is(Items.GRAY_DYE) || stack.is(Items.PINK_DYE);
+        return stack.typeHolder().is(ItemIds.DYE.lime()) || stack.typeHolder().is(ItemIds.DYE.gray()) || stack.typeHolder().is(ItemIds.DYE.pink());
     }
 
     private static int wardrobeHotbarIndexToSlot(int hotbarIndex) {

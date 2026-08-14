@@ -1,7 +1,6 @@
 package com.shyeuar.baity.features.highlights;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
@@ -157,8 +156,8 @@ public final class InvisibugHighlights implements LevelRenderEvents.AfterSolidFe
 
         Vec3 cameraPos = context.levelState().cameraRenderState.pos;
         PoseStack matrices = context.poseStack();
-        var buffers = context.bufferSource();
-        if (matrices == null || buffers == null) {
+        var submits = context.submitNodeCollector();
+        if (matrices == null || submits == null) {
             return;
         }
 
@@ -192,14 +191,11 @@ public final class InvisibugHighlights implements LevelRenderEvents.AfterSolidFe
             return;
         }
 
-        VertexConsumer lines = buffers.getBuffer(RenderTypes.lines());
-        for (AABB box : boxesToRender) {
-            EntityDrawUtils.drawWireBoxAtWorld(matrices, lines, box, cameraPos, R, G, B, A);
-        }
-
-        if (buffers instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource bufferSource) {
-            bufferSource.endBatch(RenderTypes.lines());
-        }
+        submits.submitCustomGeometry(matrices, RenderTypes.lines(), (pose, lines) -> {
+            for (AABB box : boxesToRender) {
+                EntityDrawUtils.drawWireBoxAtWorld(pose, lines, box, cameraPos, R, G, B, A);
+            }
+        });
     }
 
 }

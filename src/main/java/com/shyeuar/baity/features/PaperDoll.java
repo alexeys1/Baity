@@ -200,10 +200,10 @@ public final class PaperDoll implements HudElement {
         if (mc.player == null || mc.level == null) {
             return false;
         }
-        if (mc.screen instanceof HudPositionEditor) {
+        if (mc.gui.screen() instanceof HudPositionEditor) {
             return true;
         }
-        return !mc.options.hideGui;
+        return !mc.gui.hud.isHidden();
     }
 
     private void extractPaperDoll(GuiGraphicsExtractor graphics, float partialTicks) {

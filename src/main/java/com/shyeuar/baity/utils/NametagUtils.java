@@ -41,7 +41,7 @@ public final class NametagUtils {
             return false;
         }
 
-        double distSq = mc.gameRenderer.getMainCamera().position().distanceToSqr(
+        double distSq = mc.gameRenderer.mainCamera().position().distanceToSqr(
             player.getX(), player.getY(), player.getZ());
         QUERYING_VANILLA_VISIBILITY.set(true);
         try {
@@ -59,7 +59,7 @@ public final class NametagUtils {
             return false;
         }
 
-        Camera camera = mc.gameRenderer.getMainCamera();
+        Camera camera = mc.gameRenderer.mainCamera();
         Frustum frustum = camera.getCullFrustum();
         if (frustum == null) {
             return true;

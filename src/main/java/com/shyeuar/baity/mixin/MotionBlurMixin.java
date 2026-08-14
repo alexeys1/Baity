@@ -7,7 +7,6 @@ import com.shyeuar.baity.features.MotionBlur;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
 import org.joml.Matrix4fc;
@@ -22,7 +21,7 @@ public class MotionBlurMixin {
     @Mixin(LevelRenderer.class)
     public abstract static class LevelRendererMixin {
 
-        @Inject(method = "renderLevel", at = @At("HEAD"))
+        @Inject(method = "render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V", at = @At("HEAD"), require = 1)
         private void baity$onRenderHead(
                 GraphicsResourceAllocator resourceAllocator,
                 DeltaTracker deltaTracker,
@@ -32,7 +31,6 @@ public class MotionBlurMixin {
                 GpuBufferSlice terrainFog,
                 Vector4f fogColor,
                 boolean shouldRenderSky,
-                ChunkSectionsToRender chunkSectionsToRender,
                 CallbackInfo ci) {
             MotionBlur.onRenderHead(
                     resourceAllocator,
@@ -43,14 +41,14 @@ public class MotionBlurMixin {
                     cameraState.pos.z());
         }
 
-        @Inject(method = "submitEntities", at = @At("HEAD"))
+        @Inject(method = "submitEntities(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/state/level/LevelRenderState;Lnet/minecraft/client/renderer/SubmitNodeCollector;)V", at = @At("HEAD"), require = 1)
         private void baity$beforeSubmitEntities(PoseStack poseStack, LevelRenderState levelRenderState, SubmitNodeCollector output, CallbackInfo ci) {
             if (MotionBlur.isActive()) {
                 MotionBlur.onBeforeEntities();
             }
         }
 
-        @Inject(method = "renderLevel", at = @At("TAIL"))
+        @Inject(method = "render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V", at = @At("TAIL"), require = 1)
         private void baity$onRenderLevelTail(
                 GraphicsResourceAllocator resourceAllocator,
                 DeltaTracker deltaTracker,
@@ -60,7 +58,6 @@ public class MotionBlurMixin {
                 GpuBufferSlice terrainFog,
                 Vector4f fogColor,
                 boolean shouldRenderSky,
-                ChunkSectionsToRender chunkSectionsToRender,
                 CallbackInfo ci) {
             if (MotionBlur.isActive()) {
                 MotionBlur.onAfterLevel();

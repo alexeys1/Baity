@@ -16,7 +16,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.projectile.FishingHook;
 
@@ -125,7 +125,7 @@ public class FishHookTimer implements HudElement {
         if (!ConfigManager.fishHookTimerEnabled || !ConfigManager.fishHookTimerHideDefaultTimer) {
             return false;
         }
-        if (state.entityType != EntityType.ARMOR_STAND) {
+        if (state.entityType != EntityTypes.ARMOR_STAND) {
             return false;
         }
         Minecraft mc = Minecraft.getInstance();

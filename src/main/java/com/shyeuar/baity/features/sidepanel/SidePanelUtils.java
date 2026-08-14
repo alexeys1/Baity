@@ -2,6 +2,7 @@ package com.shyeuar.baity.features.sidepanel;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.references.BlockItemIds;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -52,9 +53,9 @@ final class SidePanelUtils {
         if (isGlassPane(stack)) {
             return true;
         }
-        if (stack.is(Items.GRAY_STAINED_GLASS_PANE)
-                || stack.is(Items.LIGHT_GRAY_STAINED_GLASS_PANE)
-                || stack.is(Items.BLACK_STAINED_GLASS_PANE)) {
+        if (stack.typeHolder().is(BlockItemIds.STAINED_GLASS_PANE.gray().item())
+                || stack.typeHolder().is(BlockItemIds.STAINED_GLASS_PANE.lightGray().item())
+                || stack.typeHolder().is(BlockItemIds.STAINED_GLASS_PANE.black().item())) {
             return true;
         }
         String name = stack.getHoverName().getString().toLowerCase();

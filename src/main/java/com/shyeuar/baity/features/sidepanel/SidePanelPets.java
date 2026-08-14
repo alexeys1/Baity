@@ -71,7 +71,7 @@ public final class SidePanelPets {
             previousPage = -1;
             return;
         }
-        if (!(client.screen instanceof AbstractContainerScreen<?> screen)) {
+        if (!(client.gui.screen() instanceof AbstractContainerScreen<?> screen)) {
             updatePetCache = true;
             previousPage = -1;
             return;

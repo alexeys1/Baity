@@ -7,8 +7,8 @@ import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.mixin.accessor.FogRendererAccessor;
 import com.shyeuar.baity.utils.ModuleUtils;
 import net.minecraft.client.DeltaTracker;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.Hud;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.client.renderer.fog.environment.BlindnessFogEnvironment;
@@ -28,7 +28,7 @@ public class NodebuffMixin {
 
         @Shadow @Final private FogRenderer fogRenderer;
 
-        @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lorg/joml/Matrix4f;rotate(FLorg/joml/Vector3fc;)Lorg/joml/Matrix4f;", ordinal = 0))
+        @WrapOperation(method = "renderLevel(Lnet/minecraft/client/DeltaTracker;)V", at = @At(value = "INVOKE", target = "Lorg/joml/Matrix4f;rotate(FLorg/joml/Vector3fc;)Lorg/joml/Matrix4f;", ordinal = 0), require = 1)
         private Matrix4f baity$preventNauseaRotation(Matrix4f matrix, float angle, Vector3fc axis, Operation<Matrix4f> original) {
             if (shouldRemoveNausea()) {
                 return matrix;
@@ -36,7 +36,7 @@ public class NodebuffMixin {
             return original.call(matrix, angle, axis);
         }
 
-        @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lorg/joml/Matrix4f;rotate(FLorg/joml/Vector3fc;)Lorg/joml/Matrix4f;", ordinal = 1))
+        @WrapOperation(method = "renderLevel(Lnet/minecraft/client/DeltaTracker;)V", at = @At(value = "INVOKE", target = "Lorg/joml/Matrix4f;rotate(FLorg/joml/Vector3fc;)Lorg/joml/Matrix4f;", ordinal = 1), require = 1)
         private Matrix4f baity$preventNauseaRotationSecond(Matrix4f matrix, float angle, Vector3fc axis, Operation<Matrix4f> original) {
             if (shouldRemoveNausea()) {
                 return matrix;
@@ -44,7 +44,7 @@ public class NodebuffMixin {
             return original.call(matrix, angle, axis);
         }
 
-        @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE", target = "Lorg/joml/Matrix4f;scale(FFF)Lorg/joml/Matrix4f;"))
+        @WrapOperation(method = "renderLevel(Lnet/minecraft/client/DeltaTracker;)V", at = @At(value = "INVOKE", target = "Lorg/joml/Matrix4f;scale(FFF)Lorg/joml/Matrix4f;"), require = 1)
         private Matrix4f baity$preventNauseaScaling(Matrix4f matrix, float x, float y, float z, Operation<Matrix4f> original) {
             if (shouldRemoveNausea()) {
                 return matrix;
@@ -52,7 +52,7 @@ public class NodebuffMixin {
             return original.call(matrix, x, y, z);
         }
 
-        @Inject(method = "renderLevel", at = @At("HEAD"))
+        @Inject(method = "renderLevel(Lnet/minecraft/client/DeltaTracker;)V", at = @At("HEAD"), require = 1)
         private void baity$clearBlindnessFog(DeltaTracker deltaTracker, CallbackInfo ci) {
             if (shouldRemoveBlindness()) {
                 FogRendererAccessor.baity$getFogEnvironments().removeIf(env -> env instanceof BlindnessFogEnvironment);
@@ -70,10 +70,10 @@ public class NodebuffMixin {
         }
     }
 
-    @Mixin(Gui.class)
-    public static class GuiMixin {
+    @Mixin(Hud.class)
+    public static class HudMixin {
 
-        @Inject(method = "renderConfusionOverlay", at = @At("HEAD"), cancellable = true)
+        @Inject(method = "extractConfusionOverlay(Lnet/minecraft/client/gui/GuiGraphicsExtractor;F)V", at = @At("HEAD"), cancellable = true, require = 1)
         private void baity$cancelNauseaOverlay(GuiGraphicsExtractor guiGraphics, float intensity, CallbackInfo ci) {
             if (shouldRemoveNausea()) {
                 ci.cancel();

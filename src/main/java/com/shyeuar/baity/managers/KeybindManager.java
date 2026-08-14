@@ -58,7 +58,7 @@ public class KeybindManager {
     }
     
     public static void handleModuleKeybinds(Minecraft client, long windowHandle) {
-        if (client.screen != null) return;
+        if (client.gui.screen() != null) return;
         
         updateKeybindCache();
         

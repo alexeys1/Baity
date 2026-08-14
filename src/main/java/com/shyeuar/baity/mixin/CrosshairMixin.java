@@ -5,8 +5,8 @@ import com.shyeuar.baity.utils.ModuleUtils;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.CameraType;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.Hud;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.BitSet;
 
-@Mixin(Gui.class)
+@Mixin(Hud.class)
 public class CrosshairMixin {
     private static final float SWING_BURST_FALL_TICKS = 3.5f;
     private static final float DYNAMIC_GAP_SCALE = 1.0f;
@@ -34,7 +34,7 @@ public class CrosshairMixin {
     private static float lastObservedNowTick = -1.0f;
     private static final Identifier WHITE_1PX = Identifier.fromNamespaceAndPath("minecraft", "textures/misc/white.png");
 
-    @ModifyExpressionValue(method = "extractCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/CameraType;isFirstPerson()Z"))
+    @ModifyExpressionValue(method = "extractCrosshair(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/CameraType;isFirstPerson()Z"), require = 1)
     private boolean baity$forceCrosshairInThirdPersonBack(boolean original) {
         if (original) {
             return true;
@@ -55,7 +55,7 @@ public class CrosshairMixin {
         return original;
     }
 
-    @Inject(method = "extractCrosshair", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "extractCrosshair(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/client/DeltaTracker;)V", at = @At("HEAD"), cancellable = true, require = 1)
     private void baity$renderCustomCrosshair(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         com.shyeuar.baity.gui.module.Module crosshairModule = com.shyeuar.baity.gui.module.ModuleManager.getModuleByName("Crosshair");
         if (crosshairModule == null || !crosshairModule.isEnabled()) return;

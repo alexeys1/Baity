@@ -1,11 +1,11 @@
 package com.shyeuar.baity.utils;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.shyeuar.baity.render.RenderScope;
 import net.minecraft.client.StringSplitter;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.network.chat.Component;
-import org.joml.Matrix4fc;
 
 public final class FloatingWorldTextCompat {
 
@@ -33,21 +33,21 @@ public final class FloatingWorldTextCompat {
             float x,
             float y,
             int color,
-            Matrix4fc matrix,
-            MultiBufferSource buffers,
+            PoseStack poseStack,
+            SubmitNodeCollector submits,
             int packedLight
     ) {
-        font.drawInBatch(
-                text,
+        submits.submitText(
+                poseStack,
                 x,
                 y,
-                color,
+                text.getVisualOrderText(),
                 false,
-                matrix,
-                buffers,
                 Font.DisplayMode.SEE_THROUGH,
+                packedLight,
+                color,
                 0,
-                packedLight
+                0
         );
     }
 }

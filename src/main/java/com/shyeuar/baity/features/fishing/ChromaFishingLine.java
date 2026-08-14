@@ -11,7 +11,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -96,15 +96,13 @@ public final class ChromaFishingLine implements LevelRenderEvents.EndMain {
         }
 
         PoseStack matrices = context.poseStack();
-        MultiBufferSource buffers = context.bufferSource();
-        if (matrices == null || buffers == null) {
+        SubmitNodeCollector submits = context.submitNodeCollector();
+        if (matrices == null || submits == null) {
             return;
         }
 
         Vec3 cameraPos = context.levelState().cameraRenderState.pos;
-        float lineWidth = MC.gameRenderer.getGameRenderState().windowRenderState.appropriateLineWidth;
-        VertexConsumer consumer = buffers.getBuffer(RenderTypes.lines());
-        boolean drew = false;
+        float lineWidth = MC.gameRenderer.gameRenderState().windowRenderState.appropriateLineWidth;
 
         for (Entity entity : MC.level.entitiesForRendering()) {
             if (!(entity instanceof FishingHook hook) || hook.getOwner() != MC.player) {
@@ -144,20 +142,15 @@ public final class ChromaFishingLine implements LevelRenderEvents.EndMain {
 
             matrices.pushPose();
             matrices.translate(renderX - cameraPos.x, renderY - cameraPos.y, renderZ - cameraPos.z);
-            renderColoredLine(
-                    matrices.last(),
-                    consumer,
-                    (float) origin.x,
-                    (float) origin.y,
-                    (float) origin.z,
-                    lineWidth
+            float originX = (float) origin.x;
+            float originY = (float) origin.y;
+            float originZ = (float) origin.z;
+            submits.submitCustomGeometry(
+                    matrices,
+                    RenderTypes.lines(),
+                    (pose, buffer) -> renderColoredLine(pose, buffer, originX, originY, originZ, lineWidth)
             );
             matrices.popPose();
-            drew = true;
-        }
-
-        if (drew && buffers instanceof MultiBufferSource.BufferSource bufferSource) {
-            bufferSource.endBatch(RenderTypes.lines());
         }
     }
 

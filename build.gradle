@@ -16,10 +16,6 @@ repositories {
         url = 'https://maven.fabricmc.net/'
     }
     maven {
-        name = 'Wisp Forest'
-        url = 'https://maven.wispforest.io'
-    }
-    maven {
         name = 'TerraformersMC'
         url = 'https://maven.terraformersmc.com/releases'
     }
@@ -41,15 +37,16 @@ dependencies {
 
     include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:0.4.1")))
 
-    implementation "io.wispforest:owo-lib:${project.owo_version}"
-    include "io.wispforest:owo-sentinel:${project.owo_version}"
+    compileOnly("com.terraformersmc:modmenu:20.0.1") {
+        exclude(group: "net.fabricmc.fabric-api")
+    }
+    localRuntime("com.terraformersmc:modmenu:20.0.1") {
+        exclude(group: "net.fabricmc.fabric-api")
+    }
 
-    compileOnly("com.terraformersmc:modmenu:18.0.0-alpha.8") {
-        exclude(group: "net.fabricmc.fabric-api")
-    }
-    localRuntime("com.terraformersmc:modmenu:18.0.0-alpha.8") {
-        exclude(group: "net.fabricmc.fabric-api")
-    }
+    testImplementation platform("org.junit:junit-bom:5.11.4")
+    testImplementation "org.junit.jupiter:junit-jupiter"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
 processResources {
@@ -79,11 +76,8 @@ java {
     withSourcesJar()
 }
 
-sourceSets {
-    test {
-        java.setSrcDirs([])
-        resources.setSrcDirs([])
-    }
+tasks.named("test") {
+    useJUnitPlatform()
 }
 
 jar {

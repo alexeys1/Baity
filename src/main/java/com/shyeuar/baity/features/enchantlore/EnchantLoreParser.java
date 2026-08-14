@@ -143,7 +143,7 @@ final class EnchantLoreParser {
 
     private static boolean isSuperpairsScreen() {
         Minecraft mc = Minecraft.getInstance();
-        if (!(mc.screen instanceof AbstractContainerScreen<?> screen)) {
+        if (!(mc.gui.screen() instanceof AbstractContainerScreen<?> screen)) {
             return false;
         }
         return EnchantLoreRender.stripColor(screen.getTitle().getString()).contains("Superpairs");

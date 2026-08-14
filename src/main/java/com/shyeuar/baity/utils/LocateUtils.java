@@ -2,11 +2,9 @@ package com.shyeuar.baity.utils;
 
 import com.shyeuar.baity.features.sidepanel.SidePanel;
 import com.shyeuar.baity.mixin.PlayerListHudMixin;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.PlayerTabOverlay;
-import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.scores.DisplaySlot;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Scoreboard;
@@ -14,6 +12,7 @@ import net.minecraft.world.scores.Scoreboard;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,7 +22,7 @@ public final class LocateUtils {
             ".*Hypixel BungeeCord.*",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern SCOREBOARD_SKYBLOCK_TITLE = Pattern.compile(
-            "SK[YI]BLOCK(?: CO-OP| GUEST)?(?: [♲☀Ⓑ])?",
+            "SK[YI]BLOCK(?: CO-OP| GUEST)?(?: [\u2672\u2600\u24b7])?",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern SCOREBOARD_SKYBLOCK_SHORT = Pattern.compile(
             "SK[YI]BLOCK",
@@ -33,15 +32,63 @@ public final class LocateUtils {
             Pattern.CASE_INSENSITIVE);
     private static final String[] SKYBLOCK_TITLE_PREFIXES = {
             "SKYBLOCK",
-            "空岛生存",
-            "空島生存"
+            "\u7a7a\u5c9b\u751f\u5b58",
+            "\u7a7a\u5cf6\u751f\u5b58"
     };
     private static final long SKYBLOCK_LEAVE_GRACE_MS = 10_000L;
     private static final Pattern TAB_AREA_LINE = Pattern.compile(
             "^(?:Area|Island|Dungeon):\\s*(.+)$",
             Pattern.CASE_INSENSITIVE);
-    private static final Pattern SB_SUBAREA_AFTER_LOC = Pattern.compile("⏣\\s*(?<area>.+)");
+    private static final Pattern SB_SUBAREA_AFTER_LOC = Pattern.compile("\u23e3\\s*(?<area>.+)");
     private static final Pattern SB_SUBAREA_RIFT = Pattern.compile("\u0444\\s*(?<area>.+)");
+    private static final Set<String> GALATEA_SUBAREAS = Set.of(
+            "moonglade marsh",
+            "tangleburg",
+            "tangleburg bank",
+            "tangleburg library",
+            "tangleburg's path",
+            "evergreen plateau",
+            "north reaches",
+            "south reaches",
+            "west reaches",
+            "verdant summit",
+            "murkwater loch",
+            "murkwater shallows",
+            "murkwater depths",
+            "murkwater outpost",
+            "north wetlands",
+            "south wetlands",
+            "westbound wetlands",
+            "moonglade's edge",
+            "wyrmgrove tomb",
+            "tomb floodway",
+            "fusion house",
+            "tranquil pass",
+            "tranquility sanctum",
+            "side-ember way",
+            "stride-ember fissure",
+            "dive-ember pass",
+            "driptoad delve",
+            "kelpwoven tunnels",
+            "swampcut inc.",
+            "red house",
+            "bubbleboost column"
+    );
+    private static final Set<String> TORRHUS_SUBAREAS = Set.of(
+            "torrhus canyon",
+            "spring path",
+            "torrhus springs",
+            "spring shallows",
+            "spring depths",
+            "torrhus heights",
+            "miria's hut",
+            "critter safari entrance",
+            "safari zone entrance",
+            "ant's cave",
+            "hotspot haven",
+            "desert temple",
+            "goblin hideaway"
+    );
 
     private static long cacheGameTime = Long.MIN_VALUE;
     private static long lastFoundScoreboardMs = -1L;
@@ -54,8 +101,22 @@ public final class LocateUtils {
     private static String cachedScoreboardSubAreaName = "";
     private static boolean cachedInRift;
     private static boolean cachedInSafari;
+    private static boolean cachedOnGalatea;
+    private static boolean cachedOnTorrhus;
+    private static String shulkerIslandLocateKey = "";
 
     private LocateUtils() {
+    }
+
+    public static void registerClientEvents() {
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> resetShulkerIslandLocateCache());
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> resetShulkerIslandLocateCache());
+    }
+
+    private static void resetShulkerIslandLocateCache() {
+        shulkerIslandLocateKey = "";
+        cachedOnGalatea = false;
+        cachedOnTorrhus = false;
     }
 
     public static boolean onHypixel(Minecraft mc) {
@@ -84,20 +145,50 @@ public final class LocateUtils {
 
     public static boolean isGalatea(Minecraft mc) {
         refresh(mc);
-        if (!inSkyBlock(mc)) {
-            return false;
-        }
-        String n = normalizeAreaName(cachedAreaIslandName);
-        return n.contains("Galatea");
+        return cachedOnGalatea;
     }
 
     public static boolean isTorrhusCanyon(Minecraft mc) {
         refresh(mc);
-        if (!inSkyBlock(mc)) {
+        return cachedOnTorrhus;
+    }
+
+    private static boolean isGalateaLocationName(String raw) {
+        String n = normalizeAreaName(raw);
+        if (n.isEmpty()) {
             return false;
         }
-        String n = normalizeAreaName(cachedAreaIslandName);
-        return n.contains("Torrhus");
+        String lower = n.toLowerCase(Locale.ROOT);
+        if (lower.contains("galatea")) {
+            return true;
+        }
+        if (GALATEA_SUBAREAS.contains(lower)) {
+            return true;
+        }
+        return lower.contains("moonglade")
+                || lower.contains("tangleburg")
+                || lower.contains("murkwater")
+                || lower.contains("wyrmgrove");
+    }
+
+    private static boolean isTorrhusLocationName(String raw) {
+        String n = normalizeAreaName(raw);
+        if (n.isEmpty()) {
+            return false;
+        }
+        String lower = n.toLowerCase(Locale.ROOT);
+        if (lower.contains("torrhus")) {
+            return true;
+        }
+        if (TORRHUS_SUBAREAS.contains(lower)) {
+            return true;
+        }
+        return lower.contains("spring path")
+                || lower.contains("spring shallows")
+                || lower.contains("spring depths")
+                || lower.contains("miria's hut")
+                || lower.contains("safari zone")
+                || lower.contains("critter safari");
     }
 
     public static boolean isHub(Minecraft mc) {
@@ -200,7 +291,7 @@ public final class LocateUtils {
     public static boolean inStillgoreChateau(Minecraft mc) {
         refresh(mc);
         String a = cachedScoreboardSubAreaName;
-        return "Stillgore Château".equals(a) || "Oubliette".equals(a);
+        return "Stillgore Ch\u00e2teau".equals(a) || "Oubliette".equals(a);
     }
 
     private static boolean cachedAreaIslandNameRawLineDungeonPrefix;
@@ -251,6 +342,90 @@ public final class LocateUtils {
         scanTabList(mc);
         cachedScoreboardSubAreaName = parseScoreboardSubArea(mc);
         updatePanelIslandFlags(mc);
+        updateShulkerIslandFlags(mc);
+    }
+
+    private static String buildShulkerIslandLocateKey() {
+        if (!cachedScoreboardSkyblock || !cachedOnHypixel) {
+            return "";
+        }
+        return cachedAreaIslandName + "\0" + cachedTabIslandName + "\0" + cachedScoreboardSubAreaName;
+    }
+
+    private static void updateShulkerIslandFlags(Minecraft mc) {
+        if (!cachedScoreboardSkyblock || !cachedOnHypixel) {
+            resetShulkerIslandLocateCache();
+            return;
+        }
+        String key = buildShulkerIslandLocateKey();
+        if (key.equals(shulkerIslandLocateKey)) {
+            return;
+        }
+        shulkerIslandLocateKey = key;
+        cachedOnGalatea = false;
+        cachedOnTorrhus = false;
+
+        markShulkerIslandsFromName(cachedAreaIslandName);
+        markShulkerIslandsFromName(cachedTabIslandName);
+        markShulkerIslandsFromName(cachedScoreboardSubAreaName);
+        if (cachedOnGalatea && cachedOnTorrhus) {
+            return;
+        }
+        for (String line : readTabHudScanPlainLines(mc)) {
+            Matcher tabLine = TAB_AREA_LINE.matcher(line);
+            if (tabLine.matches()) {
+                String label = line.toLowerCase(Locale.ROOT);
+                String value = tabLine.group(1);
+                if (label.startsWith("island:") || label.startsWith("area:")) {
+                    if (!cachedOnGalatea && isGalateaLocationName(value)) {
+                        cachedOnGalatea = true;
+                    }
+                    if (!cachedOnTorrhus && isTorrhusLocationName(value)) {
+                        cachedOnTorrhus = true;
+                    }
+                }
+            } else {
+                if (!cachedOnGalatea && isGalateaLocationName(line)) {
+                    cachedOnGalatea = true;
+                }
+                if (!cachedOnTorrhus && isTorrhusLocationName(line)) {
+                    cachedOnTorrhus = true;
+                }
+            }
+            if (cachedOnGalatea && cachedOnTorrhus) {
+                return;
+            }
+        }
+        for (String line : readSidebarPlainLines(mc, true)) {
+            if (!cachedOnGalatea && line.contains("Galatea")) {
+                cachedOnGalatea = true;
+            }
+            if (!cachedOnTorrhus && line.contains("Torrhus")) {
+                cachedOnTorrhus = true;
+            }
+            Matcher subArea = SB_SUBAREA_AFTER_LOC.matcher(line);
+            if (subArea.find()) {
+                String area = subArea.group("area");
+                if (!cachedOnGalatea && isGalateaLocationName(area)) {
+                    cachedOnGalatea = true;
+                }
+                if (!cachedOnTorrhus && isTorrhusLocationName(area)) {
+                    cachedOnTorrhus = true;
+                }
+            }
+            if (cachedOnGalatea && cachedOnTorrhus) {
+                return;
+            }
+        }
+    }
+
+    private static void markShulkerIslandsFromName(String raw) {
+        if (isGalateaLocationName(raw)) {
+            cachedOnGalatea = true;
+        }
+        if (isTorrhusLocationName(raw)) {
+            cachedOnTorrhus = true;
+        }
     }
 
     private static boolean detectOnHypixel(Minecraft mc) {
@@ -410,8 +585,8 @@ public final class LocateUtils {
         String area = null;
         String island = null;
         String dungeon = null;
-        for (Component line : readSkyBlockTabListComponents(mc)) {
-            String text = removeColorCodes(line.getString()).trim();
+        for (String text : readTabHudScanPlainLines(mc)) {
+            text = text.trim();
             if (text.isEmpty()) {
                 continue;
             }
@@ -475,7 +650,7 @@ public final class LocateUtils {
         }
         return removeColorCodes(text).trim();
     }
-    
+
     public static List<String> readTabListDisplayPlainLines(Minecraft mc) {
         List<String> lines = new ArrayList<>();
         if (mc == null || mc.getConnection() == null) {
@@ -493,62 +668,14 @@ public final class LocateUtils {
         return lines;
     }
 
-    public static List<Component> readTabListDisplayComponents(Minecraft mc) {
-        return readSkyBlockTabListComponents(mc);
-    }
-
-    public static List<Component> readSkyBlockTabListComponents(Minecraft mc) {
-        List<Component> lines = new ArrayList<>();
-        if (mc == null || mc.player == null || mc.getConnection() == null || mc.gui == null) {
-            return lines;
-        }
-        PlayerTabOverlay tabOverlay = mc.gui.getTabList();
-        if (tabOverlay == null) {
-            return lines;
-        }
-        List<PlayerInfo> players = ((PlayerListHudMixin) tabOverlay).baity$getPlayerInfos();
-        if (players == null || players.isEmpty()) {
-            return lines;
-        }
-        players = new ArrayList<>(players);
-        players.sort(LocateUtils::compareTabPlayers);
-        for (PlayerInfo info : players) {
-            Component display = tabOverlay.getNameForDisplay(info);
-            if (display != null) {
-                lines.add(display);
-            }
-        }
-        if (lines.size() < 80 && !lines.isEmpty()) {
-            lines.remove(lines.size() - 1);
-        } else if (lines.size() > 80) {
-            lines = new ArrayList<>(lines.subList(0, 80));
-        }
-        return lines;
-    }
-
-    private static int compareTabPlayers(PlayerInfo left, PlayerInfo right) {
-        boolean leftSpectator = left.getGameMode() == GameType.SPECTATOR;
-        boolean rightSpectator = right.getGameMode() == GameType.SPECTATOR;
-        if (leftSpectator != rightSpectator) {
-            return leftSpectator ? 1 : -1;
-        }
-        String leftTeam = left.getTeam() != null ? left.getTeam().getName() : "";
-        String rightTeam = right.getTeam() != null ? right.getTeam().getName() : "";
-        int teamOrder = leftTeam.compareTo(rightTeam);
-        if (teamOrder != 0) {
-            return teamOrder;
-        }
-        return left.getProfile().name().compareTo(right.getProfile().name());
-    }
-
     public static List<String> readTabHudScanPlainLines(Minecraft mc) {
         List<String> lines = new ArrayList<>();
         if (mc == null) {
             return lines;
         }
-        if (mc.gui != null && mc.gui.getTabList() != null) {
+        if (mc.gui != null && mc.gui.hud.getTabList() != null) {
             try {
-                PlayerListHudMixin tab = (PlayerListHudMixin) mc.gui.getTabList();
+                PlayerListHudMixin tab = (PlayerListHudMixin) mc.gui.hud.getTabList();
                 appendPlainLinesFromComponent(lines, tab.getHeader());
                 appendPlainLinesFromComponent(lines, tab.getFooter());
             } catch (Exception ignored) {
@@ -575,11 +702,11 @@ public final class LocateUtils {
     }
 
     public static String getTabListFooterPlainBestEffort(Minecraft mc) {
-        if (mc == null || mc.gui == null || mc.gui.getTabList() == null) {
+        if (mc == null || mc.gui == null || mc.gui.hud.getTabList() == null) {
             return null;
         }
         try {
-            Component footer = ((PlayerListHudMixin) mc.gui.getTabList()).getFooter();
+            Component footer = ((PlayerListHudMixin) mc.gui.hud.getTabList()).getFooter();
             if (footer != null) {
                 String s = toPlainText(footer.getString());
                 if (!s.isEmpty()) {
@@ -608,7 +735,7 @@ public final class LocateUtils {
         }
         return text
                 .replaceAll("(?i)\u00A7x(\u00A7[0-9a-f]){6}", "")
-                .replaceAll("§[0-9a-fk-or]", "");
+                .replaceAll("\u00a7[0-9a-fk-or]", "");
     }
 
     private static void clear() {
@@ -624,5 +751,6 @@ public final class LocateUtils {
         cachedAreaIslandNameRawLineDungeonPrefix = false;
         cachedInRift = false;
         cachedInSafari = false;
+        resetShulkerIslandLocateCache();
     }
 }

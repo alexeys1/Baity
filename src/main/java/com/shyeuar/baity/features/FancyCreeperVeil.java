@@ -12,7 +12,7 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
@@ -60,8 +60,8 @@ public class FancyCreeperVeil implements LevelRenderEvents.AfterTranslucentFeatu
         if (!isCloakActive) return;
         
         PoseStack matrices = context.poseStack();
-        MultiBufferSource buffers = context.bufferSource();
-        if (matrices == null || buffers == null) return;
+        SubmitNodeCollector submits = context.submitNodeCollector();
+        if (matrices == null || submits == null) return;
         
         Vec3 cameraPos = context.levelState().cameraRenderState.pos;
         float tickDelta = MC.getDeltaTracker().getGameTimeDeltaPartialTick(false);
@@ -85,21 +85,19 @@ public class FancyCreeperVeil implements LevelRenderEvents.AfterTranslucentFeatu
             float yawToPlayerDeg = (float) Math.toDegrees(yawToPlayerRad);
             matrices.mulPose(Axis.YP.rotationDegrees(yawToPlayerDeg));
             
-            renderShield(matrices, buffers);
+            submits.submitCustomGeometry(
+                    matrices,
+                    RenderTypes.entityTranslucent(WITHER_CLOAK_SHIELD),
+                    FancyCreeperVeil::renderShield
+            );
             
             matrices.popPose();
         }
         
         matrices.popPose();
-
-        if (buffers instanceof MultiBufferSource.BufferSource bufferSource) {
-            bufferSource.endBatch(RenderTypes.entityTranslucent(WITHER_CLOAK_SHIELD));
-        }
     }
     
-    private void renderShield(PoseStack matrices, MultiBufferSource buffers) {
-        VertexConsumer consumer = buffers.getBuffer(RenderTypes.entityTranslucent(WITHER_CLOAK_SHIELD));
-        PoseStack.Pose pose = matrices.last();
+    private static void renderShield(PoseStack.Pose pose, VertexConsumer consumer) {
         Matrix4f matrix = pose.pose();
         
         float width = (float) SHIELD_WIDTH;

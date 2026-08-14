@@ -24,7 +24,6 @@ import net.minecraft.client.renderer.fog.FogData;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.client.renderer.fog.environment.FogEnvironment;
 import net.minecraft.client.renderer.state.level.WeatherRenderState;
-import net.minecraft.server.level.ParticleStatus;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.material.FogType;
 import net.minecraft.world.phys.Vec3;
@@ -83,23 +82,6 @@ public class CullingMixin {
             ci.cancel();
         }
         
-        @Inject(
-            method = "tickRainParticles(Lnet/minecraft/client/multiplayer/ClientLevel;Lnet/minecraft/client/Camera;ILnet/minecraft/server/level/ParticleStatus;I)V",
-            at = @At("HEAD"),
-            cancellable = true
-        )
-        private void baity$skipRainSnowParticles(
-                ClientLevel level,
-                Camera camera,
-                int ticks,
-                ParticleStatus particleStatus,
-                int weatherRadius,
-                CallbackInfo ci) {
-            Module m = ModuleManager.getModuleByName("Culling");
-            if (m == null || !m.isEnabled()) return;
-            if (!ConfigManager.cullingRemoveRainSnow) return;
-            ci.cancel();
-        }
     }
     
     @Mixin(net.minecraft.client.renderer.entity.LivingEntityRenderer.class)

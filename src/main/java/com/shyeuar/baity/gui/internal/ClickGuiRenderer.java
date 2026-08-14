@@ -1,10 +1,6 @@
-package com.shyeuar.baity.gui.owo;
+package com.shyeuar.baity.gui.internal;
 
 import com.shyeuar.baity.gui.input.LineTextInput;
-import com.shyeuar.baity.gui.internal.ClickGuiLayout;
-import com.shyeuar.baity.gui.internal.ClickGuiSearchUtils;
-import com.shyeuar.baity.gui.internal.ClickGuiState;
-import com.shyeuar.baity.gui.internal.ClickGuiWatermark;
 import com.shyeuar.baity.gui.theme.Theme;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.render.ModuleStyleRenderer;
@@ -13,10 +9,6 @@ import com.shyeuar.baity.gui.value.Value;
 import com.shyeuar.baity.gui.value.ModuleCategory;
 import com.shyeuar.baity.gui.value.ValueTreeUtils;
 import com.shyeuar.baity.utils.NickRenderUtils;
-import io.wispforest.owo.ui.base.BaseUIComponent;
-import io.wispforest.owo.ui.core.OwoUIGraphics;
-import io.wispforest.owo.ui.core.Positioning;
-import io.wispforest.owo.ui.core.Sizing;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
@@ -24,7 +16,7 @@ import net.minecraft.resources.Identifier;
 import java.util.List;
 import java.util.function.Function;
 
-public class ClickGuiRootComponent extends BaseUIComponent {
+public class ClickGuiRenderer {
     private static final float VERSION_RIGHT_PADDING = 8.0f;
     
     private final ClickGuiState state;
@@ -41,7 +33,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
     private ModuleCategory cachedCategory = null;
     private String cachedModVersion = null;
     
-    public ClickGuiRootComponent(ClickGuiState state, Theme theme,
+    public ClickGuiRenderer(ClickGuiState state, Theme theme,
                                  Function<String, String> getTooltipText,
                                  Function<String, net.minecraft.network.chat.Component> getTooltipTextWithColors,
                                  Function<Object, String> getDisplayTextFormatter,
@@ -54,39 +46,29 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         this.tooltipInfo = tooltipInfo;
     }
 
-    public void configureRootLayout() {
-        this.horizontalSizing(Sizing.fixed((int)ClickGuiState.WIDTH));
-        this.verticalSizing(Sizing.fixed((int)ClickGuiState.HEIGHT));
-        this.positioning(Positioning.absolute(0, 0));
-    }
-    
     public void setGuiGraphics(GuiGraphicsExtractor guiGraphics) {
         this.guiGraphics = guiGraphics;
     }
     
-    @Override
     public void update(float delta, int mouseX, int mouseY) {
-        super.update(delta, mouseX, mouseY);
-        
         updateModuleExpandAnimations();
         
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
         updateModuleShimmerAnimations(coords.mouseX, coords.mouseY);
     }
     
-    @Override
-    public void draw(OwoUIGraphics context, int mouseX, int mouseY, float partialTicks, float delta) {
+    public void draw(int mouseX, int mouseY, float partialTicks, float delta) {
         if (guiGraphics == null) return;
 
         NickRenderUtils.beginClickGuiRenderScope();
         try {
-            baity$drawGui(context, mouseX, mouseY, partialTicks, delta);
+            baity$drawGui(mouseX, mouseY, partialTicks, delta);
         } finally {
             NickRenderUtils.endClickGuiRenderScope();
         }
     }
 
-    private void baity$drawGui(OwoUIGraphics context, int mouseX, int mouseY, float partialTicks, float delta) {
+    private void baity$drawGui(int mouseX, int mouseY, float partialTicks, float delta) {
         Minecraft client = Minecraft.getInstance();
         if (client == null) return;
         
@@ -101,16 +83,14 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
         boolean suppressTooltips = ClickGuiLayout.shouldSuppressContentTooltips(coords.mouseX, coords.mouseY);
         
-        OwoRenderAdapter adapter = OwoRenderAdapter.of(context, guiGraphics);
-        
         var matrices = guiGraphics.pose();
         matrices.pushMatrix();
         matrices.translate(Math.round(state.getWindowX()), Math.round(state.getWindowY()));
         matrices.scale(scaleRatio, scaleRatio);
         
-        renderWindowBackground(adapter);
-        renderSidebar(adapter, client, coords.mouseX, coords.mouseY);
-        renderSearchBar(adapter, client, coords.mouseX, coords.mouseY);
+        renderWindowBackground();
+        renderSidebar(client, coords.mouseX, coords.mouseY);
+        renderSearchBar(client, coords.mouseX, coords.mouseY);
         
         float contentX = ClickGuiState.SIDEBAR_WIDTH;
         float contentY = ClickGuiState.HEADER_HEIGHT;
@@ -132,14 +112,14 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         float modY = contentY + 10 - state.getScrollOffset();
         
         if (modules.isEmpty()) {
-            renderPlaceholder(adapter, client, modY, contentX, contentWidth);
+            renderPlaceholder(client, modY, contentX, contentWidth);
             modY += 100;
         }
         
         ModuleStyleRenderer.setState(state);
         
         for (Module module : modules) {
-            renderModule(adapter, client, module, contentX + 10, modY, contentX + contentWidth - 10,
+            renderModule(client, module, contentX + 10, modY, contentX + contentWidth - 10,
                         coords.mouseX, coords.mouseY, visibleTop, visibleBottom, suppressTooltips);
             
             if (!suppressTooltips && tooltipInfo != null && tooltipInfo.tooltip != null) {
@@ -151,30 +131,30 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             
             modY += 30;
             
-            modY += renderSubOptions(adapter, client, module, contentX + 20, modY, contentX + contentWidth - 20,
+            modY += renderSubOptions(client, module, contentX + 20, modY, contentX + contentWidth - 20,
                                    visibleHeight, coords.mouseX, coords.mouseY, suppressTooltips);
         }
         
         guiGraphics.disableScissor();
         
         if (calculatedContentHeight > visibleHeight) {
-            renderScrollbar(adapter, scrollbarInfo, contentX + contentWidth);
+            renderScrollbar(scrollbarInfo, contentX + contentWidth);
         }
         
-        renderWatermark(adapter, client, coords.mouseX, coords.mouseY);
-        renderHudButton(adapter, client, coords.mouseX, coords.mouseY);
+        renderWatermark(client, coords.mouseX, coords.mouseY);
+        renderHudButton(client, coords.mouseX, coords.mouseY);
         
         updateVersionCheckStatus();
-        renderVersion(adapter, client, coords.mouseX, coords.mouseY);
+        renderVersion(client, coords.mouseX, coords.mouseY);
         
         matrices.popMatrix();
         
         if (state.getHoveredTooltip() != null) {
-            renderTooltip(adapter, client, mouseX, mouseY);
+            renderTooltip(client, mouseX, mouseY);
         }
     }
     
-    private void renderWindowBackground(OwoRenderAdapter adapter) {
+    private void renderWindowBackground() {
         com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, 0, 0, ClickGuiState.WIDTH, ClickGuiState.HEIGHT,
                                  theme.BG.getRGB(), 6f);
     }
@@ -198,11 +178,11 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         return modules;
     }
 
-    private void renderSidebar(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
+    private void renderSidebar(Minecraft client, float mouseX, float mouseY) {
         com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, 0, 0, (int)ClickGuiState.SIDEBAR_WIDTH, (int)ClickGuiState.HEIGHT, 
                                  theme.BG.getRGB(), 0f);
         
-        renderLogoAndTitle(adapter, client, mouseX, mouseY);
+        renderLogoAndTitle(client, mouseX, mouseY);
         
         com.shyeuar.baity.gui.render.GuiRenderUtil.divider(guiGraphics, ClickGuiState.SIDEBAR_WIDTH, 0, 
                             ClickGuiState.SIDEBAR_WIDTH, ClickGuiState.HEIGHT,
@@ -246,10 +226,10 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             categoryY += categorySpacing;
         }
         
-        renderGitHubIcon(adapter, client, mouseX, mouseY);
+        renderGitHubIcon(client, mouseX, mouseY);
     }
     
-    private void renderLogoAndTitle(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
+    private void renderLogoAndTitle(Minecraft client, float mouseX, float mouseY) {
         float availableHeight = ClickGuiState.HEADER_HEIGHT + 20;
         float availableWidth = ClickGuiState.SIDEBAR_WIDTH;
         
@@ -263,7 +243,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, logoTexture, logoX, logoY, 0.0f, 0.0f, logoSize, logoSize, logoSize, logoSize);
     }
     
-    private void renderGitHubIcon(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
+    private void renderGitHubIcon(Minecraft client, float mouseX, float mouseY) {
         int iconSize = 20;
         int padding = 8;
         int iconX = padding;
@@ -280,7 +260,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, githubIcon, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize, color);
     }
     
-    private void renderSearchBar(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
+    private void renderSearchBar(Minecraft client, float mouseX, float mouseY) {
         float iconSize = 12;
         float iconPadding = 4;
         float searchX = ClickGuiLayout.searchBarX();
@@ -343,7 +323,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         guiGraphics.fill((int)searchX, (int)lineY, (int)(searchX + searchWidth), (int)(lineY + 1), lineColor);
     }
     
-    private void renderHudButton(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
+    private void renderHudButton(Minecraft client, float mouseX, float mouseY) {
         int githubIconSize = 20;
         int githubPadding = 8;
         int githubIconY = (int)(ClickGuiState.HEIGHT - githubIconSize - githubPadding);
@@ -376,7 +356,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         state.setHudButtonBounds((int)hudButtonX, (int)hudButtonY, (int)hudButtonWidth, (int)hudButtonHeight);
     }
     
-    private void renderPlaceholder(OwoRenderAdapter adapter, Minecraft client, float modY, float contentX, float contentWidth) {
+    private void renderPlaceholder(Minecraft client, float modY, float contentX, float contentWidth) {
         String placeholderText = "nothing~~~";
         int textWidth = client.font.width(placeholderText);
         int textX = (int)(contentX + (contentWidth - textWidth) / 2);
@@ -384,7 +364,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         guiGraphics.text(client.font, placeholderText, textX, textY, theme.FONT.getRGB(), false);
     }
     
-    private void renderModule(OwoRenderAdapter adapter, Minecraft client, Module module,
+    private void renderModule(Minecraft client, Module module,
                              float x, float modY, float width,
                              float mouseX, float mouseY, float visibleTop, float visibleBottom,
                              boolean suppressTooltips) {
@@ -446,31 +426,31 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             }
         }
         if (hasChildren && !module.getName().equals("ClickGUI")) {
-            String arrow = module.isExpanded() ? "▼" : "▶";
+            String arrow = module.isExpanded() ? "\u25bc" : "\u25b6";
             guiGraphics.text(client.font, arrow, (int)(x2 - 25), (int)(modY + 8), theme.FONT_C.getRGB(), false);
         }
         
         if (module.getName().equals("ClickGUI")) {
-            renderKeybindBox(adapter, client, x, modY, x2, moduleHeight, mouseX, mouseY);
+            renderKeybindBox(client, x, modY, x2, moduleHeight, mouseX, mouseY);
         }
     }
     
-    private void renderKeybindBox(OwoRenderAdapter adapter, Minecraft client,
+    private void renderKeybindBox(Minecraft client,
                                    float containerX1, float containerY, float containerX2, float containerHeight,
                                    float mouseX, float mouseY) {
         boolean isListening = state.isListeningForKey();
         String keyDisplay = state.getCurrentKeyDisplay();
         String keyText = isListening ? "Press a key..." : keyDisplay;
-        renderKeybindBoxContent(adapter, client, containerX2, containerY, containerHeight, mouseX, mouseY, isListening, keyText);
+        renderKeybindBoxContent(client, containerX2, containerY, containerHeight, mouseX, mouseY, isListening, keyText);
     }
     
-    private void renderKeybindBoxContent(OwoRenderAdapter adapter, Minecraft client,
+    private void renderKeybindBoxContent(Minecraft client,
                                         float containerX2, float containerY, float containerHeight,
                                         float mouseX, float mouseY, boolean isListening, String displayText) {
         if (displayText == null || displayText.isEmpty()) {
-            displayText = "☄ NOTSET";
+            displayText = "\u2604 NOTSET";
         }
-        String plainText = displayText.replaceAll("§[0-9a-fklmnor]", "");
+        String plainText = displayText.replaceAll("\u00a7[0-9a-fklmnor]", "");
         int textWidth = client.font.width(plainText);
         int boxWidth = textWidth + 16;
         float boxCenterY = containerY + containerHeight / 2f;
@@ -501,10 +481,10 @@ public class ClickGuiRootComponent extends BaseUIComponent {
             net.minecraft.network.chat.Component textObj = net.minecraft.network.chat.Component.literal(displayText);
             guiGraphics.text(client.font, textObj, baseX, baseY, theme.FONT_C.getRGB(), false);
         } else {
-            String displayPlainText = displayText.replaceAll("§[0-9a-fklmnor]", "");
+            String displayPlainText = displayText.replaceAll("\u00a7[0-9a-fklmnor]", "");
             
-            if (displayPlainText.startsWith("✎")) {
-                String prefix = "✎";
+            if (displayPlainText.startsWith("\u270e")) {
+                String prefix = "\u270e";
                 String keyName = displayPlainText.substring(1);
                 int prefixRGB = com.shyeuar.baity.utils.KeyMappingUtils.getModuleEnabledPurpleRGB();
                 int keyNameRGB = theme.FONT.getRGB();
@@ -515,11 +495,11 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 int prefixWidth = client.font.width(prefix);
                 net.minecraft.network.chat.Component keyTextObj = net.minecraft.network.chat.Component.literal(keyName);
                 guiGraphics.text(client.font, keyTextObj, baseX + prefixWidth, baseY, keyNameRGB, false);
-            } else if (displayPlainText.startsWith("☄") || 
+            } else if (displayPlainText.startsWith("\u2604") || 
                        displayPlainText.toUpperCase().contains("NOTSET") || 
                        displayPlainText.toUpperCase().contains("UNKNOWN")) {
-                String prefix = "☄";
-                String notsetText = displayPlainText.startsWith("☄") ? displayPlainText.substring(1) : (" " + displayPlainText);
+                String prefix = "\u2604";
+                String notsetText = displayPlainText.startsWith("\u2604") ? displayPlainText.substring(1) : (" " + displayPlainText);
                 int prefixRGB = 0xFFFFFF00;
                 int notsetRGB = 0xFFAAAAAA;
                 
@@ -536,7 +516,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         }
     }
     
-    private float renderSubOptions(OwoRenderAdapter adapter, Minecraft client, Module module,
+    private float renderSubOptions(Minecraft client, Module module,
                                   float containerX1, float modY, float containerX2,
                                   float visibleHeight,
                                   float mouseX, float mouseY, boolean suppressTooltips) {
@@ -620,14 +600,14 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         return containerHeight + 5;
     }
     
-    private void renderScrollbar(OwoRenderAdapter adapter, ClickGuiLayout.ScrollbarInfo info, float contentRight) {
+    private void renderScrollbar(ClickGuiLayout.ScrollbarInfo info, float contentRight) {
         float barX1 = contentRight - 6;
         float barX2 = contentRight - 2;
         com.shyeuar.baity.gui.render.GuiRenderUtil.drawRoundedRect(guiGraphics, barX1, info.barY, barX2, 
                                      info.barY + info.barHeight, 2, theme.BG_2.getRGB());
     }
     
-    private void renderWatermark(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
+    private void renderWatermark(Minecraft client, float mouseX, float mouseY) {
         ClickGuiWatermark.Layout layout = ClickGuiWatermark.layout(client);
         String prefix = ClickGuiWatermark.PREFIX;
         String handleName = ClickGuiWatermark.handleName();
@@ -660,7 +640,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         guiGraphics.fill((int)handleX1, (int)lineY, (int)handleX2, (int)lineY + 1, underlineColor);
     }
     
-    private void renderVersion(OwoRenderAdapter adapter, Minecraft client, float mouseX, float mouseY) {
+    private void renderVersion(Minecraft client, float mouseX, float mouseY) {
         if (cachedModVersion == null) {
             String version = getModVersion();
             if (version == null || version.isEmpty()) {
@@ -735,19 +715,19 @@ public class ClickGuiRootComponent extends BaseUIComponent {
                 if ("latest".equals(checkStatus)) {
                     if (!isAutoCheck) {
                         showFeedback = true;
-                        displayText = "It's already the latest version！";
+                        displayText = "It's already the latest version\uff01";
                     }
                 } else if ("error".equals(checkStatus)) {
                     showFeedback = true;
-                    displayText = "Network error！";
+                    displayText = "Network error\uff01";
                     isError = true;
                 } else if ("update_available".equals(checkStatus)) {
                     showFeedback = true;
                     String latest = state.getLatestVersion();
                     if (latest != null) {
-                        displayText = "Available updates！Check " + latest + "！";
+                        displayText = "Available updates\uff01Check " + latest + "\uff01";
                     } else {
-                        displayText = "Available updates！";
+                        displayText = "Available updates\uff01";
                     }
                 }
             }
@@ -777,8 +757,8 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         if (showFeedback && "update_available".equals(checkStatus)) {
             String latest = state.getLatestVersion();
             if (latest != null) {
-                String prefix = "Available updates！Check ";
-                String suffix = "！";
+                String prefix = "Available updates\uff01Check ";
+                String suffix = "\uff01";
                 int prefixWidth = client.font.width(prefix);
                 int versionWidth = client.font.width(latest);
                 
@@ -812,7 +792,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         } else if (showFeedback && "update_available".equals(checkStatus)) {
             String latest = state.getLatestVersion();
             if (latest != null) {
-                String prefix = "Available updates！Check ";
+                String prefix = "Available updates\uff01Check ";
                 int prefixWidth = client.font.width(prefix);
                 int versionWidth = client.font.width(latest);
                 
@@ -865,7 +845,7 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         }
     }
     
-    private void renderTooltip(OwoRenderAdapter adapter, Minecraft client, double mouseX, double mouseY) {
+    private void renderTooltip(Minecraft client, double mouseX, double mouseY) {
         float tooltipScaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
         float tipScale = 0.75f * tooltipScaleRatio;
         int offsetFromCursor = (int)(3 * tooltipScaleRatio);
@@ -1115,4 +1095,3 @@ public class ClickGuiRootComponent extends BaseUIComponent {
         return theme;
     }
 }
-

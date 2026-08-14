@@ -99,6 +99,32 @@ public final class EntityDrawUtils {
         matrices.popPose();
     }
 
+    public static void drawWireBoxAtWorld(
+            PoseStack.Pose pose,
+            VertexConsumer lines,
+            AABB box,
+            Vec3 cameraPos,
+            float r,
+            float g,
+            float b,
+            float a
+    ) {
+        drawWireCube(
+                pose,
+                lines,
+                box.minX - cameraPos.x,
+                box.minY - cameraPos.y,
+                box.minZ - cameraPos.z,
+                box.maxX - cameraPos.x,
+                box.maxY - cameraPos.y,
+                box.maxZ - cameraPos.z,
+                r,
+                g,
+                b,
+                a
+        );
+    }
+
     public static void drawLineAtWorld(
             PoseStack matrices,
             VertexConsumer lines,
@@ -127,6 +153,33 @@ public final class EntityDrawUtils {
                 a
         );
         matrices.popPose();
+    }
+
+    public static void drawLineAtWorld(
+            PoseStack.Pose pose,
+            VertexConsumer lines,
+            Vec3 start,
+            Vec3 end,
+            Vec3 cameraPos,
+            float r,
+            float g,
+            float b,
+            float a
+    ) {
+        drawLine(
+                pose,
+                lines,
+                start.x - cameraPos.x,
+                start.y - cameraPos.y,
+                start.z - cameraPos.z,
+                end.x - cameraPos.x,
+                end.y - cameraPos.y,
+                end.z - cameraPos.z,
+                r,
+                g,
+                b,
+                a
+        );
     }
 
     private EntityDrawUtils() {}

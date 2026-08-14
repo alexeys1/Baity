@@ -155,7 +155,8 @@ public final class ComponentTextUtils {
         }
         int v = color.getValue();
         for (ChatFormatting cf : ChatFormatting.values()) {
-            if (cf.getColor() != null && cf.getColor().intValue() == v) {
+            TextColor legacyColor = TextColor.fromLegacyFormat(cf);
+            if (legacyColor != null && legacyColor.getValue() == v) {
                 return cf;
             }
         }

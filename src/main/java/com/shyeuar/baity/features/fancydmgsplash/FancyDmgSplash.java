@@ -11,7 +11,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -180,12 +180,12 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
         if (mc.level == null || mc.player == null) return;
 
         PoseStack matrices = context.poseStack();
-        MultiBufferSource buffers = context.bufferSource();
-        if (matrices == null || buffers == null) return;
+        SubmitNodeCollector submits = context.submitNodeCollector();
+        if (matrices == null || submits == null) return;
         
         long currentTime = System.currentTimeMillis();
         Vec3 cameraPos = context.levelState().cameraRenderState.pos;
-        Camera camera = mc.gameRenderer.getMainCamera();
+        Camera camera = mc.gameRenderer.mainCamera();
         float cameraYaw = camera.yRot();
         float cameraPitch = camera.xRot();
 
@@ -213,15 +213,11 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
             }
 
             for (DamageNumber dn : damageNumbers) {
-                renderDamageNumber(matrices, buffers, dn, cameraPos, cameraYaw, cameraPitch, currentTime);
+                renderDamageNumber(matrices, submits, dn, cameraPos, cameraYaw, cameraPitch, currentTime);
             }
 
             for (ReactionText rt : reactionTexts) {
-                renderReactionText(matrices, buffers, rt, cameraPos, cameraYaw, cameraPitch, currentTime);
-            }
-
-            if (buffers instanceof MultiBufferSource.BufferSource bufferSource) {
-                bufferSource.endBatch();
+                renderReactionText(matrices, submits, rt, cameraPos, cameraYaw, cameraPitch, currentTime);
             }
         } finally {
             FloatingWorldTextCompat.endFrame();
@@ -276,7 +272,7 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
     
     private void renderDamageNumber(
             PoseStack matrices,
-            MultiBufferSource buffers,
+            SubmitNodeCollector submits,
             DamageNumber dn,
             Vec3 cameraPos,
             float cameraYaw,
@@ -349,8 +345,8 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
                     -textWidth / 2.0f,
                     0,
                     finalColor,
-                    matrices.last().pose(),
-                    buffers,
+                    matrices,
+                    submits,
                     15728880
             );
         } finally {
@@ -361,7 +357,7 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
     
     private void renderReactionText(
             PoseStack matrices,
-            MultiBufferSource buffers,
+            SubmitNodeCollector submits,
             ReactionText rt,
             Vec3 cameraPos,
             float cameraYaw,
@@ -405,8 +401,8 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
                     -textWidth / 2.0f,
                     0,
                     finalColor,
-                    matrices.last().pose(),
-                    buffers,
+                    matrices,
+                    submits,
                     15728880
             );
         } finally {
@@ -658,5 +654,3 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
         }
     }
 }
-
-

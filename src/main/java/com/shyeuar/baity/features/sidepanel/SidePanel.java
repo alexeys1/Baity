@@ -24,6 +24,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.references.ItemIds;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,14 +40,6 @@ import java.util.WeakHashMap;
 @Environment(EnvType.CLIENT)
 public final class SidePanel {
     private static final Logger LOGGER = LoggerFactory.getLogger("Baity/SidePanel");
-    private static ItemStack barrierPlaceholder;
-
-    private static ItemStack barrierPlaceholder() {
-        if (barrierPlaceholder == null) {
-            barrierPlaceholder = new ItemStack(Items.BARRIER);
-        }
-        return barrierPlaceholder;
-    }
     private static final int[] LOADOUT_PREVIEW_SLOTS = {10, 19, 28, 37, 21};
     private static final int[] EQUIPMENT_MENU_SLOTS = {10, 19, 28, 37, 47};
     private static final Codec<ItemStack[]> CACHE_CODEC = ItemStack.OPTIONAL_CODEC
@@ -270,11 +263,6 @@ public final class SidePanel {
         for (int i = 0; i < SLOTS.length; i++) {
             SLOTS[i] = ItemStack.EMPTY;
         }
-    }
-
-    static ItemStack displayStack(SlotKind kind) {
-        ItemStack stack = get(kind);
-        return stack.isEmpty() ? barrierPlaceholder() : stack;
     }
 
     static void persistNow() {
@@ -557,7 +545,7 @@ public final class SidePanel {
         }
         int[] ticks = {0};
         ScreenEvents.afterTick(screen).register(_ -> {
-            if (Minecraft.getInstance().screen != screen || syncedOnOpen.contains(screen)) {
+            if (Minecraft.getInstance().gui.screen() != screen || syncedOnOpen.contains(screen)) {
                 return;
             }
             ticks[0]++;
@@ -709,7 +697,7 @@ public final class SidePanel {
         }
         ensureSessionReady(client);
 
-        if (!(client.screen instanceof AbstractContainerScreen<?> screen)) {
+        if (!(client.gui.screen() instanceof AbstractContainerScreen<?> screen)) {
             return;
         }
         if (screen.getMenu().containerId != containerId) {
@@ -758,7 +746,7 @@ public final class SidePanel {
             return;
         }
         for (int slotIndex = 36; slotIndex <= 44; slotIndex++) {
-            if (menu.getSlot(slotIndex).getItem().is(Items.LIME_DYE)) {
+            if (menu.getSlot(slotIndex).getItem().typeHolder().is(ItemIds.DYE.lime())) {
                 readRowIntoState(menu, slotIndex - 36, slotIndex - 27, slotIndex - 18, slotIndex - 9, -1);
                 return;
             }

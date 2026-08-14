@@ -1,6 +1,7 @@
 package com.shyeuar.baity.features;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -11,7 +12,6 @@ import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.mixin.accessor.PostRenderAccessors.PostChainAccessor;
 import com.shyeuar.baity.mixin.accessor.PostRenderAccessors.PostPassAccessor;
-import com.shyeuar.baity.mixin.accessor.PostRenderAccessors.ShaderManagerAccessor;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.CameraType;
@@ -19,7 +19,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelTargetBundle;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.PostPass;
-import net.minecraft.client.renderer.ShaderManager;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -142,8 +141,8 @@ public final class MotionBlur {
         }
         float blendFactor = strength * fpsOverRefresh;
         int sampleAmount = fpsOverRefresh > 1.0f ? (int) (100 * fpsOverRefresh) : 100;
-        float viewW = client.getMainRenderTarget().width;
-        float viewH = client.getMainRenderTarget().height;
+        float viewW = client.gameRenderer.mainRenderTarget().width;
+        float viewH = client.gameRenderer.mainRenderTarget().height;
 
         List<PostPass> passes = ((PostChainAccessor) chain).baity$getPasses();
         if (passes.isEmpty()) {
@@ -157,7 +156,7 @@ public final class MotionBlur {
 
         GpuBuffer gpuBuffer = ubo.bind(chain, uniformBuffers);
         try {
-            try (GpuBuffer.MappedView view = RenderSystem.getDevice().createCommandEncoder().mapBuffer(gpuBuffer, false, true)) {
+            try (GpuBufferSlice.MappedView view = gpuBuffer.map(false, true)) {
                 Std140Builder builder = Std140Builder.intoBuffer(view.data());
                 builder.putMat4f(mvInverse);
                 builder.putMat4f(projInverse);
@@ -170,7 +169,7 @@ public final class MotionBlur {
                 builder.putInt(0);
                 builder.putInt(1);
             }
-            RenderTarget mainTarget = client.getMainRenderTarget();
+            RenderTarget mainTarget = client.gameRenderer.mainRenderTarget();
             FrameGraphBuilder frame = new FrameGraphBuilder();
             PostChain.TargetBundle targets = PostChain.TargetBundle.of(
                     PostChain.MAIN_TARGET_ID, frame.importExternal("main", mainTarget));
@@ -186,12 +185,7 @@ public final class MotionBlur {
 
     private static PostChain loadChain(Minecraft client, Identifier id) {
         try {
-            ShaderManager.CompilationCache cache =
-                    ((ShaderManagerAccessor) client.getShaderManager()).baity$getCompilationCache();
-            if (cache == null) {
-                return null;
-            }
-            PostChain chain = cache.getOrLoadPostChain(id, LevelTargetBundle.MAIN_TARGETS);
+            PostChain chain = client.getShaderManager().getPostChain(id, LevelTargetBundle.MAIN_TARGETS);
             loadErrorLogged.remove(id.getPath());
             return chain;
         } catch (Exception e) {

@@ -15,7 +15,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
@@ -59,12 +59,16 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
         if (mc.level == null || mc.player == null) return;
         
         Vec3 cameraPos = context.levelState().cameraRenderState.pos;
-        Camera camera = mc.gameRenderer.getMainCamera();
+        Camera camera = mc.gameRenderer.mainCamera();
         float tickDelta = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         float cameraYaw = camera.yRot();
         float cameraPitch = camera.xRot();
         
         PoseStack matrices = context.poseStack();
+        SubmitNodeCollector submits = context.submitNodeCollector();
+        if (submits == null) {
+            return;
+        }
         if (matrices == null) {
             matrices = new PoseStack();
             matrices.mulPose(new org.joml.Quaternionf().rotationXYZ(
@@ -89,14 +93,21 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
             matrices.pushPose();
             try {
                 matrices.translate(x, y, z);
-                renderPlayerName(matrices, player, cameraYaw, cameraPitch, m);
+                renderPlayerName(matrices, player, cameraYaw, cameraPitch, m, submits);
             } finally {
                 matrices.popPose();
             }
         }
     }
     
-    private void renderPlayerName(PoseStack matrices, Player player, float cameraYaw, float cameraPitch, Module module) {
+    private void renderPlayerName(
+            PoseStack matrices,
+            Player player,
+            float cameraYaw,
+            float cameraPitch,
+            Module module,
+            SubmitNodeCollector submits
+    ) {
         matrices.pushPose();
         try {
             float heightOffset = player.getBbHeight() + 0.5f;
@@ -185,33 +196,50 @@ public class NametagRenderer implements LevelRenderEvents.EndMain {
         int totalWidth = nameWidth + prefixWidth + distanceWidth + (showDistance ? 2 : 0);
         int currentX = -totalWidth / 2;
         
-        MultiBufferSource.BufferSource immediate = mc.renderBuffers().bufferSource();
-        
         int distanceColorWithAlpha = 0xFF00FFFF;
         int bracketColorWithAlpha = DevConfig.DEV_PREFIX_COLOR | 0xFF000000;
         int devTextColorWithAlpha = DevConfig.DEV_TEXT_COLOR | 0xFF000000;
 
         if (isDeveloper) {
-            textRenderer.drawInBatch("[", currentX, 0, bracketColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+            submitText(submits, matrices, Component.literal("["), currentX, bracketColorWithAlpha);
             currentX += textRenderer.width("[");
-            textRenderer.drawInBatch("Dev", currentX, 0, devTextColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+            submitText(submits, matrices, Component.literal("Dev"), currentX, devTextColorWithAlpha);
             currentX += textRenderer.width("Dev");
-            textRenderer.drawInBatch("]", currentX, 0, bracketColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+            submitText(submits, matrices, Component.literal("]"), currentX, bracketColorWithAlpha);
             currentX += textRenderer.width("]") + 2;
         }
         
-        textRenderer.drawInBatch(nameComponent, currentX, 0, 0xFFFFFFFF, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+        submitText(submits, matrices, nameComponent, currentX, 0xFFFFFFFF);
         currentX += nameWidth;
         
         if (showDistance && distanceText != null) {
             currentX += 2;
-            textRenderer.drawInBatch(distanceText, currentX, 0, distanceColorWithAlpha, false, matrices.last().pose(), immediate, Font.DisplayMode.SEE_THROUGH, 0, 15728880);
+            submitText(submits, matrices, Component.literal(distanceText), currentX, distanceColorWithAlpha);
         }
-        
-            immediate.endBatch();
         } finally {
             matrices.popPose();
         }
+    }
+
+    private static void submitText(
+            SubmitNodeCollector submits,
+            PoseStack matrices,
+            Component text,
+            float x,
+            int color
+    ) {
+        submits.submitText(
+                matrices,
+                x,
+                0,
+                text.getVisualOrderText(),
+                false,
+                Font.DisplayMode.SEE_THROUGH,
+                15728880,
+                color,
+                0,
+                0
+        );
     }
     private static void updateCache() {
         long currentTime = System.currentTimeMillis();

@@ -49,3 +49,5 @@ replay_*.log
 
 # local temp sources / caches
 .tmp/
+_tmp_*/
+_extract_*/

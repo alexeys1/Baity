@@ -28,6 +28,9 @@ public final class OldSneakingUtils {
     }
 
     public static float getVisualEyeHeight(Player player) {
+        if (NoSwimPoseUtils.shouldDeferCameraEyeHeightToVanilla(player)) {
+            return player.getEyeHeight();
+        }
         float currentEyeHeight = player.getEyeHeight();
         if (!isEligiblePlayer(player) || !isLandSneakContext(player) || !isPhysicallyCrouching(player)) {
             return currentEyeHeight;
@@ -55,6 +58,7 @@ public final class OldSneakingUtils {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
         return player != null
+            && !NoSwimPoseUtils.shouldDeferCameraEyeHeightToVanilla(player)
             && isEligiblePlayer(player)
             && isLandSneakContext(player)
             && isPhysicallyCrouching(player);
@@ -70,6 +74,7 @@ public final class OldSneakingUtils {
 
     public static boolean shouldApplyLegacyPick(Player player) {
         return ConfigManager.oldSneakingEnabled
+            && !NoSwimPoseUtils.shouldDeferCameraEyeHeightToVanilla(player)
             && isEligiblePlayer(player)
             && player.isCrouching();
     }

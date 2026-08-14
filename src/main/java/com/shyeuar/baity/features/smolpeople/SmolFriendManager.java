@@ -23,10 +23,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -41,6 +43,9 @@ public final class SmolFriendManager {
     private static final double MIRROR_ARMOR_STAND_COLUMN_HEIGHT_BLOCKS = 4.0;
     private static List<String> cachedLobbyPlayers = List.of();
     private static long lastLobbyPlayersRefreshTime = 0L;
+
+    private record SmolMirrorSource(UUID uuid, Player player, PlayerInfo tabInfo) {
+    }
 
     private SmolFriendManager() {
     }
@@ -73,7 +78,7 @@ public final class SmolFriendManager {
             return false;
         }
 
-        if (isLocalPlayerMirror(targetPlayer)) {
+        if (isMirrorOfAnySmolSource(targetPlayer)) {
             return true;
         }
 
@@ -106,64 +111,153 @@ public final class SmolFriendManager {
         }
 
         String standDisplayName = getArmorStandDisplayName(armorStand);
-        String localDisplayName = getLocalPlayerDisplayName(mc.player);
-        if (!nametagDisplayNamesMatch(localDisplayName, standDisplayName)) {
-            return false;
-        }
-
-        for (Player mirrorPlayer : mc.level.players()) {
-            if (mirrorPlayer == mc.player || !isLocalPlayerMirror(mirrorPlayer)) {
+        for (SmolMirrorSource source : collectSmolMirrorSources(mc)) {
+            if (!nametagDisplayNamesMatch(getSourceDisplayName(source), standDisplayName)) {
                 continue;
             }
-            if (isWithinMirrorArmorStandRadius(mirrorPlayer, armorStand)) {
+            for (Player mirrorPlayer : mc.level.players()) {
+                if (mirrorPlayer == source.player || !isMirrorOf(source, mirrorPlayer)) {
+                    continue;
+                }
+                if (isWithinMirrorArmorStandRadius(mirrorPlayer, armorStand)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean isMirrorOfAnySmolSource(Player candidate) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || candidate == null) {
+            return false;
+        }
+        for (SmolMirrorSource source : collectSmolMirrorSources(mc)) {
+            if (isMirrorOf(source, candidate)) {
                 return true;
             }
         }
         return false;
     }
 
-    private static boolean isLocalPlayerMirror(Player other) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || other == mc.player) {
+    private static List<SmolMirrorSource> collectSmolMirrorSources(Minecraft mc) {
+        List<SmolMirrorSource> sources = new ArrayList<>();
+        Set<UUID> seen = new HashSet<>();
+        if (mc.player != null) {
+            sources.add(new SmolMirrorSource(mc.player.getUUID(), mc.player, null));
+            seen.add(mc.player.getUUID());
+        }
+        if (mc.getConnection() == null) {
+            return sources;
+        }
+        for (PlayerInfo info : mc.getConnection().getOnlinePlayers()) {
+            if (info == null || info.getProfile() == null) {
+                continue;
+            }
+            UUID uuid = info.getProfile().id();
+            if (uuid == null || !seen.add(uuid)) {
+                continue;
+            }
+            if (!shouldSmolifySourcePlayer(mc, uuid, info.getProfile().name())) {
+                continue;
+            }
+            Player worldPlayer = mc.level != null ? mc.level.getPlayerByUUID(uuid) : null;
+            sources.add(new SmolMirrorSource(uuid, worldPlayer, info));
+        }
+        return sources;
+    }
+
+    private static boolean shouldSmolifySourcePlayer(Minecraft mc, UUID uuid, String name) {
+        if (mc.player != null && uuid.equals(mc.player.getUUID())) {
+            return true;
+        }
+        Boolean remotePreference = BaityPresenceSync.getRemoteSmolPreference(uuid);
+        if (remotePreference != null) {
+            return remotePreference;
+        }
+        return ConfigManager.smolFriendsEnabled && isFriend(name);
+    }
+
+    private static boolean isMirrorOf(SmolMirrorSource source, Player candidate) {
+        if (source == null || candidate == null || candidate == source.player()) {
             return false;
         }
-        return matchesProfileIdMirrorPath(mc, other) || matchesLegacyMirrorPath(mc, other);
+        UUID skinOwnerId = getSkinTextureProfileId(candidate);
+        if (skinOwnerId != null && skinOwnerId.equals(source.uuid())) {
+            return true;
+        }
+        if (source.player() != null) {
+            return matchesLegacyMirrorPath(source.player(), candidate);
+        }
+        if (source.tabInfo() != null) {
+            return matchesLegacyMirrorPathFromTab(source.tabInfo(), candidate);
+        }
+        return false;
     }
 
-    private static boolean matchesProfileIdMirrorPath(Minecraft mc, Player other) {
-        UUID skinOwnerId = getSkinTextureProfileId(other);
-        return skinOwnerId != null && skinOwnerId.equals(mc.player.getUUID());
-    }
-
-    private static boolean matchesLegacyMirrorPath(Minecraft mc, Player other) {
-        if (other.getUUID().equals(mc.player.getUUID())) {
+    private static boolean matchesLegacyMirrorPath(Player source, Player other) {
+        if (other.getUUID().equals(source.getUUID())) {
             return true;
         }
 
-        String selfName = mc.player.getGameProfile().name();
+        String sourceName = source.getGameProfile().name();
         String otherName = other.getGameProfile().name();
-        if (namesMatchMirror(selfName, otherName)) {
+        if (namesMatchMirror(sourceName, otherName)) {
             return true;
         }
 
-        if (matchesVisibleName(mc.player, other)) {
+        if (matchesVisibleName(source, other)) {
             return true;
         }
 
-        if (!(mc.player instanceof AbstractClientPlayer selfClient)) {
+        if (!(source instanceof AbstractClientPlayer sourceClient)) {
             return false;
         }
         if (!(other instanceof AbstractClientPlayer otherClient)) {
             return false;
         }
 
-        var selfSkin = selfClient.getSkin();
+        var sourceSkin = sourceClient.getSkin();
         var otherSkin = otherClient.getSkin();
-        if (selfSkin == null || otherSkin == null
-                || selfSkin.body() == null || otherSkin.body() == null) {
+        if (sourceSkin == null || otherSkin == null
+                || sourceSkin.body() == null || otherSkin.body() == null) {
             return false;
         }
-        if (!selfSkin.body().texturePath().equals(otherSkin.body().texturePath())) {
+        if (!sourceSkin.body().texturePath().equals(otherSkin.body().texturePath())) {
+            return false;
+        }
+        return !isListedInTab(other.getUUID());
+    }
+
+    private static boolean matchesLegacyMirrorPathFromTab(PlayerInfo info, Player other) {
+        if (info.getProfile() == null) {
+            return false;
+        }
+        UUID sourceUuid = info.getProfile().id();
+        if (sourceUuid != null && other.getUUID().equals(sourceUuid)) {
+            return true;
+        }
+
+        String sourceName = info.getProfile().name();
+        String otherName = other.getGameProfile().name();
+        if (namesMatchMirror(sourceName, otherName)) {
+            return true;
+        }
+
+        String tabDisplayName = info.getTabListDisplayName() != null
+                ? LocateUtils.toPlainText(info.getTabListDisplayName().getString())
+                : null;
+        if (tabDisplayName != null) {
+            for (String otherVisible : collectVisibleNames(other)) {
+                if (namesMatchMirror(tabDisplayName, otherVisible)) {
+                    return true;
+                }
+            }
+        }
+
+        String sourceTexture = getTexturesPropertyValue(info.getProfile());
+        String otherTexture = getTexturesPropertyValue(other.getGameProfile());
+        if (sourceTexture == null || otherTexture == null || !sourceTexture.equals(otherTexture)) {
             return false;
         }
         return !isListedInTab(other.getUUID());
@@ -319,28 +413,41 @@ public final class SmolFriendManager {
         return LocateUtils.toPlainText(armorStand.getName().getString()).trim();
     }
 
-    private static String getLocalPlayerDisplayName(Player player) {
+    private static String getPlayerDisplayName(Player player) {
         if (player.getDisplayName() != null) {
             return LocateUtils.toPlainText(player.getDisplayName().getString()).trim();
         }
         return LocateUtils.toPlainText(player.getName().getString()).trim();
     }
 
-    private static boolean nametagDisplayNamesMatch(String localDisplayName, String standDisplayName) {
-        if (localDisplayName == null || standDisplayName == null) {
+    private static String getSourceDisplayName(SmolMirrorSource source) {
+        if (source.player() != null) {
+            return getPlayerDisplayName(source.player());
+        }
+        if (source.tabInfo() != null && source.tabInfo().getTabListDisplayName() != null) {
+            return LocateUtils.toPlainText(source.tabInfo().getTabListDisplayName().getString()).trim();
+        }
+        if (source.tabInfo() != null && source.tabInfo().getProfile() != null) {
+            return source.tabInfo().getProfile().name();
+        }
+        return "";
+    }
+
+    private static boolean nametagDisplayNamesMatch(String sourceDisplayName, String standDisplayName) {
+        if (sourceDisplayName == null || standDisplayName == null) {
             return false;
         }
-        String local = localDisplayName.trim();
+        String source = sourceDisplayName.trim();
         String stand = standDisplayName.trim();
-        if (local.isEmpty() || stand.isEmpty()) {
+        if (source.isEmpty() || stand.isEmpty()) {
             return false;
         }
-        if (local.equalsIgnoreCase(stand)) {
+        if (source.equalsIgnoreCase(stand)) {
             return true;
         }
-        if (local.length() > stand.length()
-                && local.regionMatches(true, 0, stand, 0, stand.length())
-                && !Character.isLetterOrDigit(local.charAt(stand.length()))) {
+        if (source.length() > stand.length()
+                && source.regionMatches(true, 0, stand, 0, stand.length())
+                && !Character.isLetterOrDigit(source.charAt(stand.length()))) {
             return true;
         }
         return false;

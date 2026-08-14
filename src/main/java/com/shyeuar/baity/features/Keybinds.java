@@ -163,18 +163,16 @@ public final class Keybinds {
         }
 
         MenuType menuType = MenuType.fromTitle(screen.getTitle());
-        if (tryBlockPreventUnequipHotbar(client, screen, binding -> binding.matches(keyInput), menuType)) {
-            return false;
-        }
-
-        if (!tryConsumeClickCooldown()) {
-            return true;
-        }
 
         return switch (menuType) {
             case WARDROBE -> handleSetMenu(client, screen, binding -> binding.matches(keyInput), menuType);
             case EQUIPMENT -> handleSetMenu(client, screen, binding -> binding.matches(keyInput), menuType);
-            case LOADOUT -> handleLoadoutMenu(client, screen, keyInput);
+            case LOADOUT -> {
+                if (!tryConsumeClickCooldown()) {
+                    yield false;
+                }
+                yield handleLoadoutMenu(client, screen, keyInput);
+            }
             case NONE -> true;
         };
     }
@@ -185,13 +183,6 @@ public final class Keybinds {
         }
 
         MenuType menuType = MenuType.fromTitle(screen.getTitle());
-        if (tryBlockPreventUnequipHotbar(client, screen, binding -> binding.matchesMouse(click), menuType)) {
-            return false;
-        }
-
-        if (!tryConsumeClickCooldown()) {
-            return true;
-        }
 
         if (menuType == MenuType.WARDROBE && ConfigManager.keybindsWardrobeEnabled) {
             return handleSetMenu(client, screen, binding -> binding.matchesMouse(click), menuType);
@@ -200,6 +191,9 @@ public final class Keybinds {
             return handleSetMenu(client, screen, binding -> binding.matchesMouse(click), menuType);
         }
         if (menuType == MenuType.LOADOUT && ConfigManager.keybindsLoadoutEnabled) {
+            if (!tryConsumeClickCooldown()) {
+                return false;
+            }
             return handleLoadoutMenu(client, screen, binding -> binding.matchesMouse(click));
         }
         return true;
@@ -232,30 +226,6 @@ public final class Keybinds {
         return false;
     }
 
-    private static boolean tryBlockPreventUnequipHotbar(
-            Minecraft client,
-            AbstractContainerScreen<?> screen,
-            Predicate<KeyMapping> matcher,
-            MenuType menuType
-    ) {
-        if (menuType != MenuType.WARDROBE && menuType != MenuType.EQUIPMENT) {
-            return false;
-        }
-        if (!isSetMenuEnabled(menuType)) {
-            return false;
-        }
-        int hotbarIndex = resolveHotbarIndex(client, matcher);
-        if (hotbarIndex < 0) {
-            return false;
-        }
-        int slotIndex = wardrobeHotbarIndexToSlot(hotbarIndex);
-        ItemStack stack = screen.getMenu().getSlot(slotIndex).getItem();
-        if (!isWardrobeButton(stack)) {
-            return false;
-        }
-        return shouldPreventUnequip(menuType, stack);
-    }
-
     private static boolean handleSetMenu(
             Minecraft client,
             AbstractContainerScreen<?> screen,
@@ -272,6 +242,14 @@ public final class Keybinds {
         ItemStack stack = slot.getItem();
         if (!isWardrobeButton(stack)) {
             return true;
+        }
+
+        if (shouldPreventUnequip(menuType, stack)) {
+            return false;
+        }
+
+        if (!tryConsumeClickCooldown()) {
+            return false;
         }
 
         boolean unequipping = isEquippedSetButton(stack);
@@ -416,14 +394,6 @@ public final class Keybinds {
         return -1;
     }
 
-    private static boolean isSetMenuEnabled(MenuType menuType) {
-        return switch (menuType) {
-            case WARDROBE -> ConfigManager.keybindsWardrobeEnabled;
-            case EQUIPMENT -> ConfigManager.keybindsEquipmentEnabled;
-            default -> false;
-        };
-    }
-
     private static boolean isAutoCloseEnabled(MenuType menuType) {
         return switch (menuType) {
             case WARDROBE -> ConfigManager.keybindsWardrobeAutoCloseOnUse;
@@ -479,15 +449,31 @@ public final class Keybinds {
             return false;
         }
         Minecraft client = Minecraft.getInstance();
-        if (client == null) {
+        if (client == null || client.getWindow() == null) {
             return false;
         }
+        long windowHandle = client.getWindow().handle();
         return switch (mode.toLowerCase()) {
-            case "ctrl" -> client.hasControlDown();
-            case "shift" -> client.hasShiftDown();
-            case "alt" -> client.hasAltDown();
+            case "ctrl" -> isCtrlDown(windowHandle);
+            case "shift" -> isShiftDown(windowHandle);
+            case "alt" -> isAltDown(windowHandle);
             default -> false;
         };
+    }
+
+    private static boolean isCtrlDown(long windowHandle) {
+        return GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
+    }
+
+    private static boolean isShiftDown(long windowHandle) {
+        return GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
+    }
+
+    private static boolean isAltDown(long windowHandle) {
+        return GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_LEFT_ALT) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_RIGHT_ALT) == GLFW.GLFW_PRESS;
     }
 
     private static boolean tryConsumeClickCooldown() {

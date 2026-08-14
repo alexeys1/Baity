@@ -39,14 +39,6 @@ import java.util.WeakHashMap;
 @Environment(EnvType.CLIENT)
 public final class SidePanel {
     private static final Logger LOGGER = LoggerFactory.getLogger("Baity/SidePanel");
-    private static ItemStack barrierPlaceholder;
-
-    private static ItemStack barrierPlaceholder() {
-        if (barrierPlaceholder == null) {
-            barrierPlaceholder = new ItemStack(Items.BARRIER);
-        }
-        return barrierPlaceholder;
-    }
     private static final int[] LOADOUT_PREVIEW_SLOTS = {10, 19, 28, 37, 21};
     private static final int[] EQUIPMENT_MENU_SLOTS = {10, 19, 28, 37, 47};
     private static final Codec<ItemStack[]> CACHE_CODEC = ItemStack.OPTIONAL_CODEC
@@ -270,11 +262,6 @@ public final class SidePanel {
         for (int i = 0; i < SLOTS.length; i++) {
             SLOTS[i] = ItemStack.EMPTY;
         }
-    }
-
-    static ItemStack displayStack(SlotKind kind) {
-        ItemStack stack = get(kind);
-        return stack.isEmpty() ? barrierPlaceholder() : stack;
     }
 
     static void persistNow() {

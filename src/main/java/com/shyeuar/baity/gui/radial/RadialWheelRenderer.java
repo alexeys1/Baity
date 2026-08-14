@@ -11,6 +11,8 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.PlayerSkin;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 public final class RadialWheelRenderer {
 
@@ -28,6 +30,7 @@ public final class RadialWheelRenderer {
 
     public static final float ICON_BASE_SCALE = 3f;
     public static final int WARP_ICON_BASE_SIZE = 24;
+    public static final int CENTER_ACTION_ICON_SIZE = 20;
     public static final int CENTER_HEAD_SIZE = 24;
     public static final int ICON_RADIUS_INSET = 4;
 
@@ -54,9 +57,6 @@ public final class RadialWheelRenderer {
     private static final int ACCENT2 = LinearTheme.ACCENT_SECONDARY.getRGB();
     private static final int BORDER = LinearTheme.BORDER_PRIMARY.getRGB();
     private static final int TEXT_SECONDARY = LinearTheme.TEXT_SECONDARY.getRGB();
-    private static final int YELLOW = 0xFFFFFF55;
-    private static final int YELLOW_RIM = 0xCCFFFF55;
-    private static final int YELLOW_DARK = 0xFFCCCC44;
 
     public static int textSecondary() {
         return TEXT_SECONDARY;
@@ -201,20 +201,31 @@ public final class RadialWheelRenderer {
     }
 
     public static void drawCenter(GuiGraphicsExtractor context, int centerX, int centerY, CenterStyle style) {
-        switch (style) {
-            case EXIT -> {
-                int hubFace = withAlpha(lerpArgb(BG3, 0xFF6A5C, 0.35f), 0xFF);
-                int hubRim = withAlpha(lerpArgb(0xFF8A7A, 0xFFB0A8, 0.5f), 0xEE);
-                drawCenterHub(context, centerX, centerY, hubFace, hubRim);
-                drawCenterCloseIcon(context, centerX, centerY, 0xFFFFECEA);
-            }
-            case BACK -> {
-                int hubFace = withAlpha(lerpArgb(BG3, YELLOW_DARK, 0.45f), 0xFF);
-                int hubRim = YELLOW_RIM;
-                drawCenterHub(context, centerX, centerY, hubFace, hubRim);
-                drawCenterBackIcon(context, centerX, centerY, YELLOW);
-            }
+        int hubFace = withAlpha(lerpArgb(BG3, BG, 0.2f), 0xFF);
+        int hubRim = withAlpha(lerpArgb(BG3, BORDER, 0.35f), 0xEE);
+        drawCenterHub(context, centerX, centerY, hubFace, hubRim);
+        ItemStack stack = switch (style) {
+            case EXIT -> new ItemStack(Items.BARRIER);
+            case BACK -> new ItemStack(Items.STRUCTURE_VOID);
+        };
+        drawItemStackIcon(context, stack, centerX, centerY, CENTER_ACTION_ICON_SIZE);
+    }
+
+    public static void drawItemStackIcon(GuiGraphicsExtractor graphics, ItemStack stack,
+                                         float centerX, float centerY, int size) {
+        if (stack == null || stack.isEmpty()) {
+            return;
         }
+        float scale = size / 16f;
+        int drawX = Math.round(centerX - 8);
+        int drawY = Math.round(centerY - 8);
+        var pose = graphics.pose();
+        pose.pushMatrix();
+        pose.translate(centerX, centerY);
+        pose.scale(scale, scale);
+        pose.translate(-centerX, -centerY);
+        graphics.fakeItem(stack, drawX, drawY);
+        pose.popMatrix();
     }
 
     private static void drawCenterHub(GuiGraphicsExtractor context, int centerX, int centerY, int hubFace, int hubRim) {
@@ -282,58 +293,6 @@ public final class RadialWheelRenderer {
     private static double sectorIconRadius(int innerRadius, int outerRadius) {
         double mid = (innerRadius + outerRadius) * 0.5;
         return Math.max(innerRadius + 4, mid - ICON_RADIUS_INSET);
-    }
-
-    private static void drawCenterCloseIcon(GuiGraphicsExtractor context, int centerX, int centerY, int color) {
-        float half = 4.6f;
-        float stroke = 2.15f;
-        drawThickRoundLine(context, centerX - half, centerY - half, centerX + half, centerY + half, stroke, color);
-        drawThickRoundLine(context, centerX - half, centerY + half, centerX + half, centerY - half, stroke, color);
-    }
-
-    private static void drawCenterBackIcon(GuiGraphicsExtractor context, int centerX, int centerY, int color) {
-        float stroke = 2.05f;
-        float pad = stroke * 0.52f;
-        float tailX = 3.6f;
-        float tipX = -5.2f;
-        float midY = 0.5f;
-        float headSpread = 3.4f;
-        float headDepth = 3.2f;
-        float headX = tipX + headDepth;
-        float geoX = (tipX - pad + tailX + pad) * 0.5f;
-        float geoY = (midY - headSpread - pad + midY + headSpread + pad) * 0.5f;
-        drawThickRoundLineCentered(context, centerX, centerY, geoX, geoY, tailX, midY, tipX, midY, stroke, color);
-        drawThickRoundLineCentered(context, centerX, centerY, geoX, geoY, tipX, midY, headX, midY - headSpread, stroke, color);
-        drawThickRoundLineCentered(context, centerX, centerY, geoX, geoY, tipX, midY, headX, midY + headSpread, stroke, color);
-    }
-
-    private static void drawThickRoundLineCentered(GuiGraphicsExtractor context, int hubX, int hubY,
-                                                   float geoX, float geoY,
-                                                   float x0, float y0, float x1, float y1,
-                                                   float thickness, int color) {
-        drawThickRoundLine(context,
-                hubX + x0 - geoX, hubY + y0 - geoY,
-                hubX + x1 - geoX, hubY + y1 - geoY,
-                thickness, color);
-    }
-
-    private static void drawThickRoundLine(GuiGraphicsExtractor context, float x0, float y0, float x1, float y1,
-                                           float thickness, int color) {
-        float dx = x1 - x0;
-        float dy = y1 - y0;
-        float len = (float) Math.sqrt(dx * dx + dy * dy);
-        if (len < 0.001f) return;
-
-        float step = Math.max(0.32f, thickness * 0.42f);
-        int segments = Math.max(1, Math.round(len / step));
-        double radius = thickness * 0.52;
-
-        for (int i = 0; i <= segments; i++) {
-            float t = i / (float) segments;
-            float x = x0 + dx * t;
-            float y = y0 + dy * t;
-            UiShapeRenderer.drawCircle(context, (int) x, (int) y, 10, radius, color);
-        }
     }
 
     private static void drawLayoutRing(GuiGraphicsExtractor context, int centerX, int centerY,

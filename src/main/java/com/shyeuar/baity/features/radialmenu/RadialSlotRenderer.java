@@ -80,17 +80,7 @@ public final class RadialSlotRenderer {
     }
 
     private static void drawItemIcon(GuiGraphicsExtractor graphics, ItemStack stack, float centerX, float centerY) {
-        int size = RadialWheelRenderer.WARP_ICON_BASE_SIZE;
-        float scale = size / 16f;
-        int drawX = Math.round(centerX - 8);
-        int drawY = Math.round(centerY - 8);
-        var pose = graphics.pose();
-        pose.pushMatrix();
-        pose.translate(centerX, centerY);
-        pose.scale(scale, scale);
-        pose.translate(-centerX, -centerY);
-        graphics.fakeItem(stack, drawX, drawY);
-        pose.popMatrix();
+        RadialWheelRenderer.drawItemStackIcon(graphics, stack, centerX, centerY, RadialWheelRenderer.WARP_ICON_BASE_SIZE);
     }
 
     private static void drawBlockSpriteIcon(GuiGraphicsExtractor graphics, TextureAtlasSprite sprite,

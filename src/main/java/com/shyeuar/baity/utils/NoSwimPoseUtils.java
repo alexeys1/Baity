@@ -36,6 +36,15 @@ public final class NoSwimPoseUtils {
         return m != null && m.isEnabled();
     }
 
+    public static boolean shouldDeferCameraEyeHeightToVanilla(Player player) {
+        if (player == null) {
+            return true;
+        }
+        return player.isSleeping()
+            || player.isPassenger()
+            || player.isFallFlying();
+    }
+
     private enum SwimVisualPhase {
         NONE,
         ACTIVE,
@@ -105,13 +114,13 @@ public final class NoSwimPoseUtils {
 
     public static boolean shouldApplyCameraEyeHeightChange() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc != null && mc.player != null && shouldApplySmolThirdPersonFrontDryExitCamera(mc.player)) {
+        if (mc == null || mc.player == null || shouldDeferCameraEyeHeightToVanilla(mc.player)) {
+            return false;
+        }
+        if (shouldApplySmolThirdPersonFrontDryExitCamera(mc.player)) {
             return true;
         }
         if (!shouldApplyEyeHeightChange()) {
-            return false;
-        }
-        if (mc == null || mc.player == null) {
             return false;
         }
         if (mc.options.getCameraType().isFirstPerson()) {
@@ -121,6 +130,9 @@ public final class NoSwimPoseUtils {
     }
 
     private static boolean shouldApplySmolThirdPersonFrontDryExitCamera(Player player) {
+        if (shouldDeferCameraEyeHeightToVanilla(player)) {
+            return false;
+        }
         if (!isFeatureActive() || !SmolPeopleCamera.isThirdPersonFrontActive()) {
             return false;
         }
@@ -141,6 +153,9 @@ public final class NoSwimPoseUtils {
     }
 
     public static boolean shouldSnapCameraEyeHeight(Player player) {
+        if (shouldDeferCameraEyeHeightToVanilla(player)) {
+            return false;
+        }
         if (shouldApplySmolThirdPersonFrontDryExitCamera(player)) {
             return true;
         }
@@ -171,7 +186,9 @@ public final class NoSwimPoseUtils {
     }
 
     public static void tickGroundedSwimCameraState(Player player) {
-        if (!shouldApplyEyeHeightChange() || !isGroundedInWater(player)) {
+        if (shouldDeferCameraEyeHeightToVanilla(player)
+            || !shouldApplyEyeHeightChange()
+            || !isGroundedInWater(player)) {
             groundedSwimSneakEyeProgress = 0.0F;
             poolBottomStandUpLerpActive = false;
             return;
@@ -210,6 +227,9 @@ public final class NoSwimPoseUtils {
     }
 
     public static float getCameraEyeHeight(Player player) {
+        if (shouldDeferCameraEyeHeightToVanilla(player)) {
+            return player.getEyeHeight();
+        }
         if (shouldApplySmolThirdPersonFrontDryExitCamera(player)) {
             return STANDING_EYE_HEIGHT;
         }
@@ -268,10 +288,18 @@ public final class NoSwimPoseUtils {
     }
 
     public static boolean shouldApplyVisualOverrides() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && shouldDeferCameraEyeHeightToVanilla(mc.player)) {
+            return false;
+        }
         return isFeatureActive() && isInWaterSwimVisualContext();
     }
 
     public static boolean shouldForceStandingModelAppearance() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && shouldDeferCameraEyeHeightToVanilla(mc.player)) {
+            return false;
+        }
         return isFeatureActive() && isInWaterSwimVisualContext();
     }
 

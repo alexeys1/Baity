@@ -150,6 +150,7 @@ public class ConfigManager {
     public static boolean nodebuffEnabled = false;
     public static boolean nodebuffRemoveNausea = true;
     public static boolean nodebuffRemoveBlindness = true;
+    public static boolean nodebuffRemoveDarkness = true;
     
     public static boolean soundsEnabled = true;
     
@@ -638,6 +639,9 @@ public class ConfigManager {
         registerField("  RemoveBlindness", Boolean.class,
             c -> ConfigManager.nodebuffRemoveBlindness,
             (c, v) -> ConfigManager.nodebuffRemoveBlindness = (Boolean) v);
+        registerField("  RemoveDarkness", Boolean.class,
+            c -> ConfigManager.nodebuffRemoveDarkness,
+            (c, v) -> ConfigManager.nodebuffRemoveDarkness = (Boolean) v);
         registerField("Sounds", Boolean.class,
             c -> ConfigManager.soundsEnabled,
             (c, v) -> ConfigManager.soundsEnabled = (Boolean) v);

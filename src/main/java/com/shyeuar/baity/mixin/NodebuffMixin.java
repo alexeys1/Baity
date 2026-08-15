@@ -11,7 +11,9 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.fog.FogRenderer;
+import net.minecraft.client.renderer.SkyRenderer;
 import net.minecraft.client.renderer.fog.environment.BlindnessFogEnvironment;
+import net.minecraft.client.renderer.fog.environment.DarknessFogEnvironment;
 import org.joml.Matrix4f;
 import org.joml.Vector3fc;
 import org.spongepowered.asm.mixin.Final;
@@ -53,9 +55,13 @@ public class NodebuffMixin {
         }
 
         @Inject(method = "renderLevel", at = @At("HEAD"))
-        private void baity$clearBlindnessFog(DeltaTracker deltaTracker, CallbackInfo ci) {
+        private void baity$clearDebuffFog(DeltaTracker deltaTracker, CallbackInfo ci) {
+            var fogEnvironments = FogRendererAccessor.baity$getFogEnvironments();
             if (shouldRemoveBlindness()) {
-                FogRendererAccessor.baity$getFogEnvironments().removeIf(env -> env instanceof BlindnessFogEnvironment);
+                fogEnvironments.removeIf(env -> env instanceof BlindnessFogEnvironment);
+            }
+            if (shouldRemoveDarkness()) {
+                fogEnvironments.removeIf(env -> env instanceof DarknessFogEnvironment);
             }
         }
 
@@ -67,6 +73,27 @@ public class NodebuffMixin {
         private static boolean shouldRemoveBlindness() {
             Module module = ModuleManager.getModuleByName("Nodebuff");
             return module != null && module.isEnabled() && ModuleUtils.getOptionBoolean(module, "remove blindness", true);
+        }
+
+        private static boolean shouldRemoveDarkness() {
+            Module module = ModuleManager.getModuleByName("Nodebuff");
+            return module != null && module.isEnabled() && ModuleUtils.getOptionBoolean(module, "remove darkness", true);
+        }
+    }
+
+    @Mixin(SkyRenderer.class)
+    public static class SkyRendererMixin {
+
+        @Inject(method = "renderDarkDisc", at = @At("HEAD"), cancellable = true)
+        private void baity$cancelDarknessOverlay(CallbackInfo ci) {
+            if (shouldRemoveDarkness()) {
+                ci.cancel();
+            }
+        }
+
+        private static boolean shouldRemoveDarkness() {
+            Module module = ModuleManager.getModuleByName("Nodebuff");
+            return module != null && module.isEnabled() && ModuleUtils.getOptionBoolean(module, "remove darkness", true);
         }
     }
 

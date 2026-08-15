@@ -1083,7 +1083,8 @@ public class ModuleManager {
             val -> ConfigManager.nodebuffEnabled = val,
             new Option[]{
                 new Option("remove nausea", "remove nausea", true, ModuleCategory.RENDER),
-                new Option("remove blindness", "remove blindness", true, ModuleCategory.RENDER)
+                new Option("remove blindness", "remove blindness", true, ModuleCategory.RENDER),
+                new Option("remove darkness", "remove darkness", true, ModuleCategory.RENDER)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(
@@ -1095,6 +1096,11 @@ public class ModuleManager {
                     "remove blindness",
                     () -> ConfigManager.nodebuffRemoveBlindness,
                     val -> ConfigManager.nodebuffRemoveBlindness = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "remove darkness",
+                    () -> ConfigManager.nodebuffRemoveDarkness,
+                    val -> ConfigManager.nodebuffRemoveDarkness = (Boolean) val
                 )
             }
         );

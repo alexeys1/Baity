@@ -22,7 +22,7 @@ public class ModuleInitializer {
             "compact damage number"
     );
     private static final Set<String> HIGHLIGHTS_OPTIONS = Set.of("shulker", "invisibug", "safari", "pest");
-    private static final Set<String> NODEBUFF_OPTIONS = Set.of("remove nausea", "remove blindness");
+    private static final Set<String> NODEBUFF_OPTIONS = Set.of("remove nausea", "remove blindness", "remove darkness");
 
     public static boolean isHiddenGuiValue(String valueName) {
         return FANCYDMGSPLASH_HIDDEN_GUI.contains(valueName);
@@ -257,6 +257,7 @@ public class ModuleInitializer {
                     switch (v.getName()) {
                         case "remove nausea" -> v.setValue(ConfigManager.nodebuffRemoveNausea);
                         case "remove blindness" -> v.setValue(ConfigManager.nodebuffRemoveBlindness);
+                        case "remove darkness" -> v.setValue(ConfigManager.nodebuffRemoveDarkness);
                     }
                 }
             }

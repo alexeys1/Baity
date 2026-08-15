@@ -58,6 +58,7 @@
     "MufflerMixin",
     "NodebuffMixin$GameRendererMixin",
     "NodebuffMixin$GuiMixin",
+    "NodebuffMixin$SkyRendererMixin",
     "accessor.FogRendererAccessor",
     "NoSwapAnimationMixin",
     "NoArmSwayMixin",

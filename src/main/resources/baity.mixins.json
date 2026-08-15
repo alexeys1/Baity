@@ -98,7 +98,13 @@
     "accessor.AvatarRendererInvoker",
     "accessor.CameraRenderStateAccessor",
     "accessor.PostRenderAccessors$PostChainAccessor",
-    "accessor.PostRenderAccessors$PostPassAccessor"
+    "accessor.PostRenderAccessors$PostPassAccessor",
+    "accessor.PostRenderAccessors$ShaderManagerAccessor"
+  ],
+  "client": [
+    "GuiRendererMixin",
+    "ModernTooltipMixin",
+    "ModernTooltipScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

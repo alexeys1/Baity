@@ -26,7 +26,8 @@ public class ClickGuiState {
     
     private ModuleCategory selectedCategory = ModuleCategory.MISC;
     
-    private float scrollOffset = 0f;
+    private float targetScrollOffset = 0f;
+    private float animatedScrollOffset = 0f;
     public static final float LIST_TOP_PADDING = 60f;
     public static final float ITEM_HEIGHT = 30f;
     
@@ -45,6 +46,7 @@ public class ClickGuiState {
     private final LineTextInput sliderInput = new LineTextInput(LineTextInput.Policy.search());
     
     private final Map<String, Float> moduleExpandAnimations = new HashMap<>();
+    private final Map<String, Float> groupExpandAnimations = new HashMap<>();
     
     private final Map<String, ShimmerAnimationState> moduleShimmerAnimations = new HashMap<>();
     
@@ -86,8 +88,10 @@ public class ClickGuiState {
     public ModuleCategory getSelectedCategory() { return selectedCategory; }
     public void setSelectedCategory(ModuleCategory category) { selectedCategory = category; }
     
-    public float getScrollOffset() { return scrollOffset; }
-    public void setScrollOffset(float offset) { scrollOffset = offset; }
+    public float getScrollOffset() { return animatedScrollOffset; }
+    public float getTargetScrollOffset() { return targetScrollOffset; }
+    public void setTargetScrollOffset(float offset) { targetScrollOffset = offset; }
+    public void setAnimatedScrollOffset(float offset) { animatedScrollOffset = offset; }
     
     public boolean isListeningForKey() { return isListeningForKey; }
     public void setListeningForKey(boolean listening) { isListeningForKey = listening; }
@@ -116,6 +120,7 @@ public class ClickGuiState {
     }
     
     public Map<String, Float> getModuleExpandAnimations() { return moduleExpandAnimations; }
+    public Map<String, Float> getGroupExpandAnimations() { return groupExpandAnimations; }
     
     public Map<String, ShimmerAnimationState> getModuleShimmerAnimations() { return moduleShimmerAnimations; }
     

@@ -11,46 +11,12 @@ import java.util.List;
 public class ClickGuiLayout {
     
     public static float calculateContentHeight(ClickGuiState state, float visibleHeight) {
-        float contentHeight = 0f;
         List<Module> modules = ModuleManager.getModulesByCategory(state.getSelectedCategory());
-        
-        for (Module module : modules) {
-            contentHeight += ClickGuiState.ITEM_HEIGHT;
-            if (module.isExpanded()) {
-                java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
-                int childCount = entries.size();
-                int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
-                if (childCount > 0) {
-                    ClickGuiLayout.ContainerDimensions dims = 
-                        ClickGuiLayout.calculateSubOptionContainer(childCount, visibleHeight, extraHeight);
-                    int fullContainerHeight = childCount * dims.subOptionHeight + dims.padding * 2 + extraHeight;
-                    contentHeight += fullContainerHeight + 5;
-                }
-            }
-        }
-        
-        return contentHeight;
+        return ClickGuiMotion.calculateContentHeightForModules(modules, state, visibleHeight);
     }
     
-    public static float calculateContentHeightForModules(List<Module> modules, float visibleHeight) {
-        float contentHeight = 0f;
-        
-        for (Module module : modules) {
-            contentHeight += ClickGuiState.ITEM_HEIGHT;
-            if (module.isExpanded()) {
-                java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
-                int childCount = entries.size();
-                int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
-                if (childCount > 0) {
-                    ClickGuiLayout.ContainerDimensions dims = 
-                        ClickGuiLayout.calculateSubOptionContainer(childCount, visibleHeight, extraHeight);
-                    int fullContainerHeight = childCount * dims.subOptionHeight + dims.padding * 2 + extraHeight;
-                    contentHeight += fullContainerHeight + 5;
-                }
-            }
-        }
-        
-        return contentHeight;
+    public static float calculateContentHeightForModules(List<Module> modules, float visibleHeight, ClickGuiState state) {
+        return ClickGuiMotion.calculateContentHeightForModules(modules, state, visibleHeight);
     }
    
     public static ContainerDimensions calculateSubOptionContainer(int subOptionCount, float visibleHeight) {
@@ -211,16 +177,25 @@ public class ClickGuiLayout {
     }
     
     public static void clampScrollOffset(ClickGuiState state, float maxScroll) {
-        float scrollOffset = state.getScrollOffset();
-        if (scrollOffset < 0) {
-            state.setScrollOffset(0);
-        } else if (scrollOffset > maxScroll) {
-            state.setScrollOffset(maxScroll);
+        float target = state.getTargetScrollOffset();
+        if (target < 0) {
+            target = 0;
+        } else if (target > maxScroll) {
+            target = maxScroll;
         }
+        state.setTargetScrollOffset(target);
+
+        float animated = state.getScrollOffset();
+        if (animated < 0) {
+            animated = 0;
+        } else if (animated > maxScroll) {
+            animated = maxScroll;
+        }
+        state.setAnimatedScrollOffset(animated);
     }
     
     public static float clampScrollDelta(ClickGuiState state, float maxScroll, float delta) {
-        float currentOffset = state.getScrollOffset();
+        float currentOffset = state.getTargetScrollOffset();
         float newOffset = currentOffset + delta;
         
         if (currentOffset <= 0 && delta < 0) {

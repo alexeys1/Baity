@@ -147,6 +147,12 @@ public class ConfigManager {
     public static boolean vanillaHudHiderMountHealth = false;
     public static boolean vanillaHudHiderExperienceBar = false;
     
+    public static boolean modernTooltipEnabled = false;
+    public static boolean smoothTooltipEnabled = true;
+    public static boolean scrollableTooltipEnabled = true;
+    public static int scrollableTooltipHorizontalKey = 341;
+    public static boolean scrollableTooltipGroupExpanded = false;
+    public static boolean scrollableTooltipKeepScrollInGui = false;
     public static boolean nodebuffEnabled = false;
     public static boolean nodebuffRemoveNausea = true;
     public static boolean nodebuffRemoveBlindness = true;
@@ -630,6 +636,24 @@ public class ConfigManager {
         registerField("experience bar", Boolean.class,
             c -> ConfigManager.vanillaHudHiderExperienceBar,
             (c, v) -> ConfigManager.vanillaHudHiderExperienceBar = (Boolean) v);
+        registerField("ModernTooltip", Boolean.class,
+            c -> ConfigManager.modernTooltipEnabled,
+            (c, v) -> ConfigManager.modernTooltipEnabled = (Boolean) v);
+        registerField("smoothtooltip", Boolean.class,
+            c -> ConfigManager.smoothTooltipEnabled,
+            (c, v) -> ConfigManager.smoothTooltipEnabled = (Boolean) v);
+        registerField("ModernTooltipScrollableGroupExpanded", Boolean.class,
+            c -> ConfigManager.scrollableTooltipGroupExpanded,
+            (c, v) -> ConfigManager.scrollableTooltipGroupExpanded = (Boolean) v);
+        registerField("  scrollable enabled", Boolean.class,
+            c -> ConfigManager.scrollableTooltipEnabled,
+            (c, v) -> ConfigManager.scrollableTooltipEnabled = (Boolean) v);
+        registerField("  keep scroll in gui", Boolean.class,
+            c -> ConfigManager.scrollableTooltipKeepScrollInGui,
+            (c, v) -> ConfigManager.scrollableTooltipKeepScrollInGui = (Boolean) v);
+        registerField("  horizontal scrolling", Integer.class,
+            c -> ConfigManager.scrollableTooltipHorizontalKey,
+            (c, v) -> ConfigManager.scrollableTooltipHorizontalKey = (Integer) v);
         registerField("Nodebuff", Boolean.class,
             c -> ConfigManager.nodebuffEnabled,
             (c, v) -> ConfigManager.nodebuffEnabled = (Boolean) v);
@@ -1215,6 +1239,18 @@ public class ConfigManager {
                 ConfigManager.heldItemTweaksEnabled = true;
                 ConfigManager.heldItemTweaksNoArmSwayEnabled = true;
             }
+            seenKeys.add(key);
+            return;
+        }
+        if ("  smoothtooltip enabled".equals(key)) {
+            Object legacy = parseValue(valueStr, Boolean.class);
+            if (legacy instanceof Boolean enabled) {
+                ConfigManager.smoothTooltipEnabled = enabled;
+            }
+            seenKeys.add(key);
+            return;
+        }
+        if ("ModernTooltipSmoothGroupExpanded".equals(key)) {
             seenKeys.add(key);
             return;
         }

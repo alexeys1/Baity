@@ -164,6 +164,12 @@ public class ConfigManager {
     public static boolean highlightsEnabled = false;
     public static boolean highlightsShulkerEnabled = true;
     public static boolean highlightsInvisibugEnabled = true;
+    public static boolean safariRenderTargetESP = false;
+    public static boolean safariMobEnabled = true;
+    public static boolean safariHideyhoEnabled = true;
+    public static boolean safariNpcEnabled = true;
+    public static boolean safariFloorDropEnabled = true;
+    public static boolean safariGroupExpanded = false;
     public static boolean highlightsPestEnabled = true;
     public static boolean highlightsPestDrawLineEnabled = true;
     public static boolean highlightsPestGroupExpanded = false;
@@ -665,6 +671,24 @@ public class ConfigManager {
         registerField("  HighlightsInvisibug", Boolean.class,
             c -> ConfigManager.highlightsInvisibugEnabled,
             (c, v) -> ConfigManager.highlightsInvisibugEnabled = (Boolean) v);
+        registerField("  HighlightsSafariRenderTargetESP", Boolean.class,
+            c -> ConfigManager.safariRenderTargetESP,
+            (c, v) -> ConfigManager.safariRenderTargetESP = (Boolean) v);
+        registerField("  HighlightsSafariMob", Boolean.class,
+            c -> ConfigManager.safariMobEnabled,
+            (c, v) -> ConfigManager.safariMobEnabled = (Boolean) v);
+        registerField("  HighlightsSafariHideyho", Boolean.class,
+            c -> ConfigManager.safariHideyhoEnabled,
+            (c, v) -> ConfigManager.safariHideyhoEnabled = (Boolean) v);
+        registerField("  HighlightsSafariNpc", Boolean.class,
+            c -> ConfigManager.safariNpcEnabled,
+            (c, v) -> ConfigManager.safariNpcEnabled = (Boolean) v);
+        registerField("  HighlightsSafariFloorDrop", Boolean.class,
+            c -> ConfigManager.safariFloorDropEnabled,
+            (c, v) -> ConfigManager.safariFloorDropEnabled = (Boolean) v);
+        registerField("  HighlightsSafariGroupExpanded", Boolean.class,
+            c -> ConfigManager.safariGroupExpanded,
+            (c, v) -> ConfigManager.safariGroupExpanded = (Boolean) v);
         registerField("  HighlightsPest", Boolean.class,
             c -> ConfigManager.highlightsPestEnabled,
             (c, v) -> ConfigManager.highlightsPestEnabled = (Boolean) v);

@@ -1183,6 +1183,15 @@ public class ModuleManager {
             .addChild(new Option("enabled", "enabled", ConfigManager.highlightsPestEnabled, ModuleCategory.RENDER))
             .addChild(new Option("draw line", "draw line", ConfigManager.highlightsPestDrawLineEnabled, ModuleCategory.RENDER));
 
+        GroupValue highlightsSafariGroup = new GroupValue("safari", "Safari", ModuleCategory.RENDER)
+            .setExpanded(ConfigManager.safariGroupExpanded)
+            .setSubModuleSwitchChildName("safari enabled")
+            .addChild(new Option("safari enabled", "enabled", ConfigManager.safariRenderTargetESP, ModuleCategory.RENDER))
+            .addChild(new Option("safari mob", "Mob", ConfigManager.safariMobEnabled, ModuleCategory.RENDER))
+            .addChild(new Option("safari hideyho", "Hideyho", ConfigManager.safariHideyhoEnabled, ModuleCategory.RENDER))
+            .addChild(new Option("safari npc", "NPC", ConfigManager.safariNpcEnabled, ModuleCategory.RENDER))
+            .addChild(new Option("safari floor drop", "FloorDrop", ConfigManager.safariFloorDropEnabled, ModuleCategory.RENDER));
+
         ModuleRegistry.registerModuleWithValues(
             "Highlights", "Highlights", ModuleCategory.RENDER,
             () -> ConfigManager.highlightsEnabled,
@@ -1190,6 +1199,7 @@ public class ModuleManager {
             new com.shyeuar.baity.gui.value.Value[]{
                 new Option("shulker", "shulker", false, ModuleCategory.RENDER),
                 new Option("invisibug", "Invisibug", false, ModuleCategory.RENDER),
+                highlightsSafariGroup,
                 highlightsPestGroup
             },
             new ModuleRegistry.ValueConfigInfo[]{
@@ -1202,6 +1212,36 @@ public class ModuleManager {
                     "invisibug",
                     () -> ConfigManager.highlightsInvisibugEnabled,
                     val -> ConfigManager.highlightsInvisibugEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "safari",
+                    () -> ConfigManager.safariGroupExpanded,
+                    val -> ConfigManager.safariGroupExpanded = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "safari enabled",
+                    () -> ConfigManager.safariRenderTargetESP,
+                    val -> ConfigManager.safariRenderTargetESP = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "safari mob",
+                    () -> ConfigManager.safariMobEnabled,
+                    val -> ConfigManager.safariMobEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "safari hideyho",
+                    () -> ConfigManager.safariHideyhoEnabled,
+                    val -> ConfigManager.safariHideyhoEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "safari npc",
+                    () -> ConfigManager.safariNpcEnabled,
+                    val -> ConfigManager.safariNpcEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "safari floor drop",
+                    () -> ConfigManager.safariFloorDropEnabled,
+                    val -> ConfigManager.safariFloorDropEnabled = (Boolean) val
                 ),
                 new ModuleRegistry.ValueConfigInfo(
                     "pest",

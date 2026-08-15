@@ -21,6 +21,7 @@ import com.shyeuar.baity.features.fishing.HypixelFishingRodCatalog;
 import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.features.highlights.PestEntityRegistry;
 import com.shyeuar.baity.features.highlights.PestHighlights;
+import com.shyeuar.baity.features.highlights.SafariHighlights;
 import com.shyeuar.baity.features.VanillaHudHider;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
@@ -131,6 +132,7 @@ public class Baity implements ClientModInitializer {
         LevelRenderEvents.END_MAIN.register(new com.shyeuar.baity.features.NametagRenderer());
         LevelRenderEvents.END_MAIN.register(new FancyDmgSplash());
         LevelRenderEvents.AFTER_SOLID_FEATURES.register(new com.shyeuar.baity.features.highlights.ShulkerHighlights());
+        LevelRenderEvents.AFTER_SOLID_FEATURES.register(new SafariHighlights());
         LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(new com.shyeuar.baity.features.highlights.PestHighlights());
         LevelRenderEvents.AFTER_SOLID_FEATURES.register(new com.shyeuar.baity.features.highlights.InvisibugHighlights());
 

@@ -125,6 +125,76 @@ public final class EntityDrawUtils {
         );
     }
 
+    public static void drawFilledBoxAtWorld(
+            PoseStack.Pose pose,
+            VertexConsumer fill,
+            AABB box,
+            Vec3 cameraPos,
+            float r,
+            float g,
+            float b,
+            float a
+    ) {
+        double x1 = box.minX - cameraPos.x;
+        double y1 = box.minY - cameraPos.y;
+        double z1 = box.minZ - cameraPos.z;
+        double x2 = box.maxX - cameraPos.x;
+        double y2 = box.maxY - cameraPos.y;
+        double z2 = box.maxZ - cameraPos.z;
+        drawFilledBoxFaces(pose, fill, x1, y1, z1, x2, y2, z2, r, g, b, a);
+    }
+
+    private static void drawFilledBoxFaces(
+            PoseStack.Pose pose,
+            VertexConsumer vc,
+            double x1,
+            double y1,
+            double z1,
+            double x2,
+            double y2,
+            double z2,
+            float r,
+            float g,
+            float b,
+            float a
+    ) {
+        drawQuad(pose, vc, (float) x1, (float) y1, (float) z1, (float) x2, (float) y1, (float) z1, (float) x2, (float) y1, (float) z2, (float) x1, (float) y1, (float) z2, r, g, b, a, 0f, -1f, 0f);
+        drawQuad(pose, vc, (float) x1, (float) y2, (float) z1, (float) x1, (float) y2, (float) z2, (float) x2, (float) y2, (float) z2, (float) x2, (float) y2, (float) z1, r, g, b, a, 0f, 1f, 0f);
+        drawQuad(pose, vc, (float) x1, (float) y1, (float) z1, (float) x1, (float) y1, (float) z2, (float) x1, (float) y2, (float) z2, (float) x1, (float) y2, (float) z1, r, g, b, a, -1f, 0f, 0f);
+        drawQuad(pose, vc, (float) x2, (float) y1, (float) z2, (float) x2, (float) y1, (float) z1, (float) x2, (float) y2, (float) z1, (float) x2, (float) y2, (float) z2, r, g, b, a, 1f, 0f, 0f);
+        drawQuad(pose, vc, (float) x1, (float) y1, (float) z1, (float) x2, (float) y1, (float) z1, (float) x2, (float) y2, (float) z1, (float) x1, (float) y2, (float) z1, r, g, b, a, 0f, 0f, -1f);
+        drawQuad(pose, vc, (float) x1, (float) y1, (float) z2, (float) x1, (float) y2, (float) z2, (float) x2, (float) y2, (float) z2, (float) x2, (float) y1, (float) z2, r, g, b, a, 0f, 0f, 1f);
+    }
+
+    private static void drawQuad(
+            PoseStack.Pose pose,
+            VertexConsumer vc,
+            float ax,
+            float ay,
+            float az,
+            float bx,
+            float by,
+            float bz,
+            float cx,
+            float cy,
+            float cz,
+            float dx,
+            float dy,
+            float dz,
+            float r,
+            float g,
+            float b,
+            float a,
+            float nx,
+            float ny,
+            float nz
+    ) {
+        vc.addVertex(pose.pose(), ax, ay, az).setColor(r, g, b, a).setNormal(pose, nx, ny, nz);
+        vc.addVertex(pose.pose(), bx, by, bz).setColor(r, g, b, a).setNormal(pose, nx, ny, nz);
+        vc.addVertex(pose.pose(), cx, cy, cz).setColor(r, g, b, a).setNormal(pose, nx, ny, nz);
+        vc.addVertex(pose.pose(), dx, dy, dz).setColor(r, g, b, a).setNormal(pose, nx, ny, nz);
+    }
+
     public static void drawLineAtWorld(
             PoseStack matrices,
             VertexConsumer lines,

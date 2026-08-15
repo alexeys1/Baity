@@ -161,8 +161,8 @@ public final class ScrollableTooltip {
         }
 
         Minecraft client = Minecraft.getInstance();
-        if (client.gui != null) {
-            visibleTick = client.gui.getGuiTicks();
+        if (client.gui != null && client.gui.hud != null) {
+            visibleTick = client.gui.hud.getGuiTicks();
         }
     }
 
@@ -268,7 +268,9 @@ public final class ScrollableTooltip {
 
     private static boolean isTooltipVisible() {
         Minecraft client = Minecraft.getInstance();
-        return client.gui != null && visibleTick == client.gui.getGuiTicks();
+        return client.gui != null
+                && client.gui.hud != null
+                && visibleTick == client.gui.hud.getGuiTicks();
     }
 
     private static double clamp(double value, double min, double max) {

@@ -26,7 +26,7 @@ public final class ModernTooltip {
 
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client.screen == null) {
+            if (client.gui.screen() == null) {
                 TooltipAnimation.reset();
                 ScrollableTooltip.reset();
             }

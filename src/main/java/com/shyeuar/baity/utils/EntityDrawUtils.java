@@ -2,6 +2,7 @@ package com.shyeuar.baity.utils;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -118,6 +119,37 @@ public final class EntityDrawUtils {
         matrices.pushPose();
         drawFilledBoxFaces(matrices.last(), fill, x1, y1, z1, x2, y2, z2, r, g, b, a);
         matrices.popPose();
+    }
+
+    public static AABB interpolatedEntityBox(Entity entity, float partialTick, double inflate) {
+        Vec3 at = entity.getPosition(partialTick);
+        AABB original = entity.getBoundingBox();
+        double width = original.getXsize();
+        double height = original.getYsize();
+        return new AABB(
+                at.x - width / 2.0,
+                at.y,
+                at.z - width / 2.0,
+                at.x + width / 2.0,
+                at.y + height,
+                at.z + width / 2.0
+        ).inflate(inflate);
+    }
+
+    public static void drawFilledUpperHalfBlockAtWorld(
+            PoseStack matrices,
+            VertexConsumer fill,
+            double blockX,
+            double blockY,
+            double blockZ,
+            Vec3 cameraPos,
+            float r,
+            float g,
+            float b,
+            float a
+    ) {
+        AABB box = new AABB(blockX, blockY + 0.5, blockZ, blockX + 1.0, blockY + 1.0, blockZ + 1.0);
+        drawFilledBoxAtWorld(matrices, fill, box, cameraPos, r, g, b, a);
     }
 
     private static void drawFilledBoxFaces(

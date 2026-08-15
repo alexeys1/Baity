@@ -10,6 +10,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.shyeuar.baity.config.ConfigManager;
+import com.shyeuar.baity.config.DevConfig;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.utils.EntityDrawUtils;
@@ -48,10 +49,20 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
     private static final String HIDEYHO_NAME = "Hideyho";
     private static final String EXCLUDED_HUNTER_TOKEN = "\"hunter\"";
     private static final String SPARKLING_LABEL = "SPARKLING";
+
     private static final float SPARKLING_R = 1.0f;
     private static final float SPARKLING_G = 215.0f / 255.0f;
     private static final float SPARKLING_B = 0.0f;
     private static final float SPARKLING_FILL_ALPHA = 0.25f;
+
+    private static final float MOB_R = ((DevConfig.DEV_PREFIX_COLOR >> 16) & 0xFF) / 255.0f;
+    private static final float MOB_G = ((DevConfig.DEV_PREFIX_COLOR >> 8) & 0xFF) / 255.0f;
+    private static final float MOB_B = (DevConfig.DEV_PREFIX_COLOR & 0xFF) / 255.0f;
+
+    private static final float FLOOR_FILL_R = 0.7f;
+    private static final float FLOOR_FILL_G = 1.0f;
+    private static final float FLOOR_FILL_B = 0.0f;
+    private static final float FLOOR_FILL_ALPHA = 0.25f;
 
     private static final RenderPipeline BAITY_SAFARI_LINES = RenderPipelines.register(
             RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
@@ -100,6 +111,9 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
         MultiBufferSource buffers = context.bufferSource();
         if (matrices == null || buffers == null) return;
 
+        SafariZoneUtils.Zone playerZone = SafariZoneUtils.playerZone(MC);
+        float partialTick = MC.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+
         List<ArmorStand> namedArmorStands = new ArrayList<>();
         for (Entity entity : MC.level.entitiesForRendering()) {
             if (entity instanceof ArmorStand armorStand && armorStand.isAlive() && armorStand.hasCustomName()) {
@@ -107,35 +121,93 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
             }
         }
 
-        VertexConsumer lines = buffers.getBuffer(THROUGH_WALLS_LINE);
-        boolean needsFill = ConfigManager.safariFloorDropEnabled || ConfigManager.safariMobEnabled;
-        VertexConsumer fill = needsFill ? buffers.getBuffer(THROUGH_WALLS_FILL) : null;
-        float partialTick = MC.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         Vec3 rayStart = MC.player == null
                 ? null
                 : MC.player.getEyePosition(partialTick).add(MC.player.getViewVector(partialTick).scale(0.12));
-        for (Entity entity : MC.level.entitiesForRendering()) {
-            if (entity instanceof Display.ItemDisplay itemDisplay) {
-                if (ConfigManager.safariFloorDropEnabled && isFloorDrop(itemDisplay)) {
-                    AABB box = new AABB(itemDisplay.blockPosition());
-                    EntityDrawUtils.drawFilledBoxAtWorld(matrices, fill, box, cameraPos, 0.0f, 1.0f, 0.0f, 0.25f);
-                    EntityDrawUtils.drawWireBoxAtWorld(matrices, lines, box, cameraPos, 0.0f, 1.0f, 0.0f, 0.9f);
+
+        boolean needsFill = ConfigManager.safariFloorDropEnabled || ConfigManager.safariMobEnabled;
+        if (needsFill && buffers instanceof MultiBufferSource.BufferSource bufferSource) {
+            VertexConsumer fill = buffers.getBuffer(THROUGH_WALLS_FILL);
+            for (Entity entity : MC.level.entitiesForRendering()) {
+                if (entity instanceof Display.ItemDisplay itemDisplay) {
+                    if (!ConfigManager.safariFloorDropEnabled || !isFloorDrop(itemDisplay)) {
+                        continue;
+                    }
+                    BlockPos position = itemDisplay.blockPosition();
+                    if (!SafariZoneUtils.matchesPlayerZone(playerZone, position.getX(), position.getZ())) {
+                        continue;
+                    }
+                    EntityDrawUtils.drawFilledUpperHalfBlockAtWorld(
+                            matrices,
+                            fill,
+                            position.getX(),
+                            position.getY(),
+                            position.getZ(),
+                            cameraPos,
+                            FLOOR_FILL_R,
+                            FLOOR_FILL_G,
+                            FLOOR_FILL_B,
+                            FLOOR_FILL_ALPHA
+                    );
+                    continue;
                 }
+                if (!ConfigManager.safariMobEnabled
+                        || !(entity instanceof Mob mob)
+                        || !mob.isAlive()
+                        || mob instanceof HappyGhast) {
+                    continue;
+                }
+                if (!SafariZoneUtils.matchesPlayerZone(playerZone, mob.getX(), mob.getZ())) {
+                    continue;
+                }
+                ArmorStand associatedArmorStand = findAssociatedArmorStand(mob, namedArmorStands);
+                if (!hasLabel(associatedArmorStand, SPARKLING_LABEL)) {
+                    continue;
+                }
+                EntityDrawUtils.drawFilledBoxAtWorld(
+                        matrices,
+                        fill,
+                        EntityDrawUtils.interpolatedEntityBox(mob, partialTick, 0.01),
+                        cameraPos,
+                        SPARKLING_R,
+                        SPARKLING_G,
+                        SPARKLING_B,
+                        SPARKLING_FILL_ALPHA
+                );
+            }
+            bufferSource.endBatch(THROUGH_WALLS_FILL);
+        }
+
+        VertexConsumer lines = buffers.getBuffer(THROUGH_WALLS_LINE);
+        for (Entity entity : MC.level.entitiesForRendering()) {
+            if (entity instanceof Display.ItemDisplay) {
                 continue;
             }
 
             if (entity instanceof Player player && player != MC.player) {
-                if (player.isAlive()) {
-                    String name = LocateUtils.toPlainText(
-                            player.getDisplayName() != null
-                                    ? player.getDisplayName().getString()
-                                    : player.getName().getString()
-                    );
-                    if ((ConfigManager.safariHideyhoEnabled && HIDEYHO_NAME.equals(name))
-                            || (ConfigManager.safariNpcEnabled
-                            && (isSafariNpc(name) || hasAssociatedSafariNpcLabel(player, namedArmorStands)))) {
-                        drawBox(matrices, lines, player, cameraPos, 1.0f, 1.0f, 1.0f);
-                    }
+                if (!player.isAlive()) {
+                    continue;
+                }
+                if (!SafariZoneUtils.matchesPlayerZone(playerZone, player.getX(), player.getZ())) {
+                    continue;
+                }
+                String name = LocateUtils.toPlainText(
+                        player.getDisplayName() != null
+                                ? player.getDisplayName().getString()
+                                : player.getName().getString()
+                );
+                if ((ConfigManager.safariHideyhoEnabled && HIDEYHO_NAME.equals(name))
+                        || (ConfigManager.safariNpcEnabled
+                        && (isSafariNpc(name) || hasAssociatedSafariNpcLabel(player, namedArmorStands)))) {
+                        drawWireBox(
+                            matrices,
+                            lines,
+                            EntityDrawUtils.interpolatedEntityBox(player, partialTick, 0.01),
+                            cameraPos,
+                            1.0f,
+                            1.0f,
+                            1.0f
+                        );
                 }
                 continue;
             }
@@ -146,38 +218,20 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                     || mob instanceof HappyGhast) {
                 continue;
             }
+            if (!SafariZoneUtils.matchesPlayerZone(playerZone, mob.getX(), mob.getZ())) {
+                continue;
+            }
 
             ArmorStand associatedArmorStand = findAssociatedArmorStand(mob, namedArmorStands);
+            AABB box = EntityDrawUtils.interpolatedEntityBox(mob, partialTick, 0.01);
             if (hasLabel(associatedArmorStand, SPARKLING_LABEL)) {
-                AABB box = mob.getBoundingBox().inflate(0.01);
-                if (fill != null) {
-                    EntityDrawUtils.drawFilledBoxAtWorld(
-                            matrices,
-                            fill,
-                            box,
-                            cameraPos,
-                            SPARKLING_R,
-                            SPARKLING_G,
-                            SPARKLING_B,
-                            SPARKLING_FILL_ALPHA
-                    );
-                }
-                EntityDrawUtils.drawWireBoxAtWorld(
-                        matrices,
-                        lines,
-                        box,
-                        cameraPos,
-                        SPARKLING_R,
-                        SPARKLING_G,
-                        SPARKLING_B,
-                        0.9f
-                );
+                drawWireBox(matrices, lines, box, cameraPos, SPARKLING_R, SPARKLING_G, SPARKLING_B);
                 if (rayStart != null) {
                     EntityDrawUtils.drawLineAtWorld(
                             matrices,
                             lines,
                             rayStart,
-                            mob.getBoundingBox().getCenter(),
+                            box.getCenter(),
                             cameraPos,
                             SPARKLING_R,
                             SPARKLING_G,
@@ -186,16 +240,25 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                     );
                 }
             } else {
-                drawBox(matrices, lines, mob, cameraPos, 1.0f, 0.0f, 0.0f);
+                drawWireBox(matrices, lines, box, cameraPos, MOB_R, MOB_G, MOB_B);
             }
         }
 
-        if (fill != null && buffers instanceof MultiBufferSource.BufferSource bufferSource) {
-            bufferSource.endBatch(THROUGH_WALLS_FILL);
-        }
         if (buffers instanceof MultiBufferSource.BufferSource bufferSource) {
             bufferSource.endBatch(THROUGH_WALLS_LINE);
         }
+    }
+
+    private static void drawWireBox(
+            PoseStack matrices,
+            VertexConsumer lines,
+            AABB box,
+            Vec3 cameraPos,
+            float r,
+            float g,
+            float b
+    ) {
+        EntityDrawUtils.drawWireBoxAtWorld(matrices, lines, box, cameraPos, r, g, b, 0.9f);
     }
 
     private static boolean isFloorDrop(Display.ItemDisplay itemDisplay) {
@@ -241,26 +304,5 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
     private static boolean hasLabel(ArmorStand armorStand, String label) {
         return armorStand != null
                 && LocateUtils.toPlainText(armorStand.getName().getString()).contains(label);
-    }
-
-    private static void drawBox(
-            PoseStack matrices,
-            VertexConsumer lines,
-            Entity entity,
-            Vec3 cameraPos,
-            float r,
-            float g,
-            float b
-    ) {
-        EntityDrawUtils.drawWireBoxAtWorld(
-                matrices,
-                lines,
-                entity.getBoundingBox().inflate(0.01),
-                cameraPos,
-                r,
-                g,
-                b,
-                0.9f
-        );
     }
 }

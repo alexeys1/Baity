@@ -1077,6 +1077,57 @@ public class ModuleManager {
             }
         );
         
+        GroupValue scrollableTooltipGroup = new GroupValue("scrollable tooltip", "scrollable tooltip", ModuleCategory.RENDER)
+            .setExpanded(ConfigManager.scrollableTooltipGroupExpanded)
+            .setSubModuleSwitchChildName("scrollable enabled")
+            .addChild(new Option("scrollable enabled", "enabled", ConfigManager.scrollableTooltipEnabled, ModuleCategory.RENDER))
+            .addChild(new Option("keep scroll in gui", "keep scroll in gui", ConfigManager.scrollableTooltipKeepScrollInGui, ModuleCategory.RENDER))
+            .addChild(new ButtonValue(
+                "horizontal scrolling",
+                "horizontal scrolling",
+                ConfigManager.scrollableTooltipHorizontalKey,
+                ModuleCategory.RENDER,
+                ButtonValue.ButtonValueType.KEYBIND,
+                false
+            ));
+
+        ModuleRegistry.registerModuleWithValues(
+            "ModernTooltip", "ModernTooltip", ModuleCategory.RENDER,
+            () -> ConfigManager.modernTooltipEnabled,
+            val -> ConfigManager.modernTooltipEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new Option("smoothtooltip", "smoothtooltip", ConfigManager.smoothTooltipEnabled, ModuleCategory.RENDER),
+                scrollableTooltipGroup
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "smoothtooltip",
+                    () -> ConfigManager.smoothTooltipEnabled,
+                    val -> ConfigManager.smoothTooltipEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "scrollable tooltip",
+                    () -> ConfigManager.scrollableTooltipGroupExpanded,
+                    val -> ConfigManager.scrollableTooltipGroupExpanded = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "scrollable enabled",
+                    () -> ConfigManager.scrollableTooltipEnabled,
+                    val -> ConfigManager.scrollableTooltipEnabled = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "keep scroll in gui",
+                    () -> ConfigManager.scrollableTooltipKeepScrollInGui,
+                    val -> ConfigManager.scrollableTooltipKeepScrollInGui = (Boolean) val
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "horizontal scrolling",
+                    () -> ConfigManager.scrollableTooltipHorizontalKey,
+                    val -> ConfigManager.scrollableTooltipHorizontalKey = ((Number) val).intValue()
+                )
+            }
+        );
+
         ModuleRegistry.registerModuleWithValues(
             "Nodebuff", "Nodebuff", ModuleCategory.RENDER,
             () -> ConfigManager.nodebuffEnabled,
@@ -1441,6 +1492,11 @@ public class ModuleManager {
         TooltipManager.registerTooltip("sync non-critical dmg",
             "Apply preset colors to plain non-crit damage.", 0xFFFFFF);
         TooltipManager.registerTooltip("mute wormhole", "Only work when wearing froggles.", 0xFFFF00);
+        TooltipManager.registerTooltip(
+            "keep scroll in gui",
+            "Remember each item's tooltip scroll position separately until the screen closes.",
+            0xFFFFFF
+        );
     }
     
     public static List<Module> getModules() {

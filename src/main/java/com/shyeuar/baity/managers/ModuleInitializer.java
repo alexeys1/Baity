@@ -39,7 +39,8 @@ public class ModuleInitializer {
         initializeFancyDmgSplash();
         initializeHighlights();
         initializeNodebuff();
-        initializeOldSneaking();
+        initializeModernTooltip();
+        initializeMiscModules();
         
         com.shyeuar.baity.gui.sync.ConfigSynchronizer.syncModuleStates();
         
@@ -264,10 +265,44 @@ public class ModuleInitializer {
         }
     }
     
-    private static void initializeOldSneaking() {
-        Module oldSneaking = ModuleManager.getModuleByName("OldSneaking");
-        if (oldSneaking != null) {
-            oldSneaking.setEnabled(ConfigManager.oldSneakingEnabled);
+    private static void initializeModernTooltip() {
+        Module module = ModuleManager.getModuleByName("ModernTooltip");
+        if (module == null) {
+            return;
+        }
+        module.setEnabled(ConfigManager.modernTooltipEnabled);
+        for (Value v : module.getValues()) {
+            if ("smoothtooltip".equals(v.getName())) {
+                v.setValue(ConfigManager.smoothTooltipEnabled);
+            } else if (v instanceof GroupValue group) {
+                switch (group.getName()) {
+                    case "scrollable tooltip" -> {
+                        group.setExpanded(ConfigManager.scrollableTooltipGroupExpanded);
+                        for (Value child : group.getChildren()) {
+                            switch (child.getName()) {
+                                case "scrollable enabled" -> child.setValue(ConfigManager.scrollableTooltipEnabled);
+                                case "keep scroll in gui" -> child.setValue(ConfigManager.scrollableTooltipKeepScrollInGui);
+                                case "horizontal scrolling" -> child.setValue(ConfigManager.scrollableTooltipHorizontalKey);
+                                default -> {
+                                }
+                            }
+                        }
+                    }
+                    default -> {
+                    }
+                }
+            }
+        }
+    }
+
+    private static void initializeMiscModules() {
+        setModuleEnabled("OldSneaking", ConfigManager.oldSneakingEnabled);
+    }
+
+    private static void setModuleEnabled(String moduleName, boolean enabled) {
+        Module module = ModuleManager.getModuleByName(moduleName);
+        if (module != null) {
+            module.setEnabled(enabled);
         }
     }
 }

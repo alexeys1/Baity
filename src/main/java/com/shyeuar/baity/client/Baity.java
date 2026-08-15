@@ -21,6 +21,7 @@ import com.shyeuar.baity.features.smolpeople.SmolFriendManager;
 import com.shyeuar.baity.features.highlights.PestEntityRegistry;
 import com.shyeuar.baity.features.highlights.PestHighlights;
 import com.shyeuar.baity.features.highlights.SafariHighlights;
+import com.shyeuar.baity.features.moderntooltip.ModernTooltip;
 import com.shyeuar.baity.features.VanillaHudHider;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
@@ -75,6 +76,7 @@ public class Baity implements ClientModInitializer {
         com.shyeuar.baity.features.enchantlore.EnchantLore.init();
         com.shyeuar.baity.features.Keybinds.init();
         com.shyeuar.baity.features.sidepanel.SidePanel.init();
+        ModernTooltip.init();
         com.shyeuar.baity.utils.LocateUtils.registerClientEvents();
         
         registerCustomSounds();

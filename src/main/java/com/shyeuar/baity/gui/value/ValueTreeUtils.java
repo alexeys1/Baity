@@ -14,11 +14,18 @@ public final class ValueTreeUtils {
     }
 
     public static List<ValueEntry> getVisibleEntries(Module module) {
+        return getVisibleEntries(module, (ignoredModule, groupValue) -> groupValue.isExpanded() ? 1.0f : 0.0f);
+    }
+
+    public static List<ValueEntry> getVisibleEntries(
+            Module module,
+            java.util.function.BiFunction<Module, GroupValue, Float> groupProgress
+    ) {
         List<ValueEntry> out = new ArrayList<>();
         for (Value value : module.getValues()) {
             if ("enabled".equals(value.getName())) continue;
             if (isHiddenFromGui(module, value)) continue;
-            appendVisible(value, 0, null, out);
+            appendVisible(module, value, 0, null, out, groupProgress);
         }
         return out;
     }
@@ -57,12 +64,22 @@ public final class ValueTreeUtils {
         return null;
     }
 
-    private static void appendVisible(Value value, int depth, String enclosingGroupName, List<ValueEntry> out) {
+    private static void appendVisible(
+            Module module,
+            Value value,
+            int depth,
+            String enclosingGroupName,
+            List<ValueEntry> out,
+            java.util.function.BiFunction<Module, GroupValue, Float> groupProgress
+    ) {
         out.add(new ValueEntry(value, depth, enclosingGroupName));
-        if (value instanceof GroupValue groupValue && groupValue.isExpanded()) {
-            String parentName = groupValue.getName();
-            for (Value child : groupValue.getChildren()) {
-                appendVisible(child, depth + 1, parentName, out);
+        if (value instanceof GroupValue groupValue) {
+            float progress = groupProgress.apply(module, groupValue);
+            if (groupValue.isExpanded() || progress > 0.001f) {
+                String parentName = groupValue.getName();
+                for (Value child : groupValue.getChildren()) {
+                    appendVisible(module, child, depth + 1, parentName, out, groupProgress);
+                }
             }
         }
     }

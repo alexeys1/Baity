@@ -103,8 +103,10 @@
     "accessor.PostRenderAccessors$PostPassAccessor",
     "accessor.PostRenderAccessors$ShaderManagerAccessor"
   ],
-  "client": [
-    "GuiRendererMixin"
+    "client": [
+    "GuiRendererMixin",
+    "ModernTooltipMixin",
+    "ModernTooltipScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 0

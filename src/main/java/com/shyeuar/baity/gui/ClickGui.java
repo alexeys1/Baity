@@ -298,6 +298,9 @@ public class ClickGui extends Screen {
         }
         lastSessionState = this.state;
         lastSessionClosedAt = System.currentTimeMillis();
+        if (rootComponent != null) {
+            rootComponent.resetTooltipAnimation();
+        }
         super.onClose();
     }
 

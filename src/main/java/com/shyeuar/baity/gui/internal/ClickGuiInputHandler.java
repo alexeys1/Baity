@@ -212,7 +212,7 @@ public class ClickGuiInputHandler {
                                     coords.mouseX, coords.mouseY)) {
             List<Module> modules = getFilteredModules();
             
-            float calculatedContentHeight = ClickGuiLayout.calculateContentHeightForModules(modules, visibleHeight);
+            float calculatedContentHeight = ClickGuiLayout.calculateContentHeightForModules(modules, visibleHeight, state);
             float contentStartY = ClickGuiState.HEADER_HEIGHT + 10;
             float contentEndY = ClickGuiState.HEADER_HEIGHT + visibleHeight;
             float maxScroll = Math.max(0, calculatedContentHeight + contentStartY - contentEndY);
@@ -222,15 +222,16 @@ public class ClickGuiInputHandler {
             float clampedDelta = ClickGuiLayout.clampScrollDelta(state, maxScroll, delta);
             
             if (clampedDelta != 0) {
-                state.setScrollOffset(state.getScrollOffset() + clampedDelta);
+                state.setTargetScrollOffset(state.getTargetScrollOffset() + clampedDelta);
                 
                 float modY = contentY + 10 - state.getScrollOffset();
                 for (Module module : modules) {
                     modY += 30;
-                    if (module.isExpanded()) {
+                    float subHeight = getSubOptionContainerHeight(module);
+                    if (subHeight > 0) {
                         handleSubOptionScroll(module, modY, coords, verticalAmount, contentX, contentWidth);
-                        modY += getSubOptionContainerHeight(module);
                     }
+                    modY += subHeight;
                 }
             }
             
@@ -1040,13 +1041,14 @@ public class ClickGuiInputHandler {
             
             modY += 30;
             
-            if (module.isExpanded()) {
+            int subHeight = getSubOptionContainerHeight(module);
+            if (subHeight > 0) {
                 if (handleSubOptionClick(module, modY, coords, button, contentX, contentWidth)) {
                     timer.reset();
                     return true;
                 }
-                modY += getSubOptionContainerHeight(module);
             }
+            modY += subHeight;
         }
         
         return false;
@@ -2127,20 +2129,8 @@ public class ClickGuiInputHandler {
     }
 
     private int getSubOptionContainerHeight(Module module) {
-        java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
-        int subOptionCount = entries.size();
-        if (subOptionCount == 0) return 0;
-        
-        int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
         float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
-        ClickGuiLayout.ContainerDimensions dims = 
-            ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
-        int fullContainerHeight = subOptionCount * dims.subOptionHeight + dims.padding * 2 + extraHeight;
-        
-        float expandProgress = state.getModuleExpandAnimations().getOrDefault(module.getName(), 0.0f);
-        int containerHeight = (int)(fullContainerHeight * expandProgress);
-        
-        return containerHeight + 5;
+        return Math.round(ClickGuiMotion.calculateModuleSubOptionsHeight(module, state, visibleHeight));
     }
     
     private void updateKeyDisplay() {

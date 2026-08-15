@@ -1,5 +1,6 @@
 package com.shyeuar.baity.gui.internal;
 
+import com.shyeuar.baity.gui.animation.ScalarTransition;
 import com.shyeuar.baity.gui.input.LineTextInput;
 import com.shyeuar.baity.gui.theme.Theme;
 import com.shyeuar.baity.gui.module.Module;
@@ -32,6 +33,8 @@ public class ClickGuiRenderer {
     private String cachedSearchText = null;
     private ModuleCategory cachedCategory = null;
     private String cachedModVersion = null;
+    private final ClickGuiTooltipAnimator tooltipAnimator = new ClickGuiTooltipAnimator();
+    private final ScalarTransition motion = new ScalarTransition();
     
     public ClickGuiRenderer(ClickGuiState state, Theme theme,
                                  Function<String, String> getTooltipText,
@@ -51,7 +54,8 @@ public class ClickGuiRenderer {
     }
     
     public void update(float delta, int mouseX, int mouseY) {
-        updateModuleExpandAnimations();
+        List<Module> modules = getFilteredModules();
+        ClickGuiMotion.updateAnimations(state, modules, motion);
         
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
         updateModuleShimmerAnimations(coords.mouseX, coords.mouseY);
@@ -101,7 +105,7 @@ public class ClickGuiRenderer {
         float visibleHeight = Math.max(0, visibleBottom - visibleTop);
         
         List<Module> modules = getFilteredModules();
-        float calculatedContentHeight = ClickGuiLayout.calculateContentHeightForModules(modules, visibleHeight);
+        float calculatedContentHeight = ClickGuiLayout.calculateContentHeightForModules(modules, visibleHeight, state);
         
         ClickGuiLayout.ScrollbarInfo scrollbarInfo = ClickGuiLayout.calculateScrollbar(state, calculatedContentHeight, visibleHeight);
         ClickGuiLayout.clampScrollOffset(state, scrollbarInfo.maxScroll);
@@ -151,6 +155,9 @@ public class ClickGuiRenderer {
         
         if (state.getHoveredTooltip() != null) {
             renderTooltip(client, mouseX, mouseY);
+            tooltipAnimator.endFrame(true);
+        } else {
+            tooltipAnimator.endFrame(false);
         }
     }
     
@@ -520,19 +527,20 @@ public class ClickGuiRenderer {
                                   float containerX1, float modY, float containerX2,
                                   float visibleHeight,
                                   float mouseX, float mouseY, boolean suppressTooltips) {
-        java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
+        java.util.List<ValueTreeUtils.ValueEntry> entries = ClickGuiMotion.getVisibleEntries(module, state);
         int subOptionCount = entries.size();
         
         if (subOptionCount == 0) return 0;
         
-        float expandProgress = getModuleExpandProgress(module.getName());
+        float expandProgress = ClickGuiMotion.getModuleExpandProgress(state, module);
         if (expandProgress <= 0.0f) return 0;
         
+        float fullContainerHeight = ClickGuiMotion.calculateEntriesHeight(entries, state, module, visibleHeight);
+        int containerHeight = (int)(fullContainerHeight * expandProgress);
+
         int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
         ClickGuiLayout.ContainerDimensions dims = 
             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
-        int fullContainerHeight = subOptionCount * dims.subOptionHeight + dims.padding * 2 + extraHeight;
-        int containerHeight = (int)(fullContainerHeight * expandProgress);
 
         int containerBg = com.shyeuar.baity.gui.theme.LinearTheme.BG_TERTIARY.getRGB();
         float containerY1 = modY;
@@ -544,6 +552,12 @@ public class ClickGuiRenderer {
         
         int innerVisible = Math.max(0, containerHeight - dims.padding * 2);
         if (innerVisible >= dims.subOptionHeight / 2) {
+            guiGraphics.enableScissor(
+                    (int) containerX1,
+                    (int) containerY1,
+                    (int) containerX2,
+                    (int) containerY2
+            );
             float subModY = modY + dims.padding;
             
             Value previousValue = null;
@@ -552,7 +566,8 @@ public class ClickGuiRenderer {
                 int depth = entry.depth();
                 
                 if (value.needsSeparatorBefore(previousValue)) {
-                    subModY += 12; 
+                    float separatorFactor = ClickGuiMotion.getEntryGroupFactor(state, module, entry);
+                    subModY += 12 * separatorFactor;
                 }
                 
                 float currentHeight = dims.subOptionHeight;
@@ -568,21 +583,57 @@ public class ClickGuiRenderer {
                 } else if (value.getStyle() == com.shyeuar.baity.gui.value.ValueStyle.CROSSHAIR_PAINTER) {
                     currentHeight = dims.subOptionHeight * 8;
                 }
-                if (subModY + currentHeight < ClickGuiState.HEADER_HEIGHT ||
+
+                float groupFactor = ClickGuiMotion.getEntryGroupFactor(state, module, entry);
+                float effectiveHeight = currentHeight * groupFactor;
+                if (effectiveHeight <= 0.01f) {
+                    previousValue = value;
+                    continue;
+                }
+                if (subModY + effectiveHeight < ClickGuiState.HEADER_HEIGHT ||
                     subModY > ClickGuiState.HEIGHT - ClickGuiState.FOOTER_HEIGHT) {
-                    subModY += currentHeight;
+                    subModY += effectiveHeight;
                     previousValue = value;
                     continue;
                 }
                 
                 float localAlphaF = Math.min(1f, Math.max(0f, 
                     (innerVisible - (subModY - modY - dims.padding)) / (float)dims.subOptionHeight));
-                int localAlpha = (int)(255 * expandProgress * localAlphaF);
+                int localAlpha = (int)(255 * expandProgress * groupFactor * localAlphaF);
                 
                 int subX1 = (int)(containerX1 + 4 + depth * 12);
                 int subX2 = (int)(containerX2 - 4 - depth * 8);
                 
-                ValueStyleRenderer.renderValue(guiGraphics, client, module, value, theme, subX1, subModY, subX2, dims.subOptionHeight, mouseX, mouseY, localAlpha, getTooltipText, getTooltipTextWithColors, getDisplayTextFormatter, state.getListeningButtonValueName(), tooltipInfo, state.getEditingSlider(), state.getSliderInput().getText(), state.getEditingGradient(), state.getGradientInput().getText(), state.getGradientInput().getCaretCp(), state.getSliderInput().getCaretCp(), state.getEditingTextInput(), state.getTextLineInput().getText(), state.getTextLineInput().getCaretCp());
+                guiGraphics.enableScissor(subX1, (int) subModY, subX2, (int) (subModY + effectiveHeight));
+                ValueStyleRenderer.renderValue(
+                        guiGraphics,
+                        client,
+                        module,
+                        value,
+                        theme,
+                        subX1,
+                        subModY,
+                        subX2,
+                        dims.subOptionHeight,
+                        mouseX,
+                        mouseY,
+                        localAlpha,
+                        getTooltipText,
+                        getTooltipTextWithColors,
+                        getDisplayTextFormatter,
+                        state.getListeningButtonValueName(),
+                        tooltipInfo,
+                        state.getEditingSlider(),
+                        state.getSliderInput().getText(),
+                        state.getEditingGradient(),
+                        state.getGradientInput().getText(),
+                        state.getGradientInput().getCaretCp(),
+                        state.getSliderInput().getCaretCp(),
+                        state.getEditingTextInput(),
+                        state.getTextLineInput().getText(),
+                        state.getTextLineInput().getCaretCp()
+                );
+                guiGraphics.disableScissor();
                 
                 
                 if (!suppressTooltips && tooltipInfo != null && tooltipInfo.tooltip != null) {
@@ -592,9 +643,10 @@ public class ClickGuiRenderer {
                     state.setTooltipY(tooltipInfo.y);
                 }
                 
-                subModY += currentHeight;
+                subModY += effectiveHeight;
                 previousValue = value;
             }
+            guiGraphics.disableScissor();
         }
         
         return containerHeight + 5;
@@ -845,6 +897,10 @@ public class ClickGuiRenderer {
         }
     }
     
+    public void resetTooltipAnimation() {
+        tooltipAnimator.reset();
+    }
+
     private void renderTooltip(Minecraft client, double mouseX, double mouseY) {
         float tooltipScaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
         float tipScale = 0.75f * tooltipScaleRatio;
@@ -878,6 +934,15 @@ public class ClickGuiRenderer {
         int rawTooltipWidth = rawTextWidth + bgPadding;
         int rawTooltipHeight = contentHeight + 8;
 
+        int signature = 31 * plainText.hashCode() + 31 * rawTooltipWidth + rawTooltipHeight;
+        var sizeFrame = tooltipAnimator.update(signature, rawTooltipWidth, rawTooltipHeight);
+        int drawTooltipWidth = sizeFrame.animateBackground()
+                ? Math.max(1, Math.round(sizeFrame.animatedWidth()))
+                : rawTooltipWidth;
+        int drawTooltipHeight = sizeFrame.animateBackground()
+                ? Math.max(1, Math.round(sizeFrame.animatedHeight()))
+                : rawTooltipHeight;
+
         int scaledTooltipWidth = (int)(rawTooltipWidth * tipScale);
         int scaledTooltipHeight = (int)(rawTooltipHeight * tipScale);
 
@@ -906,11 +971,17 @@ public class ClickGuiRenderer {
         guiMatrices.scale(tipScale, tipScale);
 
         com.shyeuar.baity.gui.render.GuiRenderUtil.drawRoundedRect(guiGraphics, 0, 0,
-                                      rawTooltipWidth, rawTooltipHeight,
+                                      drawTooltipWidth, drawTooltipHeight,
                                       4, theme.BG_2.getRGB());
 
+        boolean clipText = sizeFrame.needsTextClip();
+        if (clipText) {
+            guiGraphics.nextStratum();
+            guiGraphics.enableScissor(0, 0, drawTooltipWidth, drawTooltipHeight);
+        }
+
         int textX = bgPadding / 2;
-        int textY = (rawTooltipHeight - contentHeight) / 2;
+        int textY = clipText ? 4 : (rawTooltipHeight - contentHeight) / 2;
 
         int textColor = theme.FONT_C.getRGB() | 0xFF000000;
         if (coloredText != null && coloredText.getStyle().getColor() != null) {
@@ -926,38 +997,11 @@ public class ClickGuiRenderer {
             }
         }
 
+        if (clipText) {
+            guiGraphics.disableScissor();
+        }
+
         guiMatrices.popMatrix();
-    }
-    
-    private void updateModuleExpandAnimations() {
-        java.util.List<Module> modules = getFilteredModules();
-        for (Module module : modules) {
-            updateModuleExpandAnimation(module.getName(), module.isExpanded());
-        }
-    }
-    
-    private void updateModuleExpandAnimation(String moduleName, boolean expanded) {
-        float target = expanded ? 1.0f : 0.0f;
-        float current = state.getModuleExpandAnimations().getOrDefault(moduleName, 0.0f);
-        
-        float speed = 0.18f;
-        float newValue = com.shyeuar.baity.gui.animation.InterpolationHelper.lerp(current, target, speed);
-        
-        if (expanded) {
-            newValue = com.shyeuar.baity.gui.animation.EasingFunctions.easeOutCubic(newValue);
-        } else {
-            newValue = com.shyeuar.baity.gui.animation.EasingFunctions.easeInCubic(newValue);
-        }
-        
-        if (Math.abs(newValue - target) < 0.01f) {
-            newValue = target;
-        }
-        
-        state.getModuleExpandAnimations().put(moduleName, newValue);
-    }
-    
-    private float getModuleExpandProgress(String moduleName) {
-        return state.getModuleExpandAnimations().getOrDefault(moduleName, 0.0f);
     }
     
     private void updateModuleShimmerAnimations(float mouseX, float mouseY) {
@@ -1068,23 +1112,13 @@ public class ClickGuiRenderer {
             }
             
             modY += 30;
-            if (module.isExpanded()) {
-                modY += getSubOptionContainerHeight(module);
-            }
+            modY += getSubOptionContainerHeight(module);
         }
     }
     
     private float getSubOptionContainerHeight(Module module) {
-        java.util.List<ValueTreeUtils.ValueEntry> entries = ValueTreeUtils.getVisibleEntries(module);
-        int subOptionCount = entries.size();
-        if (subOptionCount == 0) return 0;
-        
-        int extraHeight = ClickGuiLayout.calculateExtraHeight(entries);
         float visibleHeight = ClickGuiState.HEIGHT - ClickGuiState.HEADER_HEIGHT - ClickGuiState.FOOTER_HEIGHT;
-        ClickGuiLayout.ContainerDimensions dims = 
-            ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
-        int fullContainerHeight = subOptionCount * dims.subOptionHeight + dims.padding * 2 + extraHeight;
-        return fullContainerHeight + 5;
+        return ClickGuiMotion.calculateModuleSubOptionsHeight(module, state, visibleHeight);
     }
     
     public ClickGuiState getState() {

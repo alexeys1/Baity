@@ -51,6 +51,7 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
     private static final float SPARKLING_R = 1.0f;
     private static final float SPARKLING_G = 215.0f / 255.0f;
     private static final float SPARKLING_B = 0.0f;
+    private static final float SPARKLING_FILL_ALPHA = 0.25f;
 
     private static final RenderPipeline BAITY_SAFARI_LINES = RenderPipelines.register(
             RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
@@ -146,7 +147,18 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
 
             ArmorStand associatedArmorStand = findAssociatedArmorStand(mob, namedArmorStands);
             if (hasLabel(associatedArmorStand, SPARKLING_LABEL)) {
-                drawBox(matrices, submits, mob, cameraPos, SPARKLING_R, SPARKLING_G, SPARKLING_B);
+                AABB box = mob.getBoundingBox().inflate(0.01);
+                drawFilledBox(
+                        matrices,
+                        submits,
+                        box,
+                        cameraPos,
+                        SPARKLING_R,
+                        SPARKLING_G,
+                        SPARKLING_B,
+                        SPARKLING_FILL_ALPHA
+                );
+                drawWireBox(matrices, submits, box, cameraPos, SPARKLING_R, SPARKLING_G, SPARKLING_B, 0.9f);
                 if (rayStart != null) {
                     drawLine(
                             matrices,

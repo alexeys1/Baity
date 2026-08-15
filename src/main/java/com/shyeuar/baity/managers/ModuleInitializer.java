@@ -21,7 +21,7 @@ public class ModuleInitializer {
             "bold",
             "compact damage number"
     );
-    private static final Set<String> HIGHLIGHTS_OPTIONS = Set.of("shulker", "invisibug", "pest");
+    private static final Set<String> HIGHLIGHTS_OPTIONS = Set.of("shulker", "invisibug", "safari", "pest");
     private static final Set<String> NODEBUFF_OPTIONS = Set.of("remove nausea", "remove blindness");
 
     public static boolean isHiddenGuiValue(String valueName) {
@@ -213,6 +213,22 @@ public class ModuleInitializer {
                     switch (v.getName()) {
                         case "shulker" -> v.setValue(ConfigManager.highlightsShulkerEnabled);
                         case "invisibug" -> v.setValue(ConfigManager.highlightsInvisibugEnabled);
+                        case "safari" -> {
+                            if (v instanceof GroupValue group) {
+                                group.setExpanded(ConfigManager.safariGroupExpanded);
+                                for (Value child : group.getChildren()) {
+                                    switch (child.getName()) {
+                                        case "safari enabled" -> child.setValue(ConfigManager.safariRenderTargetESP);
+                                        case "safari mob" -> child.setValue(ConfigManager.safariMobEnabled);
+                                        case "safari hideyho" -> child.setValue(ConfigManager.safariHideyhoEnabled);
+                                        case "safari npc" -> child.setValue(ConfigManager.safariNpcEnabled);
+                                        case "safari floor drop" -> child.setValue(ConfigManager.safariFloorDropEnabled);
+                                        default -> {
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         case "pest" -> {
                             if (v instanceof GroupValue group) {
                                 group.setExpanded(ConfigManager.highlightsPestGroupExpanded);

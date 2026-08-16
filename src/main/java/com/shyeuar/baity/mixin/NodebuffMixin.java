@@ -6,14 +6,23 @@ import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.mixin.accessor.FogRendererAccessor;
 import com.shyeuar.baity.utils.ModuleUtils;
+import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.fog.FogRenderer;
+import net.minecraft.client.renderer.LightmapRenderStateExtractor;
 import net.minecraft.client.renderer.SkyRenderer;
 import net.minecraft.client.renderer.fog.environment.BlindnessFogEnvironment;
 import net.minecraft.client.renderer.fog.environment.DarknessFogEnvironment;
+import net.minecraft.client.renderer.fog.environment.FogEnvironment;
+import net.minecraft.core.Holder;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.level.material.FogType;
 import org.joml.Matrix4f;
 import org.joml.Vector3fc;
 import org.spongepowered.asm.mixin.Final;
@@ -60,9 +69,6 @@ public class NodebuffMixin {
             if (shouldRemoveBlindness()) {
                 fogEnvironments.removeIf(env -> env instanceof BlindnessFogEnvironment);
             }
-            if (shouldRemoveDarkness()) {
-                fogEnvironments.removeIf(env -> env instanceof DarknessFogEnvironment);
-            }
         }
 
         private static boolean shouldRemoveNausea() {
@@ -73,6 +79,65 @@ public class NodebuffMixin {
         private static boolean shouldRemoveBlindness() {
             Module module = ModuleManager.getModuleByName("Nodebuff");
             return module != null && module.isEnabled() && ModuleUtils.getOptionBoolean(module, "remove blindness", true);
+        }
+
+        private static boolean shouldRemoveDarkness() {
+            Module module = ModuleManager.getModuleByName("Nodebuff");
+            return module != null && module.isEnabled() && ModuleUtils.getOptionBoolean(module, "remove darkness", true);
+        }
+    }
+
+    @Mixin(FogRenderer.class)
+    public static class FogRendererMixin {
+
+        @WrapOperation(method = {"computeFogColor", "setupFog"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/fog/environment/FogEnvironment;isApplicable(Lnet/minecraft/world/level/material/FogType;Lnet/minecraft/world/entity/Entity;)Z"))
+        private boolean baity$skipDarknessFog(FogEnvironment environment, FogType fogType, Entity entity, Operation<Boolean> original) {
+            if (environment instanceof DarknessFogEnvironment && shouldRemoveDarkness()) {
+                return false;
+            }
+            return original.call(environment, fogType, entity);
+        }
+
+        @WrapOperation(method = "computeFogColor", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;hasEffect(Lnet/minecraft/core/Holder;)Z", ordinal = 1))
+        private boolean baity$preventDarknessFromBlockingNightVision(LivingEntity entity, Holder<MobEffect> effect, Operation<Boolean> original) {
+            if (shouldRemoveDarkness()) {
+                return false;
+            }
+            return original.call(entity, effect);
+        }
+
+        private static boolean shouldRemoveDarkness() {
+            Module module = ModuleManager.getModuleByName("Nodebuff");
+            return module != null && module.isEnabled() && ModuleUtils.getOptionBoolean(module, "remove darkness", true);
+        }
+    }
+
+    @Mixin(Camera.class)
+    public static class CameraMixin {
+
+        @WrapOperation(method = "extractRenderState", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;hasEffect(Lnet/minecraft/core/Holder;)Z", ordinal = 1))
+        private boolean baity$allowSkyDuringDarkness(LivingEntity entity, Holder<MobEffect> effect, Operation<Boolean> original) {
+            if (shouldRemoveDarkness()) {
+                return false;
+            }
+            return original.call(entity, effect);
+        }
+
+        private static boolean shouldRemoveDarkness() {
+            Module module = ModuleManager.getModuleByName("Nodebuff");
+            return module != null && module.isEnabled() && ModuleUtils.getOptionBoolean(module, "remove darkness", true);
+        }
+    }
+
+    @Mixin(LightmapRenderStateExtractor.class)
+    public static class LightmapRenderStateExtractorMixin {
+
+        @WrapOperation(method = "extract", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;getEffectBlendFactor(Lnet/minecraft/core/Holder;F)F"))
+        private float baity$removeDarknessBlend(LocalPlayer player, Holder<MobEffect> effect, float partialTick, Operation<Float> original) {
+            if (shouldRemoveDarkness()) {
+                return 0.0F;
+            }
+            return original.call(player, effect, partialTick);
         }
 
         private static boolean shouldRemoveDarkness() {

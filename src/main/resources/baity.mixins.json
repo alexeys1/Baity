@@ -81,6 +81,7 @@
     "AvatarRenderStateMixin",
     "GameRendererMixin",
     "MotionBlurMixin$LevelRendererMixin",
+    "SafariMobOutlinePostChainMixin",
     "InGameHudMixin",
     "PaperDollArmorMixin$HumanoidArmorLayerMixin",
     "PaperDollArmorMixin$CustomHeadLayerMixin",

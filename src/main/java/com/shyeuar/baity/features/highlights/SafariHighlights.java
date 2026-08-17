@@ -19,14 +19,24 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.Model;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.OutputTarget;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.ARGB;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
@@ -52,7 +62,6 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
     private static final float SPARKLING_R = 1.0f;
     private static final float SPARKLING_G = 215.0f / 255.0f;
     private static final float SPARKLING_B = 0.0f;
-    private static final float SPARKLING_FILL_ALPHA = 0.25f;
 
     private static final float MOB_R = ((DevConfig.DEV_PREFIX_COLOR >> 16) & 0xFF) / 255.0f;
     private static final float MOB_G = ((DevConfig.DEV_PREFIX_COLOR >> 8) & 0xFF) / 255.0f;
@@ -97,6 +106,23 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                     .createRenderSetup()
     );
 
+    private static final RenderPipeline BAITY_SAFARI_MODEL_OUTLINE = RenderPipelines.register(
+            RenderPipeline.builder(RenderPipelines.OUTLINE_SNIPPET)
+                    .withLocation("pipeline/baity_safari_model_outline")
+                    .withFragmentShader(Identifier.fromNamespaceAndPath("baity", "core/baity_safari_model_outline"))
+                    .withCull(false)
+                    .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false, 0f, 0f))
+                    .build()
+    );
+
+    private static final RenderType THROUGH_WALLS_MODEL_OUTLINE = RenderType.create(
+            "baity_safari_model_outline",
+            RenderSetup.builder(BAITY_SAFARI_MODEL_OUTLINE)
+                    .setOutputTarget(OutputTarget.OUTLINE_TARGET)
+                    .setOutline(RenderSetup.OutlineProperty.IS_OUTLINE)
+                    .createRenderSetup()
+    );
+
     @Override
     public void afterSolidFeatures(LevelRenderContext context) {
         if (!ConfigManager.safariRenderTargetESP) return;
@@ -106,7 +132,8 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
         Module module = ModuleManager.getModuleByName("Highlights");
         if (module == null || !module.isEnabled()) return;
 
-        Vec3 cameraPos = context.levelState().cameraRenderState.pos;
+        CameraRenderState cameraRenderState = context.levelState().cameraRenderState;
+        Vec3 cameraPos = cameraRenderState.pos;
         PoseStack matrices = context.poseStack();
         SubmitNodeCollector submits = context.submitNodeCollector();
         if (matrices == null || submits == null) return;
@@ -114,12 +141,7 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
         SafariZoneUtils.Zone playerZone = SafariZoneUtils.playerZone(MC);
         float partialTick = MC.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 
-        List<ArmorStand> namedArmorStands = new ArrayList<>();
-        for (Entity entity : MC.level.entitiesForRendering()) {
-            if (entity instanceof ArmorStand armorStand && armorStand.isAlive() && armorStand.hasCustomName()) {
-                namedArmorStands.add(armorStand);
-            }
-        }
+        List<ArmorStand> namedArmorStands = namedArmorStands();
 
         Vec3 rayStart = MC.player == null
                 ? null
@@ -188,34 +210,27 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
             if (!SafariZoneUtils.matchesPlayerZone(playerZone, mob.getX(), mob.getZ())) continue;
 
             ArmorStand associatedArmorStand = findAssociatedArmorStand(mob, namedArmorStands);
-            AABB box = EntityDrawUtils.interpolatedEntityBox(mob, partialTick, 0.01);
-            if (hasLabel(associatedArmorStand, SPARKLING_LABEL)) {
-                drawFilledBox(
+            drawMobModel(
+                    mob,
+                    partialTick,
+                    cameraPos,
+                    matrices,
+                    submits,
+                    cameraRenderState,
+                    mobOutlineColor(associatedArmorStand)
+            );
+            if (rayStart != null && hasLabel(associatedArmorStand, SPARKLING_LABEL)) {
+                drawLine(
                         matrices,
                         submits,
-                        box,
+                        rayStart,
+                        EntityDrawUtils.interpolatedEntityBox(mob, partialTick, 0.01).getCenter(),
                         cameraPos,
                         SPARKLING_R,
                         SPARKLING_G,
                         SPARKLING_B,
-                        SPARKLING_FILL_ALPHA
+                        0.9f
                 );
-                drawWireBox(matrices, submits, box, cameraPos, SPARKLING_R, SPARKLING_G, SPARKLING_B, 0.9f);
-                if (rayStart != null) {
-                    drawLine(
-                            matrices,
-                            submits,
-                            rayStart,
-                            box.getCenter(),
-                            cameraPos,
-                            SPARKLING_R,
-                            SPARKLING_G,
-                            SPARKLING_B,
-                            0.9f
-                    );
-                }
-            } else {
-                drawWireBox(matrices, submits, box, cameraPos, MOB_R, MOB_G, MOB_B, 0.9f);
             }
         }
     }
@@ -263,6 +278,164 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
     private static boolean hasLabel(ArmorStand armorStand, String label) {
         return armorStand != null
                 && LocateUtils.toPlainText(armorStand.getName().getString()).contains(label);
+    }
+
+    private static int mobOutlineColor(ArmorStand associatedArmorStand) {
+        if (hasLabel(associatedArmorStand, SPARKLING_LABEL)) {
+            return ARGB.colorFromFloat(1.0f, SPARKLING_R, SPARKLING_G, SPARKLING_B);
+        }
+        return ARGB.colorFromFloat(1.0f, MOB_R, MOB_G, MOB_B);
+    }
+
+    public static boolean isSafariMobOutlineActive() {
+        if (!ConfigManager.safariRenderTargetESP
+                || !ConfigManager.safariMobEnabled
+                || MC.level == null
+                || !LocateUtils.isInSafari(MC)) {
+            return false;
+        }
+        Module module = ModuleManager.getModuleByName("Highlights");
+        return module != null && module.isEnabled();
+    }
+
+    private static void drawMobModel(
+            Mob mob,
+            float partialTick,
+            Vec3 cameraPos,
+            PoseStack matrices,
+            SubmitNodeCollector submits,
+            CameraRenderState cameraRenderState,
+            int color
+    ) {
+        EntityRenderDispatcher dispatcher = MC.getEntityRenderDispatcher();
+        EntityRenderState state = dispatcher.extractEntity(mob, partialTick);
+        state.isInvisible = false;
+        dispatcher.submit(
+                state,
+                cameraRenderState,
+                state.x - cameraPos.x,
+                state.y - cameraPos.y,
+                state.z - cameraPos.z,
+                matrices,
+                new SafariMobModelCollector(submits, color)
+        );
+    }
+
+    private static List<ArmorStand> namedArmorStands() {
+        List<ArmorStand> armorStands = new ArrayList<>();
+        for (Entity entity : MC.level.entitiesForRendering()) {
+            if (entity instanceof ArmorStand armorStand && armorStand.isAlive() && armorStand.hasCustomName()) {
+                armorStands.add(armorStand);
+            }
+        }
+        return armorStands;
+    }
+
+    private static final class SafariMobModelCollector extends SubmitNodeStorage {
+        private final SubmitNodeCollector target;
+        private final int color;
+
+        private SafariMobModelCollector(SubmitNodeCollector target, int color) {
+            this.target = target;
+            this.color = color;
+        }
+
+        @Override
+        public SubmitNodeCollection order(int order) {
+            return new SafariMobOrderedCollector(this);
+        }
+
+        @Override
+        public <S> void submitModel(
+                Model<? super S> model,
+                S state,
+                PoseStack poseStack,
+                RenderType renderType,
+                int lightCoords,
+                int overlayCoords,
+                int tintedColor,
+                TextureAtlasSprite textureAtlasSprite,
+                int ignoredOutlineColor,
+                ModelFeatureRenderer.CrumblingOverlay crumblingOverlay
+        ) {
+            target.submitModel(
+                    model,
+                    state,
+                    poseStack,
+                    THROUGH_WALLS_MODEL_OUTLINE,
+                    lightCoords,
+                    overlayCoords,
+                    tintedColor,
+                    textureAtlasSprite,
+                    color,
+                    crumblingOverlay
+            );
+        }
+
+        @Override
+        public void submitModelPart(
+                ModelPart modelPart,
+                PoseStack poseStack,
+                RenderType renderType,
+                int lightCoords,
+                int overlayCoords,
+                TextureAtlasSprite textureAtlasSprite,
+                int tintedColor,
+                ModelFeatureRenderer.CrumblingOverlay crumblingOverlay,
+                int ignoredOutlineColor
+        ) {
+            target.submitModelPart(
+                    modelPart,
+                    poseStack,
+                    THROUGH_WALLS_MODEL_OUTLINE,
+                    lightCoords,
+                    overlayCoords,
+                    textureAtlasSprite,
+                    tintedColor,
+                    crumblingOverlay,
+                    color
+            );
+        }
+
+        private static final class SafariMobOrderedCollector extends SubmitNodeCollection {
+            private final SafariMobModelCollector parent;
+
+            private SafariMobOrderedCollector(SafariMobModelCollector parent) {
+                super();
+                this.parent = parent;
+            }
+
+            @Override
+            public <S> void submitModel(
+                    Model<? super S> model,
+                    S state,
+                    PoseStack poseStack,
+                    RenderType renderType,
+                    int lightCoords,
+                    int overlayCoords,
+                    int tintedColor,
+                    TextureAtlasSprite textureAtlasSprite,
+                    int ignoredOutlineColor,
+                    ModelFeatureRenderer.CrumblingOverlay crumblingOverlay
+            ) {
+                parent.submitModel(model, state, poseStack, renderType, lightCoords, overlayCoords, tintedColor, textureAtlasSprite, ignoredOutlineColor, crumblingOverlay);
+            }
+
+            @Override
+            public void submitModelPart(
+                    ModelPart modelPart,
+                    PoseStack poseStack,
+                    RenderType renderType,
+                    int lightCoords,
+                    int overlayCoords,
+                    TextureAtlasSprite textureAtlasSprite,
+                    int tintedColor,
+                    ModelFeatureRenderer.CrumblingOverlay crumblingOverlay,
+                    int ignoredOutlineColor
+            ) {
+                parent.submitModelPart(modelPart, poseStack, renderType, lightCoords, overlayCoords, textureAtlasSprite, tintedColor, crumblingOverlay, ignoredOutlineColor);
+            }
+        }
     }
 
     private static void drawWireBox(

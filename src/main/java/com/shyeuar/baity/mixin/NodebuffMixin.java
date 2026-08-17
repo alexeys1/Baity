@@ -80,11 +80,6 @@ public class NodebuffMixin {
             Module module = ModuleManager.getModuleByName("Nodebuff");
             return module != null && module.isEnabled() && ModuleUtils.getOptionBoolean(module, "remove blindness", true);
         }
-
-        private static boolean shouldRemoveDarkness() {
-            Module module = ModuleManager.getModuleByName("Nodebuff");
-            return module != null && module.isEnabled() && ModuleUtils.getOptionBoolean(module, "remove darkness", true);
-        }
     }
 
     @Mixin(FogRenderer.class)

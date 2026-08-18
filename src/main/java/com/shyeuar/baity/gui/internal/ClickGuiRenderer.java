@@ -1,6 +1,7 @@
 package com.shyeuar.baity.gui.internal;
 
 import com.shyeuar.baity.gui.animation.ScalarTransition;
+import com.shyeuar.baity.gui.animation.ClickGuiOpenAnimation;
 import com.shyeuar.baity.gui.input.LineTextInput;
 import com.shyeuar.baity.gui.theme.Theme;
 import com.shyeuar.baity.gui.module.Module;
@@ -86,11 +87,39 @@ public class ClickGuiRenderer {
         float scaleRatio = ClickGuiState.BASE_GUI_SCALE / state.getGuiScale();
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
         boolean suppressTooltips = ClickGuiLayout.shouldSuppressContentTooltips(coords.mouseX, coords.mouseY);
+
+        long openElapsedMs = state.getOpenAnimationElapsedMs();
+        ClickGuiOpenAnimation.OpeningFrame openingFrame = ClickGuiOpenAnimation.computeFrame(
+                openElapsedMs, ClickGuiState.WIDTH, ClickGuiState.HEIGHT);
+        renderOpenBackdrop(client, openElapsedMs);
         
         var matrices = guiGraphics.pose();
         matrices.pushMatrix();
         matrices.translate(Math.round(state.getWindowX()), Math.round(state.getWindowY()));
         matrices.scale(scaleRatio, scaleRatio);
+
+        if (ClickGuiOpenAnimation.isPhase1(openElapsedMs)) {
+            com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(
+                    guiGraphics,
+                    openingFrame.x(),
+                    openingFrame.y(),
+                    openingFrame.x() + openingFrame.width(),
+                    openingFrame.y() + openingFrame.height(),
+                    theme.BG.getRGB(),
+                    6f);
+            matrices.popMatrix();
+            tooltipAnimator.endFrame(false);
+            return;
+        }
+
+        boolean openingClipActive = ClickGuiOpenAnimation.isOpening(openElapsedMs);
+        if (openingClipActive) {
+            int clipX1 = (int) openingFrame.x();
+            int clipY1 = (int) openingFrame.y();
+            int clipX2 = clipX1 + Math.max(1, (int) openingFrame.width());
+            int clipY2 = clipY1 + Math.max(1, (int) openingFrame.height());
+            guiGraphics.enableScissor(clipX1, clipY1, clipX2, clipY2);
+        }
         
         renderWindowBackground();
         renderSidebar(client, coords.mouseX, coords.mouseY);
@@ -150,6 +179,10 @@ public class ClickGuiRenderer {
         
         updateVersionCheckStatus();
         renderVersion(client, coords.mouseX, coords.mouseY);
+
+        if (openingClipActive) {
+            guiGraphics.disableScissor();
+        }
         
         matrices.popMatrix();
         
@@ -161,6 +194,23 @@ public class ClickGuiRenderer {
         }
     }
     
+    private void renderOpenBackdrop(Minecraft client, long openElapsedMs) {
+        float opacity = ClickGuiOpenAnimation.backdropOpacity(openElapsedMs);
+        if (opacity <= 0.01f || client == null || client.getWindow() == null) {
+            return;
+        }
+
+        int screenW = client.getWindow().getGuiScaledWidth();
+        int screenH = client.getWindow().getGuiScaledHeight();
+        int topAlpha = (int) (0x80 * opacity);
+        int bottomAlpha = (int) (0x90 * opacity);
+        int topColor = (topAlpha << 24) | 0x101010;
+        int bottomColor = (bottomAlpha << 24) | 0x101010;
+        int midY = screenH / 2;
+        guiGraphics.fill(0, 0, screenW, midY, topColor);
+        guiGraphics.fill(0, midY, screenW, screenH, bottomColor);
+    }
+
     private void renderWindowBackground() {
         com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, 0, 0, ClickGuiState.WIDTH, ClickGuiState.HEIGHT,
                                  theme.BG.getRGB(), 6f);

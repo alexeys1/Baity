@@ -1,5 +1,6 @@
 package com.shyeuar.baity.gui.internal;
 
+import com.shyeuar.baity.gui.animation.ClickGuiOpenAnimation;
 import com.shyeuar.baity.gui.sync.ConfigSynchronizer;
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
@@ -50,8 +51,11 @@ public class ClickGuiInputHandler {
         this.timer = timer;
         this.onButtonValueClick = onButtonValueClick;
     }
-   
+
     public boolean handleMouseClick(double mouseX, double mouseY, int button) {
+        if (ClickGuiOpenAnimation.isPhase1(state.getOpenAnimationElapsedMs())) {
+            return true;
+        }
         if ((state.isListeningForKey() || state.getListeningButtonValueName() != null) && button >= 2 && button <= 4) {
             return handleMouseKeybindBinding(button);
         }
@@ -200,6 +204,9 @@ public class ClickGuiInputHandler {
     }
     
     public boolean handleMouseScroll(double mouseX, double mouseY, double verticalAmount) {
+        if (ClickGuiOpenAnimation.isPhase1(state.getOpenAnimationElapsedMs())) {
+            return true;
+        }
         ClickGuiLayout.ScaledCoordinates coords = ClickGuiLayout.getScaledCoordinates(state, mouseX, mouseY);
         
         float contentX = ClickGuiState.SIDEBAR_WIDTH;
@@ -242,6 +249,9 @@ public class ClickGuiInputHandler {
     }
     
     public boolean handleKeyPress(int keyCode, int scanCode, int modifiers) {
+        if (ClickGuiOpenAnimation.isPhase1(state.getOpenAnimationElapsedMs()) && keyCode != GLFW.GLFW_KEY_ESCAPE) {
+            return true;
+        }
         if (state.isSearchFocused()) {
             LineTextInput.KeyResult result = state.getSearchInput().handleKey(keyCode, modifiers);
             if (result == LineTextInput.KeyResult.CANCEL || result == LineTextInput.KeyResult.COMMIT) {
@@ -324,6 +334,9 @@ public class ClickGuiInputHandler {
     }
 
     public boolean handleCodePointTyped(int codePoint, int modifiers) {
+        if (ClickGuiOpenAnimation.isPhase1(state.getOpenAnimationElapsedMs())) {
+            return true;
+        }
         if (state.isEditingSlider()) {
             syncSliderInputPolicy();
             return state.getSliderInput().handleCodePoint(codePoint);
@@ -499,6 +512,9 @@ public class ClickGuiInputHandler {
     }
    
     public void handleMouseMove(double mouseX, double mouseY) {
+        if (ClickGuiOpenAnimation.isPhase1(state.getOpenAnimationElapsedMs())) {
+            return;
+        }
         if (state.isDragging()) {
             ClickGuiLayout.updateWindowPosition(state, mouseX, mouseY, state.getDragX(), state.getDragY());
         }

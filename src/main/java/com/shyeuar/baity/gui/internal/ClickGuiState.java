@@ -66,7 +66,17 @@ public class ClickGuiState {
     private int hudButtonY = 0;
     private int hudButtonWidth = 0;
     private int hudButtonHeight = 0;
-    
+
+    private long openAnimationStartMs;
+
+    public void markOpenAnimationStart() {
+        openAnimationStartMs = System.currentTimeMillis();
+    }
+
+    public long getOpenAnimationElapsedMs() {
+        return System.currentTimeMillis() - openAnimationStartMs;
+    }
+
     public float getWindowX() { return windowX; }
     public void setWindowX(float x) { windowX = x; }
     

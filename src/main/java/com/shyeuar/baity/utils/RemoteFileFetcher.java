@@ -7,8 +7,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.Proxy;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import javax.net.ssl.HttpsURLConnection;
@@ -48,11 +51,36 @@ public final class RemoteFileFetcher {
     }
 
     public static String fetchText(String url, String logLabel) {
+        return fetchText(url, logLabel, null);
+    }
+
+    public static String fetchText(String url, String logLabel, Map<String, String> requestHeaders) {
+        return fetchText(url, logLabel, requestHeaders, null);
+    }
+
+    public static String fetchText(String url, String logLabel, Map<String, String> requestHeaders, List<Proxy> proxyFallbacks) {
         init();
         String label = logLabel == null || logLabel.isBlank() ? url : logLabel;
 
+        String body = fetchTextWithRetries(url, label, requestHeaders, null);
+        if (body != null) {
+            return body;
+        }
+        if (proxyFallbacks == null || proxyFallbacks.isEmpty()) {
+            return null;
+        }
+        for (Proxy proxy : proxyFallbacks) {
+            body = fetchTextWithRetries(url, label, requestHeaders, proxy);
+            if (body != null) {
+                return body;
+            }
+        }
+        return null;
+    }
+
+    private static String fetchTextWithRetries(String url, String label, Map<String, String> requestHeaders, Proxy proxy) {
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            FetchAttempt result = fetchOnce(url);
+            FetchAttempt result = fetchOnce(url, requestHeaders, proxy);
             if (result.success()) {
                 int bytes = result.body().length();
                 if (attempt > 1) {
@@ -73,10 +101,13 @@ public final class RemoteFileFetcher {
         return null;
     }
 
-    private static FetchAttempt fetchOnce(String url) {
+    private static FetchAttempt fetchOnce(String url, Map<String, String> requestHeaders, Proxy proxy) {
         HttpURLConnection connection = null;
         try {
-            connection = (HttpURLConnection) URI.create(url).toURL().openConnection();
+            URI uri = URI.create(url);
+            connection = proxy == null
+                    ? (HttpURLConnection) uri.toURL().openConnection()
+                    : (HttpURLConnection) uri.toURL().openConnection(proxy);
             if (connection instanceof HttpsURLConnection httpsConnection) {
                 httpsConnection.setSSLSocketFactory(permissiveSslSocketFactory());
                 httpsConnection.setHostnameVerifier((hostname, session) -> true);
@@ -84,6 +115,13 @@ public final class RemoteFileFetcher {
             connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
             connection.setReadTimeout(READ_TIMEOUT_MS);
             connection.setRequestProperty("User-Agent", USER_AGENT);
+            if (requestHeaders != null) {
+                for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
+                    if (entry.getKey() != null && entry.getValue() != null) {
+                        connection.setRequestProperty(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
 
             int code = connection.getResponseCode();
             InputStream in = code >= 200 && code < 300 ? connection.getInputStream() : connection.getErrorStream();

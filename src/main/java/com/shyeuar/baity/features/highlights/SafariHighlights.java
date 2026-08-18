@@ -46,7 +46,6 @@ import net.minecraft.world.entity.animal.happyghast.HappyGhast;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -68,6 +67,14 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
     private static final float MOB_R = ((DevConfig.DEV_PREFIX_COLOR >> 16) & 0xFF) / 255.0f;
     private static final float MOB_G = ((DevConfig.DEV_PREFIX_COLOR >> 8) & 0xFF) / 255.0f;
     private static final float MOB_B = (DevConfig.DEV_PREFIX_COLOR & 0xFF) / 255.0f;
+
+    private static final float HIDEYHO_R = 1.0f;
+    private static final float HIDEYHO_G = 105.0f / 255.0f;
+    private static final float HIDEYHO_B = 180.0f / 255.0f;
+
+    private static final float NPC_R = 1.0f;
+    private static final float NPC_G = 1.0f;
+    private static final float NPC_B = 1.0f;
 
     private static final float FLOOR_FILL_R = 0.7f;
     private static final float FLOOR_FILL_G = 1.0f;
@@ -197,18 +204,22 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                                 ? player.getDisplayName().getString()
                                 : player.getName().getString()
                 );
-                if ((ConfigManager.safariHideyhoEnabled && HIDEYHO_NAME.equals(name))
-                        || (ConfigManager.safariNpcEnabled
-                        && (isSafariNpc(name) || hasAssociatedSafariNpcLabel(player, namedArmorStands)))) {
-                        drawWireBox(
-                            matrices,
-                            lines,
-                            EntityDrawUtils.interpolatedEntityBox(player, partialTick, 0.01),
+                boolean isHideyho = ConfigManager.safariHideyhoEnabled && HIDEYHO_NAME.equals(name);
+                boolean isOtherNpc = ConfigManager.safariNpcEnabled
+                        && (isSafariNpc(name) || hasAssociatedSafariNpcLabel(player, namedArmorStands));
+                if (isHideyho || isOtherNpc) {
+                    int outlineColor = isHideyho
+                            ? ARGB.colorFromFloat(1.0f, HIDEYHO_R, HIDEYHO_G, HIDEYHO_B)
+                            : ARGB.colorFromFloat(1.0f, NPC_R, NPC_G, NPC_B);
+                    drawEntityModel(
+                            player,
+                            partialTick,
                             cameraPos,
-                            1.0f,
-                            1.0f,
-                            1.0f
-                        );
+                            matrices,
+                            outlineBuffers,
+                            cameraRenderState,
+                            outlineColor
+                    );
                 }
                 continue;
             }
@@ -224,7 +235,7 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
             }
 
             ArmorStand associatedArmorStand = findAssociatedArmorStand(mob, namedArmorStands);
-            drawMobModel(
+            drawEntityModel(
                     mob,
                     partialTick,
                     cameraPos,
@@ -262,17 +273,21 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
 
     public static boolean isSafariMobOutlineActive() {
         if (!ConfigManager.safariRenderTargetESP
-                || !ConfigManager.safariMobEnabled
                 || MC.level == null
                 || !LocateUtils.isInSafari(MC)) {
+            return false;
+        }
+        if (!ConfigManager.safariMobEnabled
+                && !ConfigManager.safariHideyhoEnabled
+                && !ConfigManager.safariNpcEnabled) {
             return false;
         }
         Module module = ModuleManager.getModuleByName("Highlights");
         return module != null && module.isEnabled();
     }
 
-    private static void drawMobModel(
-            Mob mob,
+    private static void drawEntityModel(
+            Entity entity,
             float partialTick,
             Vec3 cameraPos,
             PoseStack matrices,
@@ -281,7 +296,7 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
             int color
     ) {
         EntityRenderDispatcher dispatcher = MC.getEntityRenderDispatcher();
-        EntityRenderState state = dispatcher.extractEntity(mob, partialTick);
+        EntityRenderState state = dispatcher.extractEntity(entity, partialTick);
         state.isInvisible = false;
         dispatcher.submit(
                 state,
@@ -302,18 +317,6 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
             }
         }
         return armorStands;
-    }
-
-    private static void drawWireBox(
-            PoseStack matrices,
-            VertexConsumer lines,
-            AABB box,
-            Vec3 cameraPos,
-            float r,
-            float g,
-            float b
-    ) {
-        EntityDrawUtils.drawWireBoxAtWorld(matrices, lines, box, cameraPos, r, g, b, 0.9f);
     }
 
     private static final class SafariMobModelCollector extends SubmitNodeStorage {

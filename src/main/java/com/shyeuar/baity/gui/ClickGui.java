@@ -121,6 +121,8 @@ public class ClickGui extends Screen {
             int screenH = this.minecraft.getWindow().getGuiScaledHeight();
             ClickGuiLayout.initializeWindowPosition(state, screenW, screenH);
         }
+
+        state.markOpenAnimationStart();
         
         if (firstBootstrap && !restoredFromSession) {
             triggerAutoVersionCheck();

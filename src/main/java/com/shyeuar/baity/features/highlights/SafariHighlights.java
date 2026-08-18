@@ -67,6 +67,14 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
     private static final float MOB_G = ((DevConfig.DEV_PREFIX_COLOR >> 8) & 0xFF) / 255.0f;
     private static final float MOB_B = (DevConfig.DEV_PREFIX_COLOR & 0xFF) / 255.0f;
 
+    private static final float HIDEYHO_R = 1.0f;
+    private static final float HIDEYHO_G = 105.0f / 255.0f;
+    private static final float HIDEYHO_B = 180.0f / 255.0f;
+
+    private static final float NPC_R = 1.0f;
+    private static final float NPC_G = 1.0f;
+    private static final float NPC_B = 1.0f;
+
     private static final float FLOOR_FILL_R = 0.7f;
     private static final float FLOOR_FILL_G = 1.0f;
     private static final float FLOOR_FILL_B = 0.0f;
@@ -184,18 +192,21 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                                 ? player.getDisplayName().getString()
                                 : player.getName().getString()
                 );
-                if ((ConfigManager.safariHideyhoEnabled && HIDEYHO_NAME.equals(name))
-                        || (ConfigManager.safariNpcEnabled
-                        && (isSafariNpc(name) || hasAssociatedSafariNpcLabel(player, namedArmorStands)))) {
-                    drawWireBox(
+                boolean isHideyho = ConfigManager.safariHideyhoEnabled && HIDEYHO_NAME.equals(name);
+                boolean isOtherNpc = ConfigManager.safariNpcEnabled
+                        && (isSafariNpc(name) || hasAssociatedSafariNpcLabel(player, namedArmorStands));
+                if (isHideyho || isOtherNpc) {
+                    int outlineColor = isHideyho
+                            ? ARGB.colorFromFloat(1.0f, HIDEYHO_R, HIDEYHO_G, HIDEYHO_B)
+                            : ARGB.colorFromFloat(1.0f, NPC_R, NPC_G, NPC_B);
+                    drawEntityModel(
+                            player,
+                            partialTick,
+                            cameraPos,
                             matrices,
                             submits,
-                            EntityDrawUtils.interpolatedEntityBox(player, partialTick, 0.01),
-                            cameraPos,
-                            1.0f,
-                            1.0f,
-                            1.0f,
-                            0.9f
+                            cameraRenderState,
+                            outlineColor
                     );
                 }
                 continue;
@@ -210,7 +221,7 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
             if (!SafariZoneUtils.matchesPlayerZone(playerZone, mob.getX(), mob.getZ())) continue;
 
             ArmorStand associatedArmorStand = findAssociatedArmorStand(mob, namedArmorStands);
-            drawMobModel(
+            drawEntityModel(
                     mob,
                     partialTick,
                     cameraPos,
@@ -289,17 +300,21 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
 
     public static boolean isSafariMobOutlineActive() {
         if (!ConfigManager.safariRenderTargetESP
-                || !ConfigManager.safariMobEnabled
                 || MC.level == null
                 || !LocateUtils.isInSafari(MC)) {
+            return false;
+        }
+        if (!ConfigManager.safariMobEnabled
+                && !ConfigManager.safariHideyhoEnabled
+                && !ConfigManager.safariNpcEnabled) {
             return false;
         }
         Module module = ModuleManager.getModuleByName("Highlights");
         return module != null && module.isEnabled();
     }
 
-    private static void drawMobModel(
-            Mob mob,
+    private static void drawEntityModel(
+            Entity entity,
             float partialTick,
             Vec3 cameraPos,
             PoseStack matrices,
@@ -308,7 +323,7 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
             int color
     ) {
         EntityRenderDispatcher dispatcher = MC.getEntityRenderDispatcher();
-        EntityRenderState state = dispatcher.extractEntity(mob, partialTick);
+        EntityRenderState state = dispatcher.extractEntity(entity, partialTick);
         state.isInvisible = false;
         dispatcher.submit(
                 state,
@@ -436,23 +451,6 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                 parent.submitModelPart(modelPart, poseStack, renderType, lightCoords, overlayCoords, textureAtlasSprite, tintedColor, crumblingOverlay, ignoredOutlineColor);
             }
         }
-    }
-
-    private static void drawWireBox(
-            PoseStack matrices,
-            SubmitNodeCollector submits,
-            AABB box,
-            Vec3 cameraPos,
-            float r,
-            float g,
-            float b,
-            float a
-    ) {
-        submits.submitCustomGeometry(
-                matrices,
-                THROUGH_WALLS_LINE,
-                (pose, lines) -> EntityDrawUtils.drawWireBoxAtWorld(pose, lines, box, cameraPos, r, g, b, a)
-        );
     }
 
     private static void drawFilledBox(

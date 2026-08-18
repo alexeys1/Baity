@@ -1,29 +1,33 @@
 package com.shyeuar.baity.utils;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
-import java.text.Normalizer;
-import java.util.concurrent.CompletableFuture;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import com.shyeuar.baity.config.ConfigManager;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class VersionCheckUtils {
+    private static final Logger LOGGER = LoggerFactory.getLogger("Baity/VersionCheck");
+
     private static final String GITHUB_API_URL = "https://api.github.com/repos/raueyhs/Baity/releases";
-    private static final String MC_VERSION_PREFIX = "26.1";
+    private static final String MC_VERSION_PREFIX = "26.2";
     private static final Pattern MOD_VERSION_PATTERN = Pattern.compile("(?i)\\bv([0-9]+\\.[0-9]+\\.[0-9]+)\\b");
+    private static final Map<String, String> GITHUB_HEADERS = Map.of(
+            "Accept", "application/vnd.github.v3+json"
+    );
+    private static final int[] PROBE_PORTS = new int[]{7890, 7891, 7892};
 
     public static class VersionCheckResult {
         public final boolean isLatest;
@@ -40,72 +44,43 @@ public class VersionCheckUtils {
     public static CompletableFuture<VersionCheckResult> checkVersionAsync(String currentVersion) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                URL url = URI.create(GITHUB_API_URL).toURL();
-
-                if (url.getProtocol().equals("https")) {
-                    javax.net.ssl.HttpsURLConnection httpsConnection = (javax.net.ssl.HttpsURLConnection) url.openConnection();
-                    httpsConnection.setHostnameVerifier((hostname, session) -> true);
-                    httpsConnection.setSSLSocketFactory(createTrustAllSocketFactory());
-                    httpsConnection.setRequestMethod("GET");
-                    httpsConnection.setRequestProperty("Accept", "application/vnd.github.v3+json");
-                    httpsConnection.setConnectTimeout(5000);
-                    httpsConnection.setReadTimeout(5000);
-
-                    int responseCode = httpsConnection.getResponseCode();
-                    if (responseCode != HttpURLConnection.HTTP_OK) {
-                        return new VersionCheckResult(true, null, true);
-                    }
-
-                    BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(httpsConnection.getInputStream()));
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
-                    }
-                    reader.close();
-
-                    String jsonResponse = response.toString();
-                    String latestVersion = findLatestMatchingReleaseVersion(jsonResponse);
-                    if (latestVersion == null) {
-                        return new VersionCheckResult(true, null, false);
-                    }
-
-                    return compareWithLatest(currentVersion, latestVersion);
-                } else {
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setRequestMethod("GET");
-                    connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
-                    connection.setConnectTimeout(5000);
-                    connection.setReadTimeout(5000);
-
-                    int responseCode = connection.getResponseCode();
-                    if (responseCode != HttpURLConnection.HTTP_OK) {
-                        return new VersionCheckResult(true, null, true);
-                    }
-
-                    BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(connection.getInputStream()));
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
-                    }
-                    reader.close();
-
-                    String jsonResponse = response.toString();
-                    String latestVersion = findLatestMatchingReleaseVersion(jsonResponse);
-                    if (latestVersion == null) {
-                        return new VersionCheckResult(true, null, false);
-                    }
-
-                    return compareWithLatest(currentVersion, latestVersion);
+                String jsonResponse = fetchReleasesJson();
+                if (jsonResponse == null) {
+                    return new VersionCheckResult(true, null, true);
                 }
 
+                String latestVersion = findLatestMatchingReleaseVersion(jsonResponse);
+                if (latestVersion == null) {
+                    return new VersionCheckResult(true, null, false);
+                }
+
+                return compareWithLatest(currentVersion, latestVersion);
             } catch (Exception e) {
+                LOGGER.warn("Version check failed: {}", e.toString());
                 return new VersionCheckResult(true, null, true);
             }
         });
+    }
+
+    private static String fetchReleasesJson() {
+        return RemoteFileFetcher.fetchText(
+                GITHUB_API_URL,
+                "VersionCheck",
+                GITHUB_HEADERS,
+                proxyFallbacks()
+        );
+    }
+
+    private static List<Proxy> proxyFallbacks() {
+        List<Proxy> proxies = new ArrayList<>();
+        String host = ConfigManager.baityPresenceProxyHost == null ? "" : ConfigManager.baityPresenceProxyHost.trim();
+        if (!host.isEmpty() && ConfigManager.baityPresenceProxyPort > 0) {
+            proxies.add(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(host, ConfigManager.baityPresenceProxyPort)));
+        }
+        for (int port : PROBE_PORTS) {
+            proxies.add(new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", port)));
+        }
+        return proxies;
     }
 
     private static String extractVersionFromTag(String tagName) {
@@ -251,25 +226,5 @@ public class VersionCheckUtils {
             version = version.substring(1);
         }
         return version;
-    }
-
-    private static SSLSocketFactory createTrustAllSocketFactory() {
-        try {
-            TrustManager[] trustAllCerts = new TrustManager[] {
-                new X509TrustManager() {
-                    @Override
-                    public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-                    @Override
-                    public void checkClientTrusted(X509Certificate[] certs, String authType) { }
-                    @Override
-                    public void checkServerTrusted(X509Certificate[] certs, String authType) { }
-                }
-            };
-            SSLContext sc = SSLContext.getInstance("TLS");
-            sc.init(null, trustAllCerts, new SecureRandom());
-            return sc.getSocketFactory();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 }

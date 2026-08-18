@@ -9,7 +9,7 @@ public final class TooltipSizeAnimator {
     private static final float SIZE_TRANSITION_SECONDS = 0.09f;
     private static final float SNAP_EPSILON = 0.5f;
     private static final float MAX_DT_SECONDS = 0.05f;
-    private static final long SIZE_MEMORY_MS = 150L;
+    private static final long SIZE_MEMORY_MS = 300L;
     /** Adjacent inventory slots are ~18px; only animate Y when the jump is clearly a reposition, not a slot step. */
     private static final float LARGE_Y_JUMP_THRESHOLD = 48.0f;
 

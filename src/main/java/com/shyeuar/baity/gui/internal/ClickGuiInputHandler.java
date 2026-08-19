@@ -91,7 +91,7 @@ public class ClickGuiInputHandler {
             ClickGuiState.SliderInputInfo editInfo = state.getEditingSlider();
             if (editInfo != null) {
                 boolean clickedOnValueDisplay = false;
-                float modY = 60 - state.getScrollOffset();
+                float modY = 60 - state.getLayoutScrollOffset();
                 List<Module> modules = ModuleManager.getModulesByCategory(state.getSelectedCategory());
                 for (Module module : modules) {
                     if (!module.getName().equals(editInfo.moduleName)) {
@@ -231,7 +231,7 @@ public class ClickGuiInputHandler {
             if (clampedDelta != 0) {
                 state.setTargetScrollOffset(state.getTargetScrollOffset() + clampedDelta);
                 
-                float modY = contentY + 10 - state.getScrollOffset();
+                float modY = contentY + 10 - state.getLayoutScrollOffset();
                 for (Module module : modules) {
                     modY += 30;
                     float subHeight = getSubOptionContainerHeight(module);
@@ -543,8 +543,9 @@ public class ClickGuiInputHandler {
     private void handlePainterDrag(double mouseX, double mouseY) {
         if (painterDragModule == null || painterDragValue == null) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null) return;
-        long win = GLFW.glfwGetCurrentContext();
+        if (mc == null || mc.getWindow() == null) return;
+        long win = mc.getWindow().handle();
+        if (win == 0L) return;
         boolean leftDown = GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
         boolean rightDown = GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
         if ((painterDragButton == 0 && !leftDown) || (painterDragButton == 1 && !rightDown)) {
@@ -561,7 +562,7 @@ public class ClickGuiInputHandler {
         float contentX = ClickGuiState.SIDEBAR_WIDTH;
         float contentY = ClickGuiState.HEADER_HEIGHT;
         float contentWidth = ClickGuiState.CONTENT_WIDTH;
-        float modY = contentY + 10 - state.getScrollOffset();
+        float modY = contentY + 10 - state.getLayoutScrollOffset();
         List<Module> modules = getFilteredModules();
         for (Module m : modules) {
             modY += 30;
@@ -1041,7 +1042,7 @@ public class ClickGuiInputHandler {
         }
         
         List<Module> modules = getFilteredModules();
-        float modY = contentY + 10 - state.getScrollOffset();
+        float modY = contentY + 10 - state.getLayoutScrollOffset();
         
         for (Module module : modules) {
             float moduleX1 = contentX + 10;
@@ -1560,7 +1561,7 @@ public class ClickGuiInputHandler {
         ClickGuiState.GradientInputInfo editInfo = state.getEditingGradient();
         if (editInfo == null) return false;
 
-        float modY = ClickGuiState.HEADER_HEIGHT + 10 - state.getScrollOffset();
+        float modY = ClickGuiState.HEADER_HEIGHT + 10 - state.getLayoutScrollOffset();
         List<Module> modules = getFilteredModules();
         for (Module module : modules) {
             modY += 30;
@@ -1630,7 +1631,7 @@ public class ClickGuiInputHandler {
         ClickGuiState.TextInputInfo editInfo = state.getEditingTextInput();
         if (editInfo == null) return false;
 
-        float modY = ClickGuiState.HEADER_HEIGHT + 10 - state.getScrollOffset();
+        float modY = ClickGuiState.HEADER_HEIGHT + 10 - state.getLayoutScrollOffset();
         List<Module> modules = getFilteredModules();
 
         for (Module module : modules) {

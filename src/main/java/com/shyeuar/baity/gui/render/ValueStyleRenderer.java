@@ -52,17 +52,21 @@ public class ValueStyleRenderer {
 
    public static CrosshairPainterLayout computeCrosshairPainterLayout(Minecraft client, CrosshairPainterValue value,
                                                                       float x1, float y, float x2, float subOptionHeight) {
+       x1 = (float) Math.floor(x1);
+       y = (float) Math.floor(y);
+       x2 = (float) Math.floor(x2);
+
        float blockHeight = getCrosshairPainterHeight(subOptionHeight);
        float pad = 8f;
        float contentY1 = y + 22f;
        float contentY2 = y + blockHeight - 8f;
 
+       float splitX = x1 + (float) Math.floor((x2 - x1) * 0.56f);
        float canvasH = Math.max(60f, contentY2 - contentY1);
-       float canvasW = Math.max(60f, (x2 - x1) * 0.56f - pad * 2f);
-       float canvasSize = Math.min(canvasH, canvasW);
-       canvasSize = (float) Math.floor(canvasSize);
+       float canvasW = Math.max(60f, splitX - x1 - pad * 2f);
+       float canvasSize = (float) Math.floor(Math.min(canvasH, canvasW));
        float canvasX1 = x1 + pad;
-       float canvasY1 = contentY1 + ((contentY2 - contentY1) - canvasSize) * 0.5f;
+       float canvasY1 = (float) Math.floor(contentY1 + ((contentY2 - contentY1) - canvasSize) * 0.5f);
        float canvasX2 = canvasX1 + canvasSize;
        float canvasY2 = canvasY1 + canvasSize;
 
@@ -72,7 +76,7 @@ public class ValueStyleRenderer {
        int gridX1 = (int) Math.floor(canvasX1 + (canvasSize - gridSizePx) * 0.5f);
        int gridY1 = (int) Math.floor(canvasY1 + (canvasSize - gridSizePx) * 0.5f);
 
-       float rightX1 = canvasX2 + 10f;
+       float rightX1 = splitX + 10f;
        float rightX2 = x2 - pad;
 
        String resetText = value.isResetArmed() ? "reclick to confirm" : "Reset";
@@ -87,7 +91,7 @@ public class ValueStyleRenderer {
 
        float pairGap = 6f;
        float pairW = btnW * 2f + pairGap;
-       float pairX1 = rightX1 + Math.max(0f, (rightX2 - rightX1 - pairW) * 0.5f);
+       float pairX1 = (float) Math.floor(rightX1 + Math.max(0f, (rightX2 - rightX1 - pairW) * 0.5f));
 
        float activeBtnX1 = pairX1;
        float activeBtnY1 = stackY;
@@ -99,7 +103,7 @@ public class ValueStyleRenderer {
        float staticBtnX2 = staticBtnX1 + btnW;
        float staticBtnY2 = activeBtnY2;
 
-       float resetX1 = rightX1 + Math.max(0f, (rightX2 - rightX1 - resetW) * 0.5f);
+       float resetX1 = (float) Math.floor(rightX1 + Math.max(0f, (rightX2 - rightX1 - resetW) * 0.5f));
        float resetY1 = staticBtnY2 + gap;
        float resetX2 = Math.min(rightX2, resetX1 + resetW);
        float resetY2 = resetY1 + btnH;
@@ -200,6 +204,9 @@ public class ValueStyleRenderer {
 
    public static FancyDmgEditorBottomRowLayout layoutFancyDmgEditorBottomRow(Minecraft client, float x1, float y,
                                                                              float blockHeight, float symbolInputX1) {
+       x1 = (float) Math.floor(x1);
+       y = (float) Math.floor(y);
+       symbolInputX1 = (float) Math.floor(symbolInputX1);
        float toggleSize = FANCY_DMG_EDITOR_TOGGLE_SIZE;
        float gap = FANCY_DMG_EDITOR_TOGGLE_GAP;
        float previewY1 = y + blockHeight - 22f;
@@ -232,6 +239,9 @@ public class ValueStyleRenderer {
    public static GradientEditorBottomLayout computeGradientEditorBottomLayout(
            Minecraft client, float x1, float y, float x2, float blockHeight,
            String hexDisplay, boolean withReset, String symbolDisplay, boolean editingSymbol) {
+       x1 = (float) Math.floor(x1);
+       y = (float) Math.floor(y);
+       x2 = (float) Math.floor(x2);
        float syncX2 = x2 - 8f;
        float syncY2 = y + blockHeight - 8f;
        float syncX1 = syncX2 - 48f;
@@ -796,6 +806,9 @@ public class ValueStyleRenderer {
 
    public static FancyDmgPresetGridLayout layoutFancyDmgPresetGrid(Minecraft client, float x1, float y, float x2,
                                                                   float subOptionHeight) {
+       x1 = (float) Math.floor(x1);
+       y = (float) Math.floor(y);
+       x2 = (float) Math.floor(x2);
        float totalWidth = x2 - x1 - 16f;
        float boxSize = com.shyeuar.baity.features.fancydmgsplash.FancyDmgSplashPresetStore.presetSwatchSize(client.font);
        float spacing = (totalWidth - 8f * boxSize) / 7f;

@@ -142,7 +142,7 @@ public class ClickGuiRenderer {
         guiGraphics.enableScissor((int)contentX, (int)contentY, 
                                  (int)(contentX + contentWidth), (int)(contentY + visibleHeight));
         
-        float modY = contentY + 10 - state.getScrollOffset();
+        float modY = contentY + 10 - state.getLayoutScrollOffset();
         
         if (modules.isEmpty()) {
             renderPlaceholder(client, modY, contentX, contentWidth);
@@ -593,8 +593,8 @@ public class ClickGuiRenderer {
             ClickGuiLayout.calculateSubOptionContainer(subOptionCount, visibleHeight, extraHeight);
 
         int containerBg = com.shyeuar.baity.gui.theme.LinearTheme.BG_TERTIARY.getRGB();
-        float containerY1 = modY;
-        float containerY2 = modY + containerHeight;
+        float containerY1 = (float) Math.floor(modY);
+        float containerY2 = containerY1 + containerHeight;
         
         com.shyeuar.baity.gui.render.GuiRenderUtil.draw3DRect(guiGraphics, containerX1, containerY1, containerX2, containerY2, containerBg, 0f);
         com.shyeuar.baity.gui.render.GuiRenderUtil.stroke1px(guiGraphics, containerX1, containerY1, containerX2, containerY2,
@@ -608,7 +608,7 @@ public class ClickGuiRenderer {
                     (int) containerX2,
                     (int) containerY2
             );
-            float subModY = modY + dims.padding;
+            float subModY = containerY1 + dims.padding;
             
             Value previousValue = null;
             for (ValueTreeUtils.ValueEntry entry : entries) {
@@ -648,13 +648,15 @@ public class ClickGuiRenderer {
                 }
                 
                 float localAlphaF = Math.min(1f, Math.max(0f, 
-                    (innerVisible - (subModY - modY - dims.padding)) / (float)dims.subOptionHeight));
+                    (innerVisible - (subModY - containerY1 - dims.padding)) / (float)dims.subOptionHeight));
                 int localAlpha = (int)(255 * expandProgress * groupFactor * localAlphaF);
                 
                 int subX1 = (int)(containerX1 + 4 + depth * 12);
                 int subX2 = (int)(containerX2 - 4 - depth * 8);
                 
-                guiGraphics.enableScissor(subX1, (int) subModY, subX2, (int) (subModY + effectiveHeight));
+                float drawY = (float) Math.floor(subModY);
+                float drawH = (float) Math.floor(effectiveHeight);
+                guiGraphics.enableScissor(subX1, (int) drawY, subX2, (int) (drawY + drawH));
                 ValueStyleRenderer.renderValue(
                         guiGraphics,
                         client,
@@ -662,7 +664,7 @@ public class ClickGuiRenderer {
                         value,
                         theme,
                         subX1,
-                        subModY,
+                        drawY,
                         subX2,
                         dims.subOptionHeight,
                         mouseX,
@@ -1078,7 +1080,7 @@ public class ClickGuiRenderer {
             }
         }
         
-        float modY = contentY + 10 - state.getScrollOffset();
+        float modY = contentY + 10 - state.getLayoutScrollOffset();
         long currentTime = System.currentTimeMillis();
         
         for (Module module : modules) {

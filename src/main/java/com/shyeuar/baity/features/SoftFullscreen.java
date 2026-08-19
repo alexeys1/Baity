@@ -2,9 +2,11 @@ package com.shyeuar.baity.features;
 
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
+import com.mojang.blaze3d.platform.Window;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
+import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWNativeWin32;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.Platform;
@@ -46,6 +48,7 @@ public final class SoftFullscreen {
     private static int savedTop;
     private static int savedWidth;
     private static int savedHeight;
+    private static boolean savedMaximized;
 
     private SoftFullscreen() {
     }
@@ -127,7 +130,7 @@ public final class SoftFullscreen {
         if (hwnd == 0L) {
             return false;
         }
-        if (!captureAndBorderless(hwnd)) {
+        if (!captureAndBorderless(client, hwnd)) {
             return false;
         }
         applied = true;
@@ -144,6 +147,9 @@ public final class SoftFullscreen {
 
         long hwnd = hwnd(client.getWindow().handle());
         if (hwnd != 0L && savedStyle != 0L) {
+            if (User32.IsZoomed(hwnd)) {
+                User32.ShowWindow(hwnd, User32.SW_RESTORE);
+            }
             User32.SetWindowLongPtr(null, hwnd, User32.GWL_STYLE, savedStyle);
             User32.SetWindowLongPtr(null, hwnd, User32.GWL_EXSTYLE, savedExStyle);
             User32.SetWindowPos(
@@ -156,6 +162,14 @@ public final class SoftFullscreen {
                     savedHeight,
                     POS_FLAGS | User32.SWP_NOZORDER
             );
+            if (savedMaximized) {
+                User32.ShowWindow(hwnd, User32.SW_MAXIMIZE);
+            } else {
+                Window window = client.getWindow();
+                window.setWindowed(savedWidth, savedHeight);
+                GLFW.glfwSetWindowPos(window.handle(), savedLeft, savedTop);
+            }
+            syncMinecraftWindow(client);
         }
         applied = false;
         clearSaved();
@@ -168,22 +182,37 @@ public final class SoftFullscreen {
         savedTop = 0;
         savedWidth = 0;
         savedHeight = 0;
+        savedMaximized = false;
     }
 
-    private static boolean captureAndBorderless(long hwnd) {
+    private static void syncMinecraftWindow(Minecraft client) {
+        Window window = client.getWindow();
+        int[] width = new int[1];
+        int[] height = new int[1];
+        GLFW.glfwGetFramebufferSize(window.handle(), width, height);
+        if (width[0] > 0 && height[0] > 0) {
+            window.setWidth(width[0]);
+            window.setHeight(height[0]);
+        }
+        client.resizeGui();
+        if (client.levelRenderer != null) {
+            client.levelRenderer.resize(window.getWidth(), window.getHeight());
+        }
+    }
+
+    private static void captureWindowState(Minecraft client, long hwnd) {
+        Window window = client.getWindow();
+        savedMaximized = hwnd != 0L && User32.IsZoomed(hwnd);
+        savedWidth = Math.max(1, window.getWidth());
+        savedHeight = Math.max(1, window.getHeight());
+        savedLeft = window.getX();
+        savedTop = window.getY();
+    }
+
+    private static boolean captureAndBorderless(Minecraft client, long hwnd) {
         long style = User32.GetWindowLongPtr(hwnd, User32.GWL_STYLE);
         long exStyle = User32.GetWindowLongPtr(hwnd, User32.GWL_EXSTYLE);
-
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            RECT rect = RECT.calloc(stack);
-            if (!User32.GetWindowRect(null, hwnd, rect)) {
-                return false;
-            }
-            savedLeft = rect.left();
-            savedTop = rect.top();
-            savedWidth = Math.max(1, rect.right() - rect.left());
-            savedHeight = Math.max(1, rect.bottom() - rect.top());
-        }
+        captureWindowState(client, hwnd);
 
         savedStyle = style;
         savedExStyle = exStyle;
@@ -216,6 +245,7 @@ public final class SoftFullscreen {
 
         User32.SetWindowPos(null, hwnd, User32.HWND_TOP, x, y, w, h, POS_FLAGS);
         User32.ShowWindow(hwnd, User32.SW_MAXIMIZE);
+        syncMinecraftWindow(client);
         return true;
     }
 

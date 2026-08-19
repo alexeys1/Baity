@@ -99,6 +99,9 @@ public class ClickGuiState {
     public void setSelectedCategory(ModuleCategory category) { selectedCategory = category; }
     
     public float getScrollOffset() { return animatedScrollOffset; }
+
+    public float getLayoutScrollOffset() { return Math.round(animatedScrollOffset); }
+
     public float getTargetScrollOffset() { return targetScrollOffset; }
     public void setTargetScrollOffset(float offset) { targetScrollOffset = offset; }
     public void setAnimatedScrollOffset(float offset) { animatedScrollOffset = offset; }

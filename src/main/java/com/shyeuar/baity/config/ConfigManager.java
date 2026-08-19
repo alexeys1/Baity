@@ -71,10 +71,10 @@ public class ConfigManager {
     public static double customHandHoldingScale = 1.0; 
     public static boolean customHandHoldingNoSwing = false;
     
-    public static boolean radialMenuEnabled = true;
+    public static boolean radialMenuEnabled = false;
     public static int radialMenuKeybind = 4;
     public static String radialMenuActivePresetId = "default";
-    public static boolean numInputerEnabled = true;
+    public static boolean numInputerEnabled = false;
     public static boolean chatChannelSwitcherEnabled = false;
     public static String chatChannelSwitcherLastChannel = "";
     public static double chatChannelSwitcherX = Double.NaN;
@@ -134,8 +134,8 @@ public class ConfigManager {
     public static boolean sidePanelPetEnabled = true;
     
     public static boolean heldItemTweaksEnabled = false;
-    public static boolean heldItemTweaksNoItemswapAnimationEnabled = false;
-    public static boolean heldItemTweaksNoArmSwayEnabled = false;
+    public static boolean heldItemTweaksNoItemswapAnimationEnabled = true;
+    public static boolean heldItemTweaksNoArmSwayEnabled = true;
     
     public static boolean noTextShadowEnabled = false;
 
@@ -158,9 +158,9 @@ public class ConfigManager {
     public static boolean nodebuffRemoveBlindness = true;
     public static boolean nodebuffRemoveDarkness = true;
     
-    public static boolean soundsEnabled = true;
+    public static boolean soundsEnabled = false;
     
-    public static boolean mufflerEnabled = false;
+    public static boolean mufflerEnabled = true;
     public static boolean mufflerMuteEndermanScream = true;
     public static boolean mufflerMutePhantom = true;
     public static boolean mufflerMutePortal = true;
@@ -1107,7 +1107,7 @@ public class ConfigManager {
             Path txtPath = baityDir.resolve(LEGACY_CONFIG_TXT_FILE_NAME);
             Set<String> seenKeys = new HashSet<>();
 
-            // TODO(v1.6.4): Transitional config.txt migration — remove after v1.6.4 release.
+            // TODO(future): Transitional config.txt migration — can be removed in a future release when ready.
             if (!Files.exists(jsonPath) && Files.exists(txtPath)) {
                 String content = Files.readString(txtPath, StandardCharsets.UTF_8);
                 seenKeys = applyConfigFromTxt(content);
@@ -1115,7 +1115,7 @@ public class ConfigManager {
                 Files.delete(txtPath);
                 LOGGER.info("Migrated {} to {}", txtPath.getFileName(), jsonPath.getFileName());
             }
-            // END TODO(v1.6.4)
+            // END TODO(future)
 
             if (Files.exists(jsonPath)) {
                 String content = Files.readString(jsonPath, StandardCharsets.UTF_8);

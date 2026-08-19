@@ -89,6 +89,7 @@
     "PaperDollArmorMixin$CustomHeadLayerMixin",
     "KeybindsMixin$ContainerScreenMixin",
     "KeybindsMixin$GameModeMixin",
+    "accessor.WindowInvoker",
     "accessor.AbstractContainerScreenInvoker",
     "accessor.GuiGraphicsExtractorAccessor",
     "accessor.GuiRendererDrawAccessor",

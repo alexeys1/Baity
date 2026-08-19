@@ -240,7 +240,7 @@ public class ClickGuiState {
         public final float mapY1;
         public final float mapX2;
         public final float mapY2;
-        public final boolean dragValue; // true = dragging value slider; false = dragging hue/sat map
+        public final boolean dragValue;
 
         public GradientDragInfo(String moduleName, String valueName, float mapX1, float mapY1, float mapX2, float mapY2) {
             this(moduleName, valueName, mapX1, mapY1, mapX2, mapY2, false);

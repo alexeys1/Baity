@@ -1371,6 +1371,12 @@ public class ModuleManager {
             val -> ConfigManager.oldSneakingEnabled = val
         );
 
+        ModuleRegistry.registerSimpleModule(
+            "RemoveRecipeBook", "RemoveRecipeBook", ModuleCategory.QOL,
+            () -> ConfigManager.removeRecipeBookEnabled,
+            val -> ConfigManager.removeRecipeBookEnabled = val
+        );
+
         ModuleRegistry.registerModuleWithValues(
             "FishHookTimer", "FishHookTimer", ModuleCategory.QOL,
             () -> ConfigManager.fishHookTimerEnabled,
@@ -1476,6 +1482,7 @@ public class ModuleManager {
         TooltipManager.registerTooltip("OldSneaking",
             MessageUtils.createColoredText("Restore the sneaking animation of version 1.7.", 0xFFFFFF)
                 .append(MessageUtils.createColoredText(" Fake sneaking eye height!", 0xFFFF00)));
+        TooltipManager.registerTooltip("RemoveRecipeBook", "Remove the recipe book button and keep the recipe book hidden.", 0xFFFFFF);
         TooltipManager.registerTooltip("arabic numerals", "Replace roman number with arabic number.", 0xFFFFFF);
         TooltipManager.registerTooltip("transparentize other tags", "Remove the black background of tags.", 0xFFFFFF);
         TooltipManager.registerTooltip("NoTextShadow", "Disable all the text shadow in game.", 0xFFFFFF);

@@ -13,6 +13,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
@@ -27,14 +28,14 @@ import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 public class NametagMixin {
 
-    private static final String SUBMIT_NAME_DISPLAY = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V";
+    private static final String SUBMIT_NAME_DISPLAY = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V";
     private static final String ENTITY_SUBMIT_NAME_DISPLAY = "submitNameDisplay(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;I)V";
 
     @Mixin(EntityRenderer.class)
@@ -56,7 +57,7 @@ public class NametagMixin {
         }
     }
 
-    @Mixin(EntityRenderer.class)
+    @Mixin(LivingEntityRenderer.class)
     public static class SubmitMixin {
 
         @Inject(
@@ -64,7 +65,7 @@ public class NametagMixin {
             at = @At("HEAD")
         )
         private void baity$beginNameTagSubmit(
-            EntityRenderState state,
+            LivingEntityRenderState state,
             PoseStack matrices,
             SubmitNodeCollector queue,
             CameraRenderState cameraState,
@@ -86,7 +87,7 @@ public class NametagMixin {
             cancellable = true
         )
         private void baity$hideOriginalNameTag(
-            EntityRenderState state,
+            LivingEntityRenderState state,
             PoseStack matrices,
             SubmitNodeCollector queue,
             CameraRenderState cameraState,
@@ -125,15 +126,12 @@ public class NametagMixin {
             }
         }
 
-        @ModifyArg(
+        @ModifyVariable(
             method = SUBMIT_NAME_DISPLAY,
-            at = @At(
-                value = "INVOKE",
-                target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitNameTag(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZILnet/minecraft/client/renderer/state/level/CameraRenderState;)V"
-            ),
-            index = 3
+            at = @At("STORE"),
+            ordinal = 0
         )
-        private Component baity$applyNickTweaksBeforeLayout(Component originalComponent) {
+        private Component baity$applyNickTweaksBeforeLayout(Component originalComponent, LivingEntityRenderState state) {
             if (!NametagUtils.shouldProcessNametagText()) {
                 return originalComponent;
             }
@@ -148,17 +146,8 @@ public class NametagMixin {
             RenderScope.exitNameTagSubmit();
         }
 
-        private static int baity$resolveEntityId(EntityRenderState state) {
-            if (state instanceof LivingEntityRenderState livingState) {
-                return RenderScope.resolveLivingEntityRenderStateId(livingState);
-            }
-            if (state instanceof EntityRenderStateInterface context) {
-                int entityId = context.baity$getEntityId();
-                if (entityId >= 0) {
-                    return entityId;
-                }
-            }
-            return RenderScope.getNameTagSubmitEntityId();
+        private static int baity$resolveEntityId(LivingEntityRenderState state) {
+            return RenderScope.resolveLivingEntityRenderStateId(state);
         }
     }
 

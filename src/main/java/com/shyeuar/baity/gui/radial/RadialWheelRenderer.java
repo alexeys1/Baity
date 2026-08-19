@@ -23,7 +23,6 @@ public final class RadialWheelRenderer {
     public static final int INNER_RADIUS = 30;
     public static final int CENTER_RADIUS = 30;
 
-    /** Target arc length per segment (~1 GUI px); capped to keep wheel cost bounded. */
     private static final double ARC_STEP_PX = 1.0;
     private static final int MIN_ARC_SEGMENTS = 6;
     private static final int MAX_ARC_SEGMENTS = 512;

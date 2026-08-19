@@ -27,6 +27,7 @@
     "CustomHandHoldingMixin$SwingDurationMixin",
     "CustomHandHoldingMixin$AttackCooldownMixin",
     "CustomHandHoldingMixin$HeldItemTransformMixin",
+    "CustomHandHoldingMixin$LevelRendererTickMixin",
     "RadialMenuMouseMixin",
     "ChatChannelSwitcherMixin",
     "NumInputerMixin",
@@ -67,6 +68,7 @@
     "ImmuneReactionMixin$ChatDetectorMixin",
     "NickTweaksMixin$FontMixin",
     "NickTweaksMixin$ScreenGuiTextScopeMixin",
+    "ModMenuNickTweaksMixin$ModMenuScreenMixin",
     "ImmuneReactionMixin$PlayerTickMixin",
     "InvisibugHighlightsMixin$ParticlePacketMixin",
     "InvisibugHighlightsMixin$EntityRemovalMixin",
@@ -89,6 +91,7 @@
     "KeybindsMixin$GameModeMixin",
     "accessor.AbstractContainerScreenInvoker",
     "accessor.GuiGraphicsExtractorAccessor",
+    "accessor.GuiRendererDrawAccessor",
     "SidePanelMixin$ContainerScreenMixin",
     "SidePanelMixin$InventoryScreenMixin",
     "SidePanelMixin$PacketMixin",
@@ -105,10 +108,11 @@
     "accessor.PostRenderAccessors$PostPassAccessor"
   ],
   "client": [
+    "GuiRendererMixin",
     "ModernTooltipMixin",
     "ModernTooltipScreenMixin"
   ],
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   }
 }

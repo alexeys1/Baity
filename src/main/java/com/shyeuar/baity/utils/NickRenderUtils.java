@@ -111,7 +111,7 @@ public final class NickRenderUtils {
             return false;
         }
         if (isModMenuScreen(screen)) {
-            return true;
+            return false;
         }
         if (screen.isPauseScreen()) {
             return true;

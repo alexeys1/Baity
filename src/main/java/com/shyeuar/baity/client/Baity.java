@@ -125,7 +125,12 @@ public class Baity implements ClientModInitializer {
             com.shyeuar.baity.sync.SyncCommands.register(dispatcher)
         );
 
-        LevelRenderEvents.END_MAIN.register(new com.shyeuar.baity.features.NametagRenderer());
+        LevelRenderEvents.AFTER_OPAQUE_TERRAIN.register(ctx -> {
+            if (com.shyeuar.baity.features.MotionBlur.isActive()) {
+                com.shyeuar.baity.features.MotionBlur.onAfterOpaqueTerrain();
+            }
+        });
+        LevelRenderEvents.COLLECT_SUBMITS.register(new com.shyeuar.baity.features.NametagRenderer());
         LevelRenderEvents.END_MAIN.register(new FancyDmgSplash());
         LevelRenderEvents.AFTER_SOLID_FEATURES.register(new com.shyeuar.baity.features.highlights.ShulkerHighlights());
         LevelRenderEvents.AFTER_SOLID_FEATURES.register(new SafariHighlights());

@@ -18,6 +18,8 @@ import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.feature.NameTagFeatureRenderer;
+import net.minecraft.client.renderer.feature.phase.SimpleFeatureRenderPhase;
+import net.minecraft.client.renderer.feature.submit.SubmitNode;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Avatar;
@@ -25,7 +27,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import org.joml.Matrix4fc;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -247,6 +251,28 @@ public class NametagMixin {
     @Mixin(SubmitNodeCollection.class)
     public static class SubmitNodeCollectionMixin {
 
+        @Shadow
+        @Final
+        public SimpleFeatureRenderPhase afterTerrain;
+
+        @Redirect(
+            method = "submitText(Lcom/mojang/blaze3d/vertex/PoseStack;FFLnet/minecraft/util/FormattedCharSequence;ZLnet/minecraft/client/gui/Font$DisplayMode;IIII)V",
+            at = @At(
+                value = "INVOKE",
+                target = "Lnet/minecraft/client/renderer/feature/phase/SimpleFeatureRenderPhase;submit(Lnet/minecraft/client/renderer/feature/submit/SubmitNode;)V"
+            )
+        )
+        private void baity$routeCustomNametagText(
+                SimpleFeatureRenderPhase textsPhase,
+                SubmitNode submit
+        ) {
+            if (RenderScope.isCustomNametagText()) {
+                this.afterTerrain.submit(submit);
+            } else {
+                textsPhase.submit(submit);
+            }
+        }
+
         @Inject(
             method = "submitNameTag(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZILnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At("HEAD")
@@ -281,6 +307,44 @@ public class NametagMixin {
             RenderScope.exitNameTagAdd();
         }
 
+        @ModifyVariable(
+            method = "submitNameTag(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZILnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
+            at = @At("HEAD"),
+            argsOnly = true
+        )
+        private Component baity$useProcessedTextForLayout(Component originalComponent) {
+            if (!NametagUtils.shouldApplyNametagLayoutCompat()) {
+                return originalComponent;
+            }
+            return NametagUtils.applyNickProcessedText(originalComponent);
+        }
+
+        @ModifyVariable(
+            method = "submitNameTag(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZILnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
+            at = @At("STORE"),
+            ordinal = 0
+        )
+        private float baity$recalculateCenteredOffset(
+            float originalOffset,
+            PoseStack poseStack,
+            net.minecraft.world.phys.Vec3 vec3,
+            int lineOffset,
+            Component component,
+            boolean seeThrough,
+            int light,
+            CameraRenderState cameraState
+        ) {
+            if (!NametagUtils.shouldApplyNametagLayoutCompat() || component == null) {
+                return originalOffset;
+            }
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null || mc.font == null) {
+                return originalOffset;
+            }
+            Component target = NametagUtils.applyNickProcessedText(component);
+            return -mc.font.width(target.getVisualOrderText()) / 2.0F;
+        }
+
         @Redirect(
             method = "submitNameTag(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/phys/Vec3;ILnet/minecraft/network/chat/Component;ZILnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
             at = @At(
@@ -298,12 +362,6 @@ public class NametagMixin {
             int backgroundColor,
             Font.DisplayMode displayMode
         ) {
-            if (NametagUtils.shouldApplyNametagLayoutCompat() && text != null) {
-                Minecraft mc = Minecraft.getInstance();
-                if (mc != null && mc.font != null) {
-                    x = -mc.font.width(text.getVisualOrderText()) / 2.0F;
-                }
-            }
             int finalBackgroundColor = backgroundColor;
             if (NametagUtils.isNametagModuleActive() && ConfigManager.nametagTransparentizeOtherTags) {
                 finalBackgroundColor = 0;

@@ -11,6 +11,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+// TODO(ModernUI-26.2): Revisit when ModernUI ships for 26.2. MC 26.2 defers text via submitText(),
+// so beginFrame/endFrame no longer cover the actual render pass; deferred-submit tracking will be needed.
 public class ModernUiFloatingTextMixin {
 
     private static final int MODE_SDF_FILL = 1;

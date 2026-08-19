@@ -7,7 +7,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.references.BlockItemIds;
 import net.minecraft.references.ItemIds;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemLore;
 
 import java.util.regex.Matcher;

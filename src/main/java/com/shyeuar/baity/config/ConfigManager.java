@@ -71,10 +71,10 @@ public class ConfigManager {
     public static double customHandHoldingScale = 1.0; 
     public static boolean customHandHoldingNoSwing = false;
     
-    public static boolean radialMenuEnabled = true;
+    public static boolean radialMenuEnabled = false;
     public static int radialMenuKeybind = 4;
     public static String radialMenuActivePresetId = "default";
-    public static boolean numInputerEnabled = true;
+    public static boolean numInputerEnabled = false;
     public static boolean chatChannelSwitcherEnabled = false;
     public static String chatChannelSwitcherLastChannel = "";
     public static double chatChannelSwitcherX = Double.NaN;
@@ -134,8 +134,8 @@ public class ConfigManager {
     public static boolean sidePanelPetEnabled = true;
     
     public static boolean heldItemTweaksEnabled = false;
-    public static boolean heldItemTweaksNoItemswapAnimationEnabled = false;
-    public static boolean heldItemTweaksNoArmSwayEnabled = false;
+    public static boolean heldItemTweaksNoItemswapAnimationEnabled = true;
+    public static boolean heldItemTweaksNoArmSwayEnabled = true;
     
     public static boolean noTextShadowEnabled = false;
 
@@ -158,9 +158,9 @@ public class ConfigManager {
     public static boolean nodebuffRemoveBlindness = true;
     public static boolean nodebuffRemoveDarkness = true;
     
-    public static boolean soundsEnabled = true;
+    public static boolean soundsEnabled = false;
     
-    public static boolean mufflerEnabled = false;
+    public static boolean mufflerEnabled = true;
     public static boolean mufflerMuteEndermanScream = true;
     public static boolean mufflerMutePhantom = true;
     public static boolean mufflerMutePortal = true;

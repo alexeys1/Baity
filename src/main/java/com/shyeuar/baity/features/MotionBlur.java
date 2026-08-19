@@ -109,7 +109,7 @@ public final class MotionBlur {
         rememberFrame(scratchModelView, scratchProjection, camX, camY, camZ);
     }
 
-    public static void onBeforeEntities() {
+    public static void onAfterOpaqueTerrain() {
         applyBlur(useSinglePassBlur() ? VELOCITY_F5 : VELOCITY_PRE, preEntityUbo);
     }
 
@@ -141,8 +141,9 @@ public final class MotionBlur {
         }
         float blendFactor = strength * fpsOverRefresh;
         int sampleAmount = fpsOverRefresh > 1.0f ? (int) (100 * fpsOverRefresh) : 100;
-        float viewW = client.gameRenderer.mainRenderTarget().width;
-        float viewH = client.gameRenderer.mainRenderTarget().height;
+        RenderTarget mainTarget = client.gameRenderer.mainRenderTarget();
+        float viewW = mainTarget.width;
+        float viewH = mainTarget.height;
 
         List<PostPass> passes = ((PostChainAccessor) chain).baity$getPasses();
         if (passes.isEmpty()) {
@@ -169,7 +170,6 @@ public final class MotionBlur {
                 builder.putInt(0);
                 builder.putInt(1);
             }
-            RenderTarget mainTarget = client.gameRenderer.mainRenderTarget();
             FrameGraphBuilder frame = new FrameGraphBuilder();
             PostChain.TargetBundle targets = PostChain.TargetBundle.of(
                     PostChain.MAIN_TARGET_ID, frame.importExternal("main", mainTarget));
@@ -186,6 +186,9 @@ public final class MotionBlur {
     private static PostChain loadChain(Minecraft client, Identifier id) {
         try {
             PostChain chain = client.getShaderManager().getPostChain(id, LevelTargetBundle.MAIN_TARGETS);
+            if (chain == null) {
+                return null;
+            }
             loadErrorLogged.remove(id.getPath());
             return chain;
         } catch (Exception e) {

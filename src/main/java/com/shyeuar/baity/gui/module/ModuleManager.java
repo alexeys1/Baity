@@ -288,7 +288,7 @@ public class ModuleManager {
             new com.shyeuar.baity.gui.value.Value[]{
                 new GroupValue("muffler", "muffler", ModuleCategory.QOL)
                     .setSubModuleSwitchChildName("muffler enabled")
-                    .addChild(new Option("muffler enabled", "enabled", false, ModuleCategory.QOL))
+                    .addChild(new Option("muffler enabled", "enabled", true, ModuleCategory.QOL))
                     .addChild(new Option("mute enderman scream", "mute enderman scream", true, ModuleCategory.QOL))
                     .addChild(new Option("mute phantom", "mute phantom", true, ModuleCategory.QOL))
                     .addChild(new Option("mute portal", "mute portal", true, ModuleCategory.QOL))
@@ -907,8 +907,8 @@ public class ModuleManager {
             () -> ConfigManager.heldItemTweaksEnabled,
             val -> ConfigManager.heldItemTweaksEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
-                new Option("no itemswap animation", "no itemswap animation", false, ModuleCategory.RENDER),
-                new Option("no arm sway", "no arm sway", false, ModuleCategory.RENDER)
+                new Option("no itemswap animation", "no itemswap animation", true, ModuleCategory.RENDER),
+                new Option("no arm sway", "no arm sway", true, ModuleCategory.RENDER)
             },
             new ModuleRegistry.ValueConfigInfo[]{
                 new ModuleRegistry.ValueConfigInfo(

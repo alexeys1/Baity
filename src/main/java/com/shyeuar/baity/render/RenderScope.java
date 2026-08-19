@@ -26,6 +26,7 @@ public final class RenderScope {
     private static final ThreadLocal<Integer> HUD_RENDER_PHASE_DEPTH = ThreadLocal.withInitial(() -> 0);
     private static final ThreadLocal<Integer> PAPER_DOLL_RENDER_DEPTH = ThreadLocal.withInitial(() -> 0);
     private static final ThreadLocal<Integer> FLOATING_WORLD_TEXT_DEPTH = ThreadLocal.withInitial(() -> 0);
+    private static final ThreadLocal<Integer> CUSTOM_NAMETAG_TEXT_DEPTH = ThreadLocal.withInitial(() -> 0);
 
     private RenderScope() {
     }
@@ -90,8 +91,26 @@ public final class RenderScope {
         }
     }
 
+    // TODO(ModernUI-26.2): Add deferred submit tracking when ModernUI 26.2 is available.
     public static boolean isFloatingWorldText() {
         return FLOATING_WORLD_TEXT_DEPTH.get() > 0;
+    }
+
+    public static void enterCustomNametagText() {
+        CUSTOM_NAMETAG_TEXT_DEPTH.set(CUSTOM_NAMETAG_TEXT_DEPTH.get() + 1);
+    }
+
+    public static void exitCustomNametagText() {
+        int depth = CUSTOM_NAMETAG_TEXT_DEPTH.get() - 1;
+        if (depth <= 0) {
+            CUSTOM_NAMETAG_TEXT_DEPTH.remove();
+        } else {
+            CUSTOM_NAMETAG_TEXT_DEPTH.set(depth);
+        }
+    }
+
+    public static boolean isCustomNametagText() {
+        return CUSTOM_NAMETAG_TEXT_DEPTH.get() > 0;
     }
 
     public static boolean isEntityRenderScope() {

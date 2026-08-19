@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+// TODO(ModernUI-26.2): Verify pipeline/shader compatibility when ModernUI ships for 26.2.
 public final class BaityModernUiFloatingTextTypes {
 
     private static final RenderPipeline.Snippet SDF_SNIPPET = RenderPipelines.WORLD_TEXT_SNIPPET;

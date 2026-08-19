@@ -27,7 +27,7 @@
     "CustomHandHoldingMixin$SwingDurationMixin",
     "CustomHandHoldingMixin$AttackCooldownMixin",
     "CustomHandHoldingMixin$HeldItemTransformMixin",
-    "CustomHandHoldingMixin$LevelRendererTickMixin",
+    "CustomHandHoldingMixin$ItemInHandRendererTickMixin",
     "RadialMenuMouseMixin",
     "ChatChannelSwitcherMixin",
     "NumInputerMixin",

@@ -51,3 +51,5 @@ replay_*.log
 .tmp/
 _tmp_*/
 _extract_*/
+tmp-mc-src/
+/net/

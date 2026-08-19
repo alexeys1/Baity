@@ -11,7 +11,8 @@
     "**/build/**",
     "**/.gradle/**",
     "**/run/**",
-    "**/bin/**"
+    "**/bin/**",
+    "**/tmp-mc-src/**"
   ],
   "files.watcherExclude": {
     "**/.gradle/**": true,

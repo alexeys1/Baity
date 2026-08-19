@@ -6,11 +6,9 @@ import com.shyeuar.baity.gui.module.ModuleManager;
 import com.shyeuar.baity.utils.BlockAnimationUtils;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.api.EnvType;
-import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
@@ -121,8 +119,7 @@ public class CustomHandHoldingMixin {
                 target = "Lcom/mojang/blaze3d/vertex/PoseStack;pushPose()V",
                 shift = At.Shift.AFTER,
                 ordinal = 0
-            ),
-            require = 1
+            )
         )
         private void baity$applyPositionOnly(AbstractClientPlayer player, float tickDelta, float pitch,
                 InteractionHand hand, float swingProgress, ItemStack item, float equipProgress,
@@ -145,8 +142,7 @@ public class CustomHandHoldingMixin {
             at = @At(
                 value = "INVOKE",
                 target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V"
-            ),
-            require = 1
+            )
         )
         private void baity$applyTransform(AbstractClientPlayer player, float tickDelta, float pitch,
                 InteractionHand hand, float swingProgress, ItemStack item, float equipProgress,
@@ -197,10 +193,10 @@ public class CustomHandHoldingMixin {
         }
     }
 
-    @Mixin(LevelRenderer.class)
-    public static abstract class LevelRendererTickMixin {
+    @Mixin(ItemInHandRenderer.class)
+    public static abstract class ItemInHandRendererTickMixin {
         @Inject(method = "tick", at = @At("TAIL"))
-        private void baity$updateCustomHandHoldingAnimations(Camera camera, CallbackInfo ci) {
+        private void baity$updateCustomHandHoldingAnimations(CallbackInfo ci) {
             Module customHandHoldingModule = ModuleManager.getModuleByName("CustomHandHolding");
             if (customHandHoldingModule != null && customHandHoldingModule.isEnabled()) {
                 CustomHandHoldingManager.getInstance().update();

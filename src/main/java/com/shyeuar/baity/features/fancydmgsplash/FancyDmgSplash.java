@@ -189,6 +189,7 @@ public class FancyDmgSplash implements LevelRenderEvents.EndMain {
         float cameraYaw = camera.yRot();
         float cameraPitch = camera.xRot();
 
+        // TODO(ModernUI-26.2): ModernUI font compat may need deferred submit tracking once ModernUI 26.2 is out.
         FloatingWorldTextCompat.beginFrame();
         try {
             if (currentTime - lastWetHealCheckTime >= WET_HEAL_CHECK_INTERVAL_MS) {

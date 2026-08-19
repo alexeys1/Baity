@@ -2,6 +2,7 @@ package com.shyeuar.baity.features;
 
 import com.shyeuar.baity.gui.module.Module;
 import com.shyeuar.baity.gui.module.ModuleManager;
+import com.shyeuar.baity.mixin.accessor.WindowInvoker;
 import com.mojang.blaze3d.platform.Window;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -37,6 +38,7 @@ public final class SoftFullscreen {
 
     private static final int POS_FLAGS = User32.SWP_SHOWWINDOW | User32.SWP_NOOWNERZORDER | User32.SWP_NOSENDCHANGING;
     private static final int SETTLE_TICKS_AFTER_EXCLUSIVE = 3;
+    private static final int SYNC_TICKS_AFTER_WIN32_RESIZE = 2;
 
     private static boolean applied;
     private static boolean wasExclusive;
@@ -49,6 +51,7 @@ public final class SoftFullscreen {
     private static int savedWidth;
     private static int savedHeight;
     private static boolean savedMaximized;
+    private static int pendingWindowSync;
 
     private SoftFullscreen() {
     }
@@ -71,6 +74,7 @@ public final class SoftFullscreen {
                 restoreWindow();
             }
             pendingReapply = false;
+            pendingWindowSync = 0;
             settleTicks = 0;
             wasExclusive = exclusive;
             return;
@@ -100,6 +104,13 @@ public final class SoftFullscreen {
         if (pendingReapply || !applied) {
             if (tryApply(client)) {
                 pendingReapply = false;
+            }
+        }
+
+        if (pendingWindowSync > 0) {
+            pendingWindowSync--;
+            if (pendingWindowSync == 0) {
+                syncMinecraftWindow(client);
             }
         }
     }
@@ -169,7 +180,7 @@ public final class SoftFullscreen {
                 window.setWindowed(savedWidth, savedHeight);
                 GLFW.glfwSetWindowPos(window.handle(), savedLeft, savedTop);
             }
-            syncMinecraftWindow(client);
+            scheduleWindowSync();
         }
         applied = false;
         clearSaved();
@@ -185,19 +196,32 @@ public final class SoftFullscreen {
         savedMaximized = false;
     }
 
+    private static void scheduleWindowSync() {
+        pendingWindowSync = SYNC_TICKS_AFTER_WIN32_RESIZE;
+    }
+
     private static void syncMinecraftWindow(Minecraft client) {
         Window window = client.getWindow();
-        int[] width = new int[1];
-        int[] height = new int[1];
-        GLFW.glfwGetFramebufferSize(window.handle(), width, height);
-        if (width[0] > 0 && height[0] > 0) {
-            window.setWidth(width[0]);
-            window.setHeight(height[0]);
+        long handle = window.handle();
+        if (handle == 0L) {
+            return;
         }
-        client.resizeGui();
-        if (client.levelRenderer != null) {
-            client.levelRenderer.resize(window.getWidth(), window.getHeight());
+
+        GLFW.glfwPollEvents();
+
+        int[] framebufferWidth = new int[1];
+        int[] framebufferHeight = new int[1];
+        int[] windowWidth = new int[1];
+        int[] windowHeight = new int[1];
+        GLFW.glfwGetFramebufferSize(handle, framebufferWidth, framebufferHeight);
+        GLFW.glfwGetWindowSize(handle, windowWidth, windowHeight);
+        if (framebufferWidth[0] <= 0 || framebufferHeight[0] <= 0) {
+            return;
         }
+
+        WindowInvoker invoker = (WindowInvoker) (Object) window;
+        invoker.baity$onResize(handle, windowWidth[0], windowHeight[0]);
+        invoker.baity$onFramebufferResize(handle, framebufferWidth[0], framebufferHeight[0]);
     }
 
     private static void captureWindowState(Minecraft client, long hwnd) {
@@ -245,7 +269,7 @@ public final class SoftFullscreen {
 
         User32.SetWindowPos(null, hwnd, User32.HWND_TOP, x, y, w, h, POS_FLAGS);
         User32.ShowWindow(hwnd, User32.SW_MAXIMIZE);
-        syncMinecraftWindow(client);
+        scheduleWindowSync();
         return true;
     }
 

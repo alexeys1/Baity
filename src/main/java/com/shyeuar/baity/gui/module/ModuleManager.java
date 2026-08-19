@@ -1550,6 +1550,8 @@ public class ModuleManager {
             "Remember each item's tooltip scroll position separately until the screen closes.",
             0xFFFFFF
         );
+        TooltipManager.registerTooltip("PrismBreak", "Prismatic breaking glow around the block collision shape while mining.", 0xFFFFFF);
+        TooltipManager.registerTooltip("replace vanilla", "Draw the custom prism outline instead of the vanilla breaking cracks.", 0xFFFFFF);
     }
     
     public static List<Module> getModules() {

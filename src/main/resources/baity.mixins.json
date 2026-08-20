@@ -94,6 +94,7 @@
     "KeybindsMixin$ContainerScreenMixin",
     "KeybindsMixin$GameModeMixin",
     "accessor.WindowInvoker",
+    "accessor.MultiPlayerGameModeAccessor",
     "accessor.AbstractContainerScreenInvoker",
     "accessor.GuiGraphicsExtractorAccessor",
     "SidePanelMixin$ContainerScreenMixin",

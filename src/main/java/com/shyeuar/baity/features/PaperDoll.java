@@ -224,8 +224,10 @@ public final class PaperDoll implements HudElement {
             EntityRenderState entityState = extractRenderState(entity, partialTicks);
             if (entityState instanceof EntityRenderStateInterface context) {
                 context.baity$setHidePaperDollArmor(ConfigManager.paperDollHideArmor);
+                context.baity$setPaperDollRenderState(true);
             }
-            if (entityState instanceof AvatarRenderState avatar && NoSwimPoseUtils.isFeatureActive()) {
+            if (entityState instanceof AvatarRenderState avatar
+                    && NoSwimPoseUtils.shouldForceStandingModelAppearance()) {
                 NoSwimPoseUtils.clearSwimRenderState(avatar);
             }
             entityState.nameTag = null;
@@ -311,7 +313,7 @@ public final class PaperDoll implements HudElement {
     }
 
     private void transformEntity(LivingEntity entity, float partialTicks) {
-        if (NoSwimPoseUtils.isFeatureActive()) {
+        if (NoSwimPoseUtils.shouldForceStandingModelAppearance()) {
             entity.setPose(entity.isCrouching() ? Pose.CROUCHING : Pose.STANDING);
         } else if (!entity.isSwimming() && !entity.isFallFlying() && !entity.isVisuallyCrawling()) {
             entity.setPose(entity.isCrouching() ? Pose.CROUCHING : Pose.STANDING);

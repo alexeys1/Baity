@@ -119,6 +119,10 @@ public class ConfigManager {
     
     public static boolean noSwimPoseEnabled = false;
     
+    public static boolean autoSprintEnabled = false;
+    public static int autoSprintKeybind = 0;
+    public static boolean autoSprintUnderWater = false;
+    
     public static boolean cullingEnabled = false;
     public static boolean cullingHideDyingMob = true;
     public static boolean cullingHideNonStarredNametag = true;
@@ -138,6 +142,7 @@ public class ConfigManager {
     public static boolean heldItemTweaksNoArmSwayEnabled = true;
     
     public static boolean noTextShadowEnabled = false;
+    public static boolean removeRecipeBookEnabled = false;
 
     public static boolean vanillaHudHiderEnabled = false;
     public static boolean vanillaHudHiderArmorBar = false;
@@ -185,6 +190,14 @@ public class ConfigManager {
 
     public static boolean motionBlurEnabled = false;
     public static float motionBlurStrength = 0.6f;
+
+    public static boolean prismBreakEnabled = false;
+    public static double prismBreakSpeed = 1.0;
+    public static double prismBreakEdgeWidth = 5.0;
+    public static double prismBreakChromaLightness = 0.8;
+    public static double prismBreakChromaChroma = 0.2;
+    public static double prismBreakChromaSize = 2.5;
+    public static boolean prismBreakReplaceVanilla = true;
 
     public static boolean paperDollEnabled = false;
     public static double paperDollX = 0.10;
@@ -570,6 +583,15 @@ public class ConfigManager {
         registerField("NoSwimPose", Boolean.class,
             c -> ConfigManager.noSwimPoseEnabled,
             (c, v) -> ConfigManager.noSwimPoseEnabled = (Boolean) v);
+        registerField("AutoSprint", Boolean.class,
+            c -> ConfigManager.autoSprintEnabled,
+            (c, v) -> ConfigManager.autoSprintEnabled = (Boolean) v);
+        registerField("AutoSprintKeybind", Integer.class,
+            c -> ConfigManager.autoSprintKeybind,
+            (c, v) -> ConfigManager.autoSprintKeybind = (Integer) v);
+        registerField("AutoSprintUnderWater", Boolean.class,
+            c -> ConfigManager.autoSprintUnderWater,
+            (c, v) -> ConfigManager.autoSprintUnderWater = (Boolean) v);
         registerField("Culling", Boolean.class,
             c -> ConfigManager.cullingEnabled,
             (c, v) -> ConfigManager.cullingEnabled = (Boolean) v);
@@ -615,6 +637,9 @@ public class ConfigManager {
         registerField("NoTextShadow", Boolean.class,
             c -> ConfigManager.noTextShadowEnabled,
             (c, v) -> ConfigManager.noTextShadowEnabled = (Boolean) v);
+        registerField("RemoveRecipeBook", Boolean.class,
+            c -> ConfigManager.removeRecipeBookEnabled,
+            (c, v) -> ConfigManager.removeRecipeBookEnabled = (Boolean) v);
         registerField("VanillaHudHider", Boolean.class,
             c -> ConfigManager.vanillaHudHiderEnabled,
             (c, v) -> ConfigManager.vanillaHudHiderEnabled = (Boolean) v);
@@ -735,6 +760,27 @@ public class ConfigManager {
         registerField("MotionBlurStrength", Float.class,
             c -> ConfigManager.motionBlurStrength,
             (c, v) -> ConfigManager.motionBlurStrength = (Float) v);
+        registerField("PrismBreak", Boolean.class,
+            c -> ConfigManager.prismBreakEnabled,
+            (c, v) -> ConfigManager.prismBreakEnabled = (Boolean) v);
+        registerField("PrismBreakSpeed", Double.class,
+            c -> ConfigManager.prismBreakSpeed,
+            (c, v) -> ConfigManager.prismBreakSpeed = (Double) v);
+        registerField("PrismBreakEdgeWidth", Double.class,
+            c -> ConfigManager.prismBreakEdgeWidth,
+            (c, v) -> ConfigManager.prismBreakEdgeWidth = (Double) v);
+        registerField("PrismBreakChromaLightness", Double.class,
+            c -> ConfigManager.prismBreakChromaLightness,
+            (c, v) -> ConfigManager.prismBreakChromaLightness = (Double) v);
+        registerField("PrismBreakChromaChroma", Double.class,
+            c -> ConfigManager.prismBreakChromaChroma,
+            (c, v) -> ConfigManager.prismBreakChromaChroma = (Double) v);
+        registerField("PrismBreakChromaSize", Double.class,
+            c -> ConfigManager.prismBreakChromaSize,
+            (c, v) -> ConfigManager.prismBreakChromaSize = (Double) v);
+        registerField("PrismBreakReplaceVanilla", Boolean.class,
+            c -> ConfigManager.prismBreakReplaceVanilla,
+            (c, v) -> ConfigManager.prismBreakReplaceVanilla = (Boolean) v);
         registerField("PaperDoll", Boolean.class,
             c -> ConfigManager.paperDollEnabled,
             (c, v) -> ConfigManager.paperDollEnabled = (Boolean) v);

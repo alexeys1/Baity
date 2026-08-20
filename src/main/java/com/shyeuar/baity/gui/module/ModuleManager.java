@@ -887,6 +887,35 @@ public class ModuleManager {
         );
 
         ModuleRegistry.registerModuleWithValues(
+            "AutoSprint", "AutoSprint", ModuleCategory.QOL,
+            () -> ConfigManager.autoSprintEnabled,
+            val -> ConfigManager.autoSprintEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new ButtonValue(
+                    "keybind",
+                    "keybind",
+                    ConfigManager.autoSprintKeybind,
+                    ModuleCategory.QOL,
+                    ButtonValue.ButtonValueType.KEYBIND,
+                    true
+                ),
+                new Option("sprint underwater", "sprint underwater", ConfigManager.autoSprintUnderWater, ModuleCategory.QOL)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "keybind",
+                    () -> ConfigManager.autoSprintKeybind,
+                    val -> ConfigManager.autoSprintKeybind = ((Number) val).intValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "sprint underwater",
+                    () -> ConfigManager.autoSprintUnderWater,
+                    val -> ConfigManager.autoSprintUnderWater = (Boolean) val
+                )
+            }
+        );
+
+        ModuleRegistry.registerModuleWithValues(
             "SidePanel", "SidePanel", ModuleCategory.QOL,
             () -> ConfigManager.sidePanelEnabled,
             val -> ConfigManager.sidePanelEnabled = val,
@@ -944,6 +973,59 @@ public class ModuleManager {
                     "blur strength",
                     () -> (double) ConfigManager.motionBlurStrength,
                     val -> ConfigManager.motionBlurStrength = ((Number) val).floatValue()
+                )
+            }
+        );
+
+        GroupValue prismBreakChromaGroup = new GroupValue("chroma settings", "chroma settings", ModuleCategory.RENDER)
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("chroma lightness", "chroma lightness", 0.8, 0.2, 1.0, 0.05, ModuleCategory.RENDER))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("chroma chroma", "chroma chroma", 0.2, 0.0, 0.4, 0.01, ModuleCategory.RENDER))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("chroma size", "chroma size", 2.5, 0.5, 10.0, 0.1, ModuleCategory.RENDER));
+
+        ModuleRegistry.registerModuleWithValues(
+            "PrismBreak", "prismatic breaking glow", ModuleCategory.RENDER,
+            () -> ConfigManager.prismBreakEnabled,
+            val -> ConfigManager.prismBreakEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new com.shyeuar.baity.gui.value.SliderValue(
+                    "flow speed", "flow speed", 1.0, 0.1, 5.0, 0.1, ModuleCategory.RENDER
+                ),
+                new com.shyeuar.baity.gui.value.SliderValue(
+                    "edge width", "edge width", 5.0, 1.0, 20.0, 0.5, ModuleCategory.RENDER
+                ),
+                prismBreakChromaGroup,
+                new Option("replace vanilla", "replace vanilla", ConfigManager.prismBreakReplaceVanilla, ModuleCategory.RENDER)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "flow speed",
+                    () -> ConfigManager.prismBreakSpeed,
+                    val -> ConfigManager.prismBreakSpeed = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "edge width",
+                    () -> ConfigManager.prismBreakEdgeWidth,
+                    val -> ConfigManager.prismBreakEdgeWidth = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "chroma lightness",
+                    () -> ConfigManager.prismBreakChromaLightness,
+                    val -> ConfigManager.prismBreakChromaLightness = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "chroma chroma",
+                    () -> ConfigManager.prismBreakChromaChroma,
+                    val -> ConfigManager.prismBreakChromaChroma = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "chroma size",
+                    () -> ConfigManager.prismBreakChromaSize,
+                    val -> ConfigManager.prismBreakChromaSize = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "replace vanilla",
+                    () -> ConfigManager.prismBreakReplaceVanilla,
+                    val -> ConfigManager.prismBreakReplaceVanilla = (Boolean) val
                 )
             }
         );
@@ -1371,6 +1453,12 @@ public class ModuleManager {
             val -> ConfigManager.oldSneakingEnabled = val
         );
 
+        ModuleRegistry.registerSimpleModule(
+            "RemoveRecipeBook", "RemoveRecipeBook", ModuleCategory.QOL,
+            () -> ConfigManager.removeRecipeBookEnabled,
+            val -> ConfigManager.removeRecipeBookEnabled = val
+        );
+
         ModuleRegistry.registerModuleWithValues(
             "FishHookTimer", "FishHookTimer", ModuleCategory.QOL,
             () -> ConfigManager.fishHookTimerEnabled,
@@ -1476,6 +1564,7 @@ public class ModuleManager {
         TooltipManager.registerTooltip("OldSneaking",
             MessageUtils.createColoredText("Restore the sneaking animation of version 1.7.", 0xFFFFFF)
                 .append(MessageUtils.createColoredText(" Fake sneaking eye height!", 0xFFFF00)));
+        TooltipManager.registerTooltip("RemoveRecipeBook", "Remove the recipe book button and keep the recipe book hidden.", 0xFFFFFF);
         TooltipManager.registerTooltip("arabic numerals", "Replace roman number with arabic number.", 0xFFFFFF);
         TooltipManager.registerTooltip("transparentize other tags", "Remove the black background of tags.", 0xFFFFFF);
         TooltipManager.registerTooltip("NoTextShadow", "Disable all the text shadow in game.", 0xFFFFFF);
@@ -1497,6 +1586,8 @@ public class ModuleManager {
             "Remember each item's tooltip scroll position separately until the screen closes.",
             0xFFFFFF
         );
+        TooltipManager.registerTooltip("PrismBreak", "Prismatic breaking glow around the block collision shape while mining.", 0xFFFFFF);
+        TooltipManager.registerTooltip("replace vanilla", "Draw the custom prism outline instead of the vanilla breaking cracks.", 0xFFFFFF);
     }
     
     public static List<Module> getModules() {

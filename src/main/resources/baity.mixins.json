@@ -8,6 +8,7 @@
     "SmolPeopleMixin$SmolPlayerRendererMixin",
     "SmolPeopleMixin$SmolCameraMixin",
     "CrosshairMixin",
+    "AutoSprintMixin",
     "NametagMixin$ExtractMixin",
     "NametagMixin$SubmitMixin",
     "NametagMixin$EntitySubmitMixin",

@@ -887,6 +887,22 @@ public class ModuleManager {
         );
 
         ModuleRegistry.registerModuleWithValues(
+            "AutoSprint", "AutoSprint", ModuleCategory.QOL,
+            () -> ConfigManager.autoSprintEnabled,
+            val -> ConfigManager.autoSprintEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new Option("sprint underwater", "sprint underwater", ConfigManager.autoSprintUnderWater, ModuleCategory.QOL)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "sprint underwater",
+                    () -> ConfigManager.autoSprintUnderWater,
+                    val -> ConfigManager.autoSprintUnderWater = (Boolean) val
+                )
+            }
+        );
+
+        ModuleRegistry.registerModuleWithValues(
             "SidePanel", "SidePanel", ModuleCategory.QOL,
             () -> ConfigManager.sidePanelEnabled,
             val -> ConfigManager.sidePanelEnabled = val,

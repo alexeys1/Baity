@@ -119,6 +119,9 @@ public class ConfigManager {
     
     public static boolean noSwimPoseEnabled = false;
     
+    public static boolean autoSprintEnabled = false;
+    public static boolean autoSprintUnderWater = false;
+    
     public static boolean cullingEnabled = false;
     public static boolean cullingHideDyingMob = true;
     public static boolean cullingHideNonStarredNametag = true;
@@ -570,6 +573,12 @@ public class ConfigManager {
         registerField("NoSwimPose", Boolean.class,
             c -> ConfigManager.noSwimPoseEnabled,
             (c, v) -> ConfigManager.noSwimPoseEnabled = (Boolean) v);
+        registerField("AutoSprint", Boolean.class,
+            c -> ConfigManager.autoSprintEnabled,
+            (c, v) -> ConfigManager.autoSprintEnabled = (Boolean) v);
+        registerField("AutoSprintUnderWater", Boolean.class,
+            c -> ConfigManager.autoSprintUnderWater,
+            (c, v) -> ConfigManager.autoSprintUnderWater = (Boolean) v);
         registerField("Culling", Boolean.class,
             c -> ConfigManager.cullingEnabled,
             (c, v) -> ConfigManager.cullingEnabled = (Boolean) v);

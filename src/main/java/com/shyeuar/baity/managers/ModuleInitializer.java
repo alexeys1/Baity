@@ -297,6 +297,7 @@ public class ModuleInitializer {
 
     private static void initializeMiscModules() {
         setModuleEnabled("OldSneaking", ConfigManager.oldSneakingEnabled);
+        setModuleEnabled("RemoveRecipeBook", ConfigManager.removeRecipeBookEnabled);
     }
 
     private static void setModuleEnabled(String moduleName, boolean enabled) {

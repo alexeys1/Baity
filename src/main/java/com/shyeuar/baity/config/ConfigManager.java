@@ -141,6 +141,7 @@ public class ConfigManager {
     public static boolean heldItemTweaksNoArmSwayEnabled = true;
     
     public static boolean noTextShadowEnabled = false;
+    public static boolean removeRecipeBookEnabled = false;
 
     public static boolean vanillaHudHiderEnabled = false;
     public static boolean vanillaHudHiderArmorBar = false;
@@ -632,6 +633,9 @@ public class ConfigManager {
         registerField("NoTextShadow", Boolean.class,
             c -> ConfigManager.noTextShadowEnabled,
             (c, v) -> ConfigManager.noTextShadowEnabled = (Boolean) v);
+        registerField("RemoveRecipeBook", Boolean.class,
+            c -> ConfigManager.removeRecipeBookEnabled,
+            (c, v) -> ConfigManager.removeRecipeBookEnabled = (Boolean) v);
         registerField("VanillaHudHider", Boolean.class,
             c -> ConfigManager.vanillaHudHiderEnabled,
             (c, v) -> ConfigManager.vanillaHudHiderEnabled = (Boolean) v);

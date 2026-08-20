@@ -80,6 +80,8 @@
     "ItemEntityRenderStateMixin",
     "OldSneakingMixin$OldSneakingCameraMixin",
     "OldSneakingMixin$OldSneakingEntityEyeHeightMixin",
+    "RemoveRecipeBookMixin$AbstractRecipeBookScreenMixin",
+    "RemoveRecipeBookMixin$RecipeBookComponentMixin",
     "CameraRenderStateMixin",
     "AvatarRenderStateMixin",
     "GameRendererMixin",

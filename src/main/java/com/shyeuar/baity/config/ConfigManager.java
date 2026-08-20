@@ -120,6 +120,7 @@ public class ConfigManager {
     public static boolean noSwimPoseEnabled = false;
     
     public static boolean autoSprintEnabled = false;
+    public static int autoSprintKeybind = 0;
     public static boolean autoSprintUnderWater = false;
     
     public static boolean cullingEnabled = false;
@@ -585,6 +586,9 @@ public class ConfigManager {
         registerField("AutoSprint", Boolean.class,
             c -> ConfigManager.autoSprintEnabled,
             (c, v) -> ConfigManager.autoSprintEnabled = (Boolean) v);
+        registerField("AutoSprintKeybind", Integer.class,
+            c -> ConfigManager.autoSprintKeybind,
+            (c, v) -> ConfigManager.autoSprintKeybind = (Integer) v);
         registerField("AutoSprintUnderWater", Boolean.class,
             c -> ConfigManager.autoSprintUnderWater,
             (c, v) -> ConfigManager.autoSprintUnderWater = (Boolean) v);

@@ -891,9 +891,22 @@ public class ModuleManager {
             () -> ConfigManager.autoSprintEnabled,
             val -> ConfigManager.autoSprintEnabled = val,
             new com.shyeuar.baity.gui.value.Value[]{
+                new ButtonValue(
+                    "keybind",
+                    "keybind",
+                    ConfigManager.autoSprintKeybind,
+                    ModuleCategory.QOL,
+                    ButtonValue.ButtonValueType.KEYBIND,
+                    true
+                ),
                 new Option("sprint underwater", "sprint underwater", ConfigManager.autoSprintUnderWater, ModuleCategory.QOL)
             },
             new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "keybind",
+                    () -> ConfigManager.autoSprintKeybind,
+                    val -> ConfigManager.autoSprintKeybind = ((Number) val).intValue()
+                ),
                 new ModuleRegistry.ValueConfigInfo(
                     "sprint underwater",
                     () -> ConfigManager.autoSprintUnderWater,

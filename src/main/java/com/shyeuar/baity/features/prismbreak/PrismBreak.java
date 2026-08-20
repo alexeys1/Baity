@@ -42,7 +42,7 @@ public class PrismBreak {
         long now = Util.getMillis();
         HashSet<Long> seen = new HashSet<>();
         if (!levelRenderState.blockBreakingRenderStates.isEmpty()) {
-            try (Gizmos.TemporaryCollection ignored = levelRenderer.collectPerFrameGizmos()) {
+            try (var _ = levelRenderer.collectPerFrameGizmos()) {
                 for (BlockBreakingRenderState state : levelRenderState.blockBreakingRenderStates) {
                     if (state.blockState().getRenderShape() != RenderShape.MODEL) {
                         continue;

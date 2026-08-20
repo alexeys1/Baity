@@ -964,6 +964,59 @@ public class ModuleManager {
             }
         );
 
+        GroupValue prismBreakChromaGroup = new GroupValue("chroma settings", "chroma settings", ModuleCategory.RENDER)
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("chroma lightness", "chroma lightness", 0.8, 0.2, 1.0, 0.05, ModuleCategory.RENDER))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("chroma chroma", "chroma chroma", 0.2, 0.0, 0.4, 0.01, ModuleCategory.RENDER))
+            .addChild(new com.shyeuar.baity.gui.value.SliderValue("chroma size", "chroma size", 2.5, 0.5, 10.0, 0.1, ModuleCategory.RENDER));
+
+        ModuleRegistry.registerModuleWithValues(
+            "PrismBreak", "prismatic breaking glow", ModuleCategory.RENDER,
+            () -> ConfigManager.prismBreakEnabled,
+            val -> ConfigManager.prismBreakEnabled = val,
+            new com.shyeuar.baity.gui.value.Value[]{
+                new com.shyeuar.baity.gui.value.SliderValue(
+                    "flow speed", "flow speed", 1.0, 0.1, 5.0, 0.1, ModuleCategory.RENDER
+                ),
+                new com.shyeuar.baity.gui.value.SliderValue(
+                    "edge width", "edge width", 5.0, 1.0, 20.0, 0.5, ModuleCategory.RENDER
+                ),
+                prismBreakChromaGroup,
+                new Option("replace vanilla", "replace vanilla", ConfigManager.prismBreakReplaceVanilla, ModuleCategory.RENDER)
+            },
+            new ModuleRegistry.ValueConfigInfo[]{
+                new ModuleRegistry.ValueConfigInfo(
+                    "flow speed",
+                    () -> ConfigManager.prismBreakSpeed,
+                    val -> ConfigManager.prismBreakSpeed = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "edge width",
+                    () -> ConfigManager.prismBreakEdgeWidth,
+                    val -> ConfigManager.prismBreakEdgeWidth = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "chroma lightness",
+                    () -> ConfigManager.prismBreakChromaLightness,
+                    val -> ConfigManager.prismBreakChromaLightness = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "chroma chroma",
+                    () -> ConfigManager.prismBreakChromaChroma,
+                    val -> ConfigManager.prismBreakChromaChroma = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "chroma size",
+                    () -> ConfigManager.prismBreakChromaSize,
+                    val -> ConfigManager.prismBreakChromaSize = ((Number) val).doubleValue()
+                ),
+                new ModuleRegistry.ValueConfigInfo(
+                    "replace vanilla",
+                    () -> ConfigManager.prismBreakReplaceVanilla,
+                    val -> ConfigManager.prismBreakReplaceVanilla = (Boolean) val
+                )
+            }
+        );
+
         ModuleRegistry.registerModuleWithValues(
             "VanillaHudHider", "VanillaHudHider", ModuleCategory.RENDER,
             () -> ConfigManager.vanillaHudHiderEnabled,
@@ -1513,6 +1566,8 @@ public class ModuleManager {
             "Remember each item's tooltip scroll position separately until the screen closes.",
             0xFFFFFF
         );
+        TooltipManager.registerTooltip("PrismBreak", "Prismatic breaking glow around the block collision shape while mining.", 0xFFFFFF);
+        TooltipManager.registerTooltip("replace vanilla", "Draw the custom prism outline instead of the vanilla breaking cracks.", 0xFFFFFF);
     }
     
     public static List<Module> getModules() {

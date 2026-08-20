@@ -189,6 +189,14 @@ public class ConfigManager {
     public static boolean motionBlurEnabled = false;
     public static float motionBlurStrength = 0.6f;
 
+    public static boolean prismBreakEnabled = false;
+    public static double prismBreakSpeed = 1.0;
+    public static double prismBreakEdgeWidth = 5.0;
+    public static double prismBreakChromaLightness = 0.8;
+    public static double prismBreakChromaChroma = 0.2;
+    public static double prismBreakChromaSize = 2.5;
+    public static boolean prismBreakReplaceVanilla = true;
+
     public static boolean paperDollEnabled = false;
     public static double paperDollX = 0.10;
     public static double paperDollY = 0.35;
@@ -744,6 +752,27 @@ public class ConfigManager {
         registerField("MotionBlurStrength", Float.class,
             c -> ConfigManager.motionBlurStrength,
             (c, v) -> ConfigManager.motionBlurStrength = (Float) v);
+        registerField("PrismBreak", Boolean.class,
+            c -> ConfigManager.prismBreakEnabled,
+            (c, v) -> ConfigManager.prismBreakEnabled = (Boolean) v);
+        registerField("PrismBreakSpeed", Double.class,
+            c -> ConfigManager.prismBreakSpeed,
+            (c, v) -> ConfigManager.prismBreakSpeed = (Double) v);
+        registerField("PrismBreakEdgeWidth", Double.class,
+            c -> ConfigManager.prismBreakEdgeWidth,
+            (c, v) -> ConfigManager.prismBreakEdgeWidth = (Double) v);
+        registerField("PrismBreakChromaLightness", Double.class,
+            c -> ConfigManager.prismBreakChromaLightness,
+            (c, v) -> ConfigManager.prismBreakChromaLightness = (Double) v);
+        registerField("PrismBreakChromaChroma", Double.class,
+            c -> ConfigManager.prismBreakChromaChroma,
+            (c, v) -> ConfigManager.prismBreakChromaChroma = (Double) v);
+        registerField("PrismBreakChromaSize", Double.class,
+            c -> ConfigManager.prismBreakChromaSize,
+            (c, v) -> ConfigManager.prismBreakChromaSize = (Double) v);
+        registerField("PrismBreakReplaceVanilla", Boolean.class,
+            c -> ConfigManager.prismBreakReplaceVanilla,
+            (c, v) -> ConfigManager.prismBreakReplaceVanilla = (Boolean) v);
         registerField("PaperDoll", Boolean.class,
             c -> ConfigManager.paperDollEnabled,
             (c, v) -> ConfigManager.paperDollEnabled = (Boolean) v);

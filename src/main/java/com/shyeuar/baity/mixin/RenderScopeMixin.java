@@ -26,6 +26,8 @@ public class RenderScopeMixin {
 		@Unique
 		private boolean baity$hidePaperDollArmor = false;
 		@Unique
+		private boolean baity$paperDollRenderState = false;
+		@Unique
 		private int baity$entityId = -1;
 
 		@Override
@@ -46,6 +48,16 @@ public class RenderScopeMixin {
 		@Override
 		public void baity$setHidePaperDollArmor(boolean hidePaperDollArmor) {
 			this.baity$hidePaperDollArmor = hidePaperDollArmor;
+		}
+
+		@Override
+		public boolean baity$isPaperDollRenderState() {
+			return this.baity$paperDollRenderState;
+		}
+
+		@Override
+		public void baity$setPaperDollRenderState(boolean paperDollRenderState) {
+			this.baity$paperDollRenderState = paperDollRenderState;
 		}
 
 		@Override
@@ -83,16 +95,16 @@ public class RenderScopeMixin {
 			if (livingEntityRenderState instanceof AvatarRenderState avatarState) {
 				Minecraft mc = Minecraft.getInstance();
 				if (mc.player != null && NoSwimPoseUtils.isSelfPlayerById(avatarState.id)) {
+					boolean paperDollState = livingEntityRenderState instanceof EntityRenderStateInterface paperDollContext
+						&& paperDollContext.baity$isPaperDollRenderState();
 					if (worldContext && NoSwimPoseUtils.shouldForceStandingModelAppearance()) {
 						NoSwimPoseUtils.clearSwimRenderState(avatarState);
-					} else if (!worldContext) {
-						if (RenderScope.isPaperDollRender()) {
-							if (NoSwimPoseUtils.isFeatureActive()) {
-								NoSwimPoseUtils.clearSwimRenderState(avatarState);
-							}
-						} else {
-							NoSwimPoseUtils.restoreSwimRenderStateFromEntity(avatarState, mc.player);
+					} else if (paperDollState || RenderScope.isPaperDollRender()) {
+						if (NoSwimPoseUtils.shouldForceStandingModelAppearance()) {
+							NoSwimPoseUtils.clearSwimRenderState(avatarState);
 						}
+					} else if (!worldContext) {
+						NoSwimPoseUtils.restoreSwimRenderStateFromEntity(avatarState, mc.player);
 					}
 				}
 			}

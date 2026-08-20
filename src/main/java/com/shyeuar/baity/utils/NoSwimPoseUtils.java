@@ -68,22 +68,13 @@ public final class NoSwimPoseUtils {
         Player player = mc.player;
         long now = System.currentTimeMillis();
 
-        if (isInSwimAction(player)) {
-            if (isInWaterContext(player)) {
-                wasInWater = true;
-                exitWaterTime = 0L;
-                return SwimVisualPhase.ACTIVE;
-            }
-            return SwimVisualPhase.NONE;
+        if (isInSwimAction(player) && isInWaterContext(player)) {
+            wasInWater = true;
+            exitWaterTime = 0L;
+            return SwimVisualPhase.ACTIVE;
         }
 
         if (!wasInWater) {
-            return SwimVisualPhase.NONE;
-        }
-
-        if (!isInWaterContext(player)) {
-            wasInWater = false;
-            exitWaterTime = 0L;
             return SwimVisualPhase.NONE;
         }
 
@@ -350,32 +341,41 @@ public final class NoSwimPoseUtils {
         if (!isSelfPlayerById(state.id)) {
             return false;
         }
-        if (RenderScope.isPaperDollRender()) {
-            return true;
+        if (isPaperDollState(state) || RenderScope.isPaperDollRender()) {
+            return shouldForceStandingModelAppearance();
         }
         return isLevelRenderContext(state);
     }
 
+    private static boolean isPaperDollState(AvatarRenderState state) {
+        return state instanceof EntityRenderStateInterface context && context.baity$isPaperDollRenderState();
+    }
+
     public static void clearSwimRenderState(AvatarRenderState state) {
-        if (RenderScope.isPaperDollRender()) {
-            if (!isFeatureActive() || state == null) {
+        if (state == null) {
+            return;
+        }
+        if (isPaperDollState(state) || RenderScope.isPaperDollRender()) {
+            if (!shouldForceStandingModelAppearance()) {
                 return;
             }
-            state.isVisuallySwimming = false;
-            state.swimAmount = 0.0F;
-            if (isSneaking()) {
-                state.isCrouching = true;
-            }
+            applyStandingSwimVisual(state);
             return;
         }
         if (!shouldForceStandingModelAppearance()) {
             return;
         }
+        applyStandingSwimVisual(state);
+    }
+
+    private static void applyStandingSwimVisual(AvatarRenderState state) {
         state.isVisuallySwimming = false;
         state.swimAmount = 0.0F;
-
         if (isSneaking()) {
             state.isCrouching = true;
+            state.pose = Pose.CROUCHING;
+        } else {
+            state.pose = Pose.STANDING;
         }
     }
 

@@ -1,9 +1,8 @@
-package com.shyeuar.baity.features.prismbreak;
+package com.shyeuar.baity.features;
 
 import com.shyeuar.baity.config.ConfigManager;
 import com.shyeuar.baity.mixin.accessor.MultiPlayerGameModeAccessor;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -21,12 +20,16 @@ import net.minecraft.world.phys.Vec3;
 
 public class PrismBreak {
 
-    private static final HashMap<Long, Float> SMOOTH_REACH = new HashMap<>();
-    private static long lastFrameMs;
-    private static BlockPos lastLocalPos;
-    private static float lastLocalRaw = -1.0f;
-    private static long lastLocalRawMs;
-    private static float localVelocity;
+    private static final HashMap<Long, ReachAnim> REACH_ANIMS = new HashMap<>();
+    private static final float DEFAULT_STAGE_INTERVAL_SEC = 0.2f;
+    private static final float MIN_STAGE_INTERVAL_SEC = 0.04f;
+    private static final float MAX_STAGE_INTERVAL_SEC = 1.25f;
+
+    private static final class ReachAnim {
+        int lastProgress = -1;
+        long stageStartMs;
+        float intervalSec = DEFAULT_STAGE_INTERVAL_SEC;
+    }
 
     public static boolean isActive() {
         return ConfigManager.prismBreakEnabled;
@@ -36,8 +39,26 @@ public class PrismBreak {
         if (!isActive()) {
             return;
         }
-        var level = Minecraft.getInstance().level;
-        if (level == null) {
+        Minecraft mc = Minecraft.getInstance();
+        var level = mc.level;
+        if (level == null || mc.gameMode == null || !mc.gameMode.isDestroying()) {
+            REACH_ANIMS.clear();
+            return;
+        }
+        BlockPos localPos = ((MultiPlayerGameModeAccessor) mc.gameMode).baity$getDestroyBlockPos();
+        if (localPos == null) {
+            REACH_ANIMS.clear();
+            return;
+        }
+        BlockBreakingRenderState localState = null;
+        for (BlockBreakingRenderState state : levelRenderState.blockBreakingRenderStates) {
+            if (localPos.equals(state.blockPos())) {
+                localState = state;
+                break;
+            }
+        }
+        if (localState == null || localState.blockState().getRenderShape() != RenderShape.MODEL) {
+            REACH_ANIMS.remove(localPos.asLong());
             return;
         }
         double speed = ConfigManager.prismBreakSpeed;
@@ -46,90 +67,59 @@ public class PrismBreak {
         float saturation = (float) (Mth.clamp(ConfigManager.prismBreakChromaChroma, 0.0, 0.4) / 0.4);
         float size = (float) Math.max(0.1, ConfigManager.prismBreakChromaSize);
         long now = Util.getMillis();
-        float dt = lastFrameMs == 0L ? 0.016f : Mth.clamp((now - lastFrameMs) / 1000.0f, 0.001f, 0.05f);
-        lastFrameMs = now;
-        HashSet<Long> seen = new HashSet<>();
-        if (!levelRenderState.blockBreakingRenderStates.isEmpty()) {
-            try (var _ = levelRenderer.collectPerFrameRenderThreadGizmos()) {
-                for (BlockBreakingRenderState state : levelRenderState.blockBreakingRenderStates) {
-                    if (state.blockState().getRenderShape() != RenderShape.MODEL) {
-                        continue;
-                    }
-                    BlockPos pos = state.blockPos();
-                    long key = pos.asLong();
-                    float targetReach = resolveTargetReach(pos, state.progress());
-                    Float stored = SMOOTH_REACH.get(key);
-                    float reach;
-                    if (stored == null || isLocalDestroying(pos)) {
-                        reach = targetReach;
-                    } else {
-                        float alpha = 1.0f - (float) Math.exp(-18.0 * dt);
-                        reach = stored + (targetReach - stored) * alpha;
-                    }
-                    SMOOTH_REACH.put(key, reach);
-                    seen.add(key);
-                    float phase = (float) ((now / 1000.0) * (speed * 0.5));
-                    float posOffset = (float) ((Math.floorMod(key, 100)) * 0.01);
-                    var shape = state.blockState().getShape(level, pos);
-                    if (shape.isEmpty()) {
-                        continue;
-                    }
-                    var boxes = shape.toAabbs();
-                    if (boxes.size() > 8) {
-                        boxes = List.of(shape.bounds());
-                    }
-                    if (state.blockState().getBlock() instanceof CrossCollisionBlock) {
-                        drawCrossOutline(boxes, pos, reach, phase, posOffset, saturation, lightness, size, edgeWidth);
-                    } else {
-                        for (var box : boxes) {
-                            drawBrackets(pos, box, reach, phase, posOffset, saturation, lightness, size, edgeWidth);
-                        }
-                    }
+        long key = localPos.asLong();
+        float reach = resolveReach(key, localState.progress(), now);
+        try (var _ = levelRenderer.collectPerFrameRenderThreadGizmos()) {
+            float phase = (float) ((now / 1000.0) * (speed * 0.5));
+            float posOffset = (float) ((Math.floorMod(key, 100)) * 0.01);
+            var shape = localState.blockState().getShape(level, localPos);
+            if (shape.isEmpty()) {
+                return;
+            }
+            var boxes = shape.toAabbs();
+            if (boxes.size() > 8) {
+                boxes = List.of(shape.bounds());
+            }
+            if (localState.blockState().getBlock() instanceof CrossCollisionBlock) {
+                drawCrossOutline(boxes, localPos, reach, phase, posOffset, saturation, lightness, size, edgeWidth);
+            } else {
+                for (var box : boxes) {
+                    drawBrackets(localPos, box, reach, phase, posOffset, saturation, lightness, size, edgeWidth);
                 }
             }
         }
-        SMOOTH_REACH.keySet().removeIf(k -> !seen.contains(k));
-        if (Minecraft.getInstance().gameMode == null || !Minecraft.getInstance().gameMode.isDestroying()) {
-            lastLocalPos = null;
-            lastLocalRaw = -1.0f;
-            localVelocity = 0.0f;
-        }
     }
 
-    private static boolean isLocalDestroying(BlockPos pos) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.gameMode == null || !mc.gameMode.isDestroying()) {
-            return false;
+    private static float resolveReach(long key, int progress, long now) {
+        int stage = Mth.clamp(progress, 0, 9);
+        float base = stage / 10.0f;
+        float next = Math.min(1.0f, (stage + 1) / 10.0f);
+        ReachAnim anim = REACH_ANIMS.get(key);
+        if (anim == null) {
+            REACH_ANIMS.clear();
+            anim = new ReachAnim();
+            anim.lastProgress = stage;
+            anim.stageStartMs = now;
+            anim.intervalSec = DEFAULT_STAGE_INTERVAL_SEC;
+            REACH_ANIMS.put(key, anim);
+            return base;
         }
-        BlockPos destroying = ((MultiPlayerGameModeAccessor) mc.gameMode).baity$getDestroyBlockPos();
-        return destroying != null && destroying.equals(pos);
-    }
-
-    private static float resolveTargetReach(BlockPos pos, int progress) {
-        if (isLocalDestroying(pos)) {
-            return resolveLocalReach(pos);
+        if (stage != anim.lastProgress) {
+            if (stage > anim.lastProgress) {
+                float measured = (now - anim.stageStartMs) / 1000.0f;
+                if (measured >= MIN_STAGE_INTERVAL_SEC && measured <= MAX_STAGE_INTERVAL_SEC) {
+                    float steps = stage - anim.lastProgress;
+                    float perStep = measured / Math.max(1.0f, steps);
+                    anim.intervalSec = Mth.clamp(anim.intervalSec * 0.4f + perStep * 0.6f, MIN_STAGE_INTERVAL_SEC, MAX_STAGE_INTERVAL_SEC);
+                }
+            } else {
+                anim.intervalSec = DEFAULT_STAGE_INTERVAL_SEC;
+            }
+            anim.lastProgress = stage;
+            anim.stageStartMs = now;
         }
-        return Math.min(1.0f, (progress + 1) / 10.0f);
-    }
-
-    private static float resolveLocalReach(BlockPos pos) {
-        float raw = Mth.clamp(((MultiPlayerGameModeAccessor) Minecraft.getInstance().gameMode).baity$getDestroyProgress(), 0.0f, 1.0f);
-        long now = Util.getMillis();
-        if (lastLocalPos == null || !lastLocalPos.equals(pos) || lastLocalRaw < 0.0f) {
-            lastLocalPos = pos.immutable();
-            lastLocalRaw = raw;
-            lastLocalRawMs = now;
-            localVelocity = 0.0f;
-            return raw;
-        }
-        if (Float.compare(raw, lastLocalRaw) != 0) {
-            float dt = Math.max(0.001f, (now - lastLocalRawMs) / 1000.0f);
-            localVelocity = (raw - lastLocalRaw) / dt;
-            lastLocalRaw = raw;
-            lastLocalRawMs = now;
-        }
-        float extrapolated = raw + localVelocity * ((now - lastLocalRawMs) / 1000.0f);
-        return Mth.clamp(extrapolated, 0.0f, 1.0f);
+        float t = Mth.clamp((now - anim.stageStartMs) / 1000.0f / anim.intervalSec, 0.0f, 1.0f);
+        return Mth.lerp(t, base, next);
     }
 
     private static void drawBrackets(BlockPos pos, AABB box, float reach, float phase, float posOffset,
@@ -311,6 +301,18 @@ public class PrismBreak {
 
     private static final int JOINT_SEGMENTS = 16;
 
+    private static Vec3 biasTowardCamera(Vec3 point) {
+        Vec3 cam = Minecraft.getInstance().gameRenderer.mainCamera().position();
+        Vec3 toCam = cam.subtract(point);
+        double lenSq = toCam.lengthSqr();
+        if (lenSq <= 1.0E-12) {
+            return point;
+        }
+        double dist = Math.sqrt(lenSq);
+        double eps = Mth.clamp(dist * 0.002, 0.002, 0.025);
+        return point.add(toCam.scale(eps / dist));
+    }
+
     private static float jointRadius(double x, double y, double z, float edgeWidth) {
         Minecraft mc = Minecraft.getInstance();
         var camera = mc.gameRenderer.mainCamera();
@@ -322,7 +324,7 @@ public class PrismBreak {
 
     private static void drawJoint(double x, double y, double z, double centerX, double centerZ,
                                   float phase, float posOffset, float saturation, float lightness, float size, float edgeWidth) {
-        Vec3 pos = new Vec3(x, y, z);
+        Vec3 pos = biasTowardCamera(new Vec3(x, y, z));
         int packed = chromaColor(x, z, centerX, centerZ, phase, posOffset, saturation, lightness, size);
         int r = ARGB.red(packed);
         int g = ARGB.green(packed);
@@ -359,8 +361,8 @@ public class PrismBreak {
     private static void drawArm(double x0, double y0, double z0, double x1, double y1, double z1,
                                 double midX, double midY, double midZ, double centerX, double centerZ,
                                 float phase, float posOffset, float saturation, float lightness, float size, float edgeWidth) {
-        Vec3 from = new Vec3(x0, y0, z0);
-        Vec3 to = new Vec3(x1, y1, z1);
+        Vec3 from = biasTowardCamera(new Vec3(x0, y0, z0));
+        Vec3 to = biasTowardCamera(new Vec3(x1, y1, z1));
         if (from.distanceToSqr(to) <= 1.0E-12) {
             return;
         }

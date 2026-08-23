@@ -3,9 +3,7 @@ package com.shyeuar.baity.features;
 import com.shyeuar.baity.config.ConfigManager;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Environment(EnvType.CLIENT)
 public final class AutoSprint {
@@ -13,23 +11,20 @@ public final class AutoSprint {
     private AutoSprint() {
     }
 
-    public static void handleSprintKeyIsDown(KeyMapping keyMapping, CallbackInfoReturnable<Boolean> cir) {
+    public static boolean shouldAutoSprint(boolean forward) {
         if (!ConfigManager.autoSprintEnabled) {
-            return;
+            return false;
         }
-        if (keyMapping != Minecraft.getInstance().options.keySprint) {
-            return;
+        if (!forward) {
+            return false;
         }
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) {
-            return;
+            return false;
         }
         if (client.player.isSprinting()) {
-            return;
+            return false;
         }
-        if (!ConfigManager.autoSprintUnderWater && client.player.isInWater()) {
-            return;
-        }
-        cir.setReturnValue(true);
+        return ConfigManager.autoSprintUnderWater || !client.player.isInWater();
     }
 }

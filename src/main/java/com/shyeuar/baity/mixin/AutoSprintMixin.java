@@ -1,31 +1,26 @@
 package com.shyeuar.baity.mixin;
 
-import com.shyeuar.baity.features.AutoSprint;
-import net.minecraft.client.player.ClientInput;
-import net.minecraft.client.player.KeyboardInput;
-import net.minecraft.world.entity.player.Input;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.shyeuar.baity.config.ConfigManager;
+import net.minecraft.client.player.LocalPlayer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(KeyboardInput.class)
-public class AutoSprintMixin extends ClientInput {
+@Mixin(LocalPlayer.class)
+public class AutoSprintMixin {
 
-    @Inject(method = "tick", at = @At("TAIL"))
-    private void baity$autoSprint(CallbackInfo ci) {
-        Input input = this.keyPresses;
-        if (!AutoSprint.shouldAutoSprint(input.forward())) {
-            return;
+    @ModifyExpressionValue(
+        method = "aiStep",
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Input;sprint()Z"),
+        require = 1
+    )
+    private boolean baity$autoSprint(boolean original) {
+        if (!ConfigManager.autoSprintEnabled) {
+            return original;
         }
-        this.keyPresses = new Input(
-            input.forward(),
-            input.backward(),
-            input.left(),
-            input.right(),
-            input.jump(),
-            input.shift(),
-            true
-        );
+        if (!ConfigManager.autoSprintUnderWater && ((LocalPlayer) (Object) this).isInWater()) {
+            return original;
+        }
+        return true;
     }
 }

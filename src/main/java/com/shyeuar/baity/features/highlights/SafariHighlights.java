@@ -19,6 +19,7 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -81,6 +82,10 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
     private static final float FLOOR_FILL_B = 0.0f;
     private static final float FLOOR_FILL_ALPHA = 0.25f;
 
+    private static ClientLevel cachedTargetLevel;
+    private static long cachedTargetGameTime = Long.MIN_VALUE;
+    private static SafariTargets cachedTargets = new SafariTargets(List.of(), List.of());
+
     private static final RenderPipeline BAITY_SAFARI_LINES = RenderPipelines.register(
             RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
                     .withLocation("pipeline/baity_safari_lines")
@@ -134,81 +139,58 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
 
         SafariZoneUtils.Zone playerZone = SafariZoneUtils.playerZone(MC);
         float partialTick = MC.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-
-        List<ArmorStand> namedArmorStands = namedArmorStands();
+        SafariTargets targets = safariTargets(playerZone);
 
         Vec3 rayStart = MC.player == null
                 ? null
                 : MC.player.getEyePosition(partialTick).add(MC.player.getViewVector(partialTick).scale(0.12));
 
-        for (Entity entity : MC.level.entitiesForRendering()) {
-            if (entity instanceof Display.ItemDisplay itemDisplay) {
-                if (ConfigManager.safariFloorDropEnabled && isFloorDrop(itemDisplay)) {
-                    BlockPos position = itemDisplay.blockPosition();
-                    if (SafariZoneUtils.matchesPlayerZone(playerZone, position.getX(), position.getZ())) {
-                        AABB box = new AABB(
-                                position.getX(),
-                                position.getY() + 0.5,
-                                position.getZ(),
-                                position.getX() + 1.0,
-                                position.getY() + 1.0,
-                                position.getZ() + 1.0
-                        );
-                        drawFilledBox(
-                                matrices,
-                                submits,
-                                box,
-                                cameraPos,
-                                FLOOR_FILL_R,
-                                FLOOR_FILL_G,
-                                FLOOR_FILL_B,
-                                FLOOR_FILL_ALPHA
-                        );
-                    }
-                }
-                continue;
-            }
-
-            if (entity instanceof Player player && player != MC.player) {
-                if (!player.isAlive()) continue;
-                if (!SafariZoneUtils.matchesPlayerZone(playerZone, player.getX(), player.getZ())) continue;
-                if (!dispatcher.shouldRender(player, frustum, cameraPos.x, cameraPos.y, cameraPos.z)) continue;
-
-                String name = LocateUtils.toPlainText(
-                        player.getDisplayName() != null
-                                ? player.getDisplayName().getString()
-                                : player.getName().getString()
+        if (ConfigManager.safariFloorDropEnabled) {
+            for (Entity entity : MC.level.entitiesForRendering()) {
+                if (!(entity instanceof Display.ItemDisplay itemDisplay) || !isFloorDrop(itemDisplay)) continue;
+                BlockPos position = itemDisplay.blockPosition();
+                if (!SafariZoneUtils.matchesPlayerZone(playerZone, position.getX(), position.getZ())) continue;
+                AABB box = new AABB(
+                        position.getX(),
+                        position.getY() + 0.5,
+                        position.getZ(),
+                        position.getX() + 1.0,
+                        position.getY() + 1.0,
+                        position.getZ() + 1.0
                 );
-                boolean isHideyho = ConfigManager.safariHideyhoEnabled && HIDEYHO_NAME.equals(name);
-                boolean isOtherNpc = ConfigManager.safariNpcEnabled
-                        && (isSafariNpc(name) || hasAssociatedSafariNpcLabel(player, namedArmorStands));
-                if (isHideyho || isOtherNpc) {
-                    int outlineColor = isHideyho
-                            ? ARGB.colorFromFloat(1.0f, HIDEYHO_R, HIDEYHO_G, HIDEYHO_B)
-                            : ARGB.colorFromFloat(1.0f, NPC_R, NPC_G, NPC_B);
-                    drawEntityModel(
-                            player,
-                            partialTick,
-                            cameraPos,
-                            matrices,
-                            submits,
-                            cameraRenderState,
-                            outlineColor
-                    );
-                }
-                continue;
+                drawFilledBox(
+                        matrices,
+                        submits,
+                        box,
+                        cameraPos,
+                        FLOOR_FILL_R,
+                        FLOOR_FILL_G,
+                        FLOOR_FILL_B,
+                        FLOOR_FILL_ALPHA
+                );
             }
+        }
 
-            if (!ConfigManager.safariMobEnabled
-                    || !(entity instanceof Mob mob)
-                    || !mob.isAlive()
-                    || mob instanceof HappyGhast) {
-                continue;
-            }
-            if (!SafariZoneUtils.matchesPlayerZone(playerZone, mob.getX(), mob.getZ())) continue;
+        for (SafariPlayerTarget target : targets.players()) {
+            Player player = target.player();
+            if (!player.isAlive()) continue;
+            if (!dispatcher.shouldRender(player, frustum, cameraPos.x, cameraPos.y, cameraPos.z)) continue;
+            drawEntityModel(
+                    player,
+                    partialTick,
+                    cameraPos,
+                    matrices,
+                    submits,
+                    cameraRenderState,
+                    target.outlineColor()
+            );
+        }
+
+        for (SafariMobTarget target : targets.mobs()) {
+            Mob mob = target.mob();
+            if (!mob.isAlive()) continue;
             if (!dispatcher.shouldRender(mob, frustum, cameraPos.x, cameraPos.y, cameraPos.z)) continue;
-
-            ArmorStand associatedArmorStand = findAssociatedArmorStand(mob, namedArmorStands);
+            ArmorStand associatedArmorStand = target.associatedArmorStand();
             drawEntityModel(
                     mob,
                     partialTick,
@@ -232,6 +214,54 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                 );
             }
         }
+    }
+
+    private static SafariTargets safariTargets(SafariZoneUtils.Zone playerZone) {
+        long gameTime = MC.level.getGameTime();
+        if (cachedTargetLevel == MC.level && cachedTargetGameTime == gameTime) {
+            return cachedTargets;
+        }
+
+        List<ArmorStand> namedArmorStands = namedArmorStands();
+        List<SafariPlayerTarget> players = new ArrayList<>();
+        List<SafariMobTarget> mobs = new ArrayList<>();
+
+        for (Entity entity : MC.level.entitiesForRendering()) {
+            if (entity instanceof Player player && player != MC.player) {
+                if (!player.isAlive()) continue;
+                if (!SafariZoneUtils.matchesPlayerZone(playerZone, player.getX(), player.getZ())) continue;
+
+                String name = LocateUtils.toPlainText(
+                        player.getDisplayName() != null
+                                ? player.getDisplayName().getString()
+                                : player.getName().getString()
+                );
+                boolean isHideyho = ConfigManager.safariHideyhoEnabled && HIDEYHO_NAME.equals(name);
+                boolean isOtherNpc = ConfigManager.safariNpcEnabled
+                        && (isSafariNpc(name) || hasAssociatedSafariNpcLabel(player, namedArmorStands));
+                if (isHideyho || isOtherNpc) {
+                    int outlineColor = isHideyho
+                            ? ARGB.colorFromFloat(1.0f, HIDEYHO_R, HIDEYHO_G, HIDEYHO_B)
+                            : ARGB.colorFromFloat(1.0f, NPC_R, NPC_G, NPC_B);
+                    players.add(new SafariPlayerTarget(player, outlineColor));
+                }
+                continue;
+            }
+
+            if (!ConfigManager.safariMobEnabled
+                    || !(entity instanceof Mob mob)
+                    || !mob.isAlive()
+                    || mob instanceof HappyGhast) {
+                continue;
+            }
+            if (!SafariZoneUtils.matchesPlayerZone(playerZone, mob.getX(), mob.getZ())) continue;
+            mobs.add(new SafariMobTarget(mob, findAssociatedArmorStand(mob, namedArmorStands)));
+        }
+
+        cachedTargetLevel = MC.level;
+        cachedTargetGameTime = gameTime;
+        cachedTargets = new SafariTargets(players, mobs);
+        return cachedTargets;
     }
 
     private static boolean isFloorDrop(Display.ItemDisplay itemDisplay) {
@@ -332,6 +362,15 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
             }
         }
         return armorStands;
+    }
+
+    private record SafariPlayerTarget(Player player, int outlineColor) {
+    }
+
+    private record SafariMobTarget(Mob mob, ArmorStand associatedArmorStand) {
+    }
+
+    private record SafariTargets(List<SafariPlayerTarget> players, List<SafariMobTarget> mobs) {
     }
 
     private static final class SafariMobModelCollector extends SubmitNodeStorage {

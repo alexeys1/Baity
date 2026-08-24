@@ -114,23 +114,6 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                     .createRenderSetup()
     );
 
-    private static final RenderPipeline BAITY_SAFARI_MODEL_OUTLINE = RenderPipelines.register(
-            RenderPipeline.builder(RenderPipelines.OUTLINE_SNIPPET)
-                    .withLocation("pipeline/baity_safari_model_outline")
-                    .withFragmentShader(Identifier.fromNamespaceAndPath("baity", "core/baity_safari_model_outline"))
-                    .withCull(false)
-                    .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false, 0f, 0f))
-                    .build()
-    );
-
-    private static final RenderType THROUGH_WALLS_MODEL_OUTLINE = RenderType.create(
-            "baity_safari_model_outline",
-            RenderSetup.builder(BAITY_SAFARI_MODEL_OUTLINE)
-                    .setOutputTarget(OutputTarget.OUTLINE_TARGET)
-                    .setOutline(RenderSetup.OutlineProperty.IS_OUTLINE)
-                    .createRenderSetup()
-    );
-
     @Override
     public void afterSolidFeatures(LevelRenderContext context) {
         if (!ConfigManager.safariRenderTargetESP) return;
@@ -373,18 +356,18 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                 int ignoredOutlineColor,
                 ModelFeatureRenderer.CrumblingOverlay crumblingOverlay
         ) {
-            target.submitModel(
+            renderType.outline().ifPresent(outlineRenderType -> target.submitModel(
                     model,
                     state,
                     poseStack,
-                    THROUGH_WALLS_MODEL_OUTLINE,
+                    outlineRenderType,
                     lightCoords,
                     overlayCoords,
                     tintedColor,
                     textureAtlasSprite,
                     color,
                     crumblingOverlay
-            );
+            ));
         }
 
         @Override
@@ -399,17 +382,17 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                 ModelFeatureRenderer.CrumblingOverlay crumblingOverlay,
                 int ignoredOutlineColor
         ) {
-            target.submitModelPart(
+            renderType.outline().ifPresent(outlineRenderType -> target.submitModelPart(
                     modelPart,
                     poseStack,
-                    THROUGH_WALLS_MODEL_OUTLINE,
+                    outlineRenderType,
                     lightCoords,
                     overlayCoords,
                     textureAtlasSprite,
                     tintedColor,
                     crumblingOverlay,
                     color
-            );
+            ));
         }
 
         private static final class SafariMobOrderedCollector extends SubmitNodeCollection {

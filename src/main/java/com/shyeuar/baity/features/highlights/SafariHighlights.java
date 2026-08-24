@@ -16,6 +16,7 @@ import com.shyeuar.baity.utils.EntityDrawUtils;
 import com.shyeuar.baity.utils.LocateUtils;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientBlockEntityEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
@@ -46,12 +47,16 @@ import net.minecraft.world.entity.animal.happyghast.HappyGhast;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Environment(EnvType.CLIENT)
 public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatures {
@@ -85,6 +90,8 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
     private static ClientLevel cachedTargetLevel;
     private static long cachedTargetGameTime = Long.MIN_VALUE;
     private static SafariTargets cachedTargets = new SafariTargets(List.of(), List.of());
+    private static ClientLevel beeNestLevel;
+    private static final Set<BlockPos> beeNestPositions = new HashSet<>();
 
     private static final RenderPipeline BAITY_SAFARI_LINES = RenderPipelines.register(
             RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
@@ -120,11 +127,37 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                     .createRenderSetup()
     );
 
+    public SafariHighlights() {
+        ClientBlockEntityEvents.BLOCK_ENTITY_LOAD.register(SafariHighlights::onBlockEntityLoad);
+        ClientBlockEntityEvents.BLOCK_ENTITY_UNLOAD.register(SafariHighlights::onBlockEntityUnload);
+    }
+
+    private static void onBlockEntityLoad(BlockEntity blockEntity, ClientLevel level) {
+        ensureBeeNestLevel(level);
+        if (blockEntity.getBlockState().is(Blocks.BEE_NEST)) {
+            beeNestPositions.add(blockEntity.getBlockPos().immutable());
+        }
+    }
+
+    private static void onBlockEntityUnload(BlockEntity blockEntity, ClientLevel level) {
+        if (beeNestLevel == level) {
+            beeNestPositions.remove(blockEntity.getBlockPos());
+        }
+    }
+
+    private static void ensureBeeNestLevel(ClientLevel level) {
+        if (beeNestLevel != level) {
+            beeNestLevel = level;
+            beeNestPositions.clear();
+        }
+    }
+
     @Override
     public void afterSolidFeatures(LevelRenderContext context) {
         if (!ConfigManager.safariRenderTargetESP) return;
         if (MC.level == null) return;
         if (!LocateUtils.isInSafari(MC)) return;
+        ensureBeeNestLevel(MC.level);
 
         Module module = ModuleManager.getModuleByName("Highlights");
         if (module == null || !module.isEnabled()) return;
@@ -168,6 +201,22 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                         FLOOR_FILL_B,
                         FLOOR_FILL_ALPHA
                 );
+            }
+        }
+
+        if (ConfigManager.safariMobEnabled) {
+            for (BlockPos position : beeNestPositions) {
+                if (!SafariZoneUtils.matchesPlayerZone(playerZone, position.getX(), position.getZ())) continue;
+                AABB box = new AABB(
+                        position.getX(),
+                        position.getY(),
+                        position.getZ(),
+                        position.getX() + 1.0,
+                        position.getY() + 1.0,
+                        position.getZ() + 1.0
+                );
+                if (!frustum.isVisible(box)) continue;
+                drawWireBox(matrices, submits, box, cameraPos);
             }
         }
 
@@ -499,6 +548,28 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                 matrices,
                 THROUGH_WALLS_FILL,
                 (pose, fill) -> EntityDrawUtils.drawFilledBoxAtWorld(pose, fill, box, cameraPos, r, g, b, a)
+        );
+    }
+
+    private static void drawWireBox(
+            PoseStack matrices,
+            SubmitNodeCollector submits,
+            AABB box,
+            Vec3 cameraPos
+    ) {
+        submits.submitCustomGeometry(
+                matrices,
+                THROUGH_WALLS_LINE,
+                (pose, lines) -> EntityDrawUtils.drawWireBoxAtWorld(
+                        pose,
+                        lines,
+                        box,
+                        cameraPos,
+                        MOB_R,
+                        MOB_G,
+                        MOB_B,
+                        0.9f
+                )
         );
     }
 

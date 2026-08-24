@@ -25,6 +25,7 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
@@ -125,6 +126,8 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
 
         CameraRenderState cameraRenderState = context.levelState().cameraRenderState;
         Vec3 cameraPos = cameraRenderState.pos;
+        EntityRenderDispatcher dispatcher = MC.getEntityRenderDispatcher();
+        Frustum frustum = MC.gameRenderer.mainCamera().getCullFrustum();
         PoseStack matrices = context.poseStack();
         SubmitNodeCollector submits = context.submitNodeCollector();
         if (matrices == null || submits == null) return;
@@ -169,6 +172,7 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
             if (entity instanceof Player player && player != MC.player) {
                 if (!player.isAlive()) continue;
                 if (!SafariZoneUtils.matchesPlayerZone(playerZone, player.getX(), player.getZ())) continue;
+                if (!dispatcher.shouldRender(player, frustum, cameraPos.x, cameraPos.y, cameraPos.z)) continue;
 
                 String name = LocateUtils.toPlainText(
                         player.getDisplayName() != null
@@ -202,6 +206,7 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                 continue;
             }
             if (!SafariZoneUtils.matchesPlayerZone(playerZone, mob.getX(), mob.getZ())) continue;
+            if (!dispatcher.shouldRender(mob, frustum, cameraPos.x, cameraPos.y, cameraPos.z)) continue;
 
             ArmorStand associatedArmorStand = findAssociatedArmorStand(mob, namedArmorStands);
             drawEntityModel(

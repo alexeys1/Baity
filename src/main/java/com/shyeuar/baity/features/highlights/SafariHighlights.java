@@ -190,7 +190,6 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
             Mob mob = target.mob();
             if (!mob.isAlive()) continue;
             if (!dispatcher.shouldRender(mob, frustum, cameraPos.x, cameraPos.y, cameraPos.z)) continue;
-            ArmorStand associatedArmorStand = target.associatedArmorStand();
             drawEntityModel(
                     mob,
                     partialTick,
@@ -198,9 +197,9 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                     matrices,
                     submits,
                     cameraRenderState,
-                    mobOutlineColor(associatedArmorStand)
+                    mobOutlineColor(target.sparkling())
             );
-            if (rayStart != null && hasLabel(associatedArmorStand, SPARKLING_LABEL)) {
+            if (rayStart != null && target.sparkling()) {
                 drawLine(
                         matrices,
                         submits,
@@ -222,7 +221,7 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
             return cachedTargets;
         }
 
-        List<ArmorStand> namedArmorStands = namedArmorStands();
+        List<NamedArmorStand> namedArmorStands = namedArmorStands();
         List<SafariPlayerTarget> players = new ArrayList<>();
         List<SafariMobTarget> mobs = new ArrayList<>();
 
@@ -255,7 +254,8 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                 continue;
             }
             if (!SafariZoneUtils.matchesPlayerZone(playerZone, mob.getX(), mob.getZ())) continue;
-            mobs.add(new SafariMobTarget(mob, findAssociatedArmorStand(mob, namedArmorStands)));
+            NamedArmorStand associatedArmorStand = findAssociatedArmorStand(mob, namedArmorStands);
+            mobs.add(new SafariMobTarget(mob, associatedArmorStand != null && associatedArmorStand.sparkling()));
         }
 
         cachedTargetLevel = MC.level;
@@ -277,40 +277,37 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
                 && (lowerName.contains("hunter") || lowerName.contains("huntress"));
     }
 
-    private static boolean hasAssociatedSafariNpcLabel(Player player, List<ArmorStand> armorStands) {
-        for (ArmorStand armorStand : armorStands) {
+    private static boolean hasAssociatedSafariNpcLabel(Player player, List<NamedArmorStand> armorStands) {
+        for (NamedArmorStand namedArmorStand : armorStands) {
+            ArmorStand armorStand = namedArmorStand.armorStand();
             double dx = player.getX() - armorStand.getX();
             double dz = player.getZ() - armorStand.getZ();
-            double distance = Math.sqrt(dx * dx + dz * dz);
-            if (distance > 1.0 || armorStand.getY() + 2.0 < player.getY()) continue;
-            if (isSafariNpc(LocateUtils.toPlainText(armorStand.getName().getString()))) return true;
+            double distanceSquared = dx * dx + dz * dz;
+            if (distanceSquared > 1.0 || armorStand.getY() + 2.0 < player.getY()) continue;
+            if (namedArmorStand.safariNpc()) return true;
         }
         return false;
     }
 
-    private static ArmorStand findAssociatedArmorStand(Mob mob, List<ArmorStand> armorStands) {
-        ArmorStand closest = null;
-        double closestDistance = Double.MAX_VALUE;
-        for (ArmorStand armorStand : armorStands) {
+    private static NamedArmorStand findAssociatedArmorStand(Mob mob, List<NamedArmorStand> armorStands) {
+        NamedArmorStand closest = null;
+        double closestDistanceSquared = Double.MAX_VALUE;
+        for (NamedArmorStand namedArmorStand : armorStands) {
+            ArmorStand armorStand = namedArmorStand.armorStand();
             double dx = mob.getX() - armorStand.getX();
             double dz = mob.getZ() - armorStand.getZ();
-            double distance = Math.sqrt(dx * dx + dz * dz);
-            if (distance > 1.0 || armorStand.getY() + 2.0 < mob.getY()) continue;
-            if (distance < closestDistance) {
-                closest = armorStand;
-                closestDistance = distance;
+            double distanceSquared = dx * dx + dz * dz;
+            if (distanceSquared > 1.0 || armorStand.getY() + 2.0 < mob.getY()) continue;
+            if (distanceSquared < closestDistanceSquared) {
+                closest = namedArmorStand;
+                closestDistanceSquared = distanceSquared;
             }
         }
         return closest;
     }
 
-    private static boolean hasLabel(ArmorStand armorStand, String label) {
-        return armorStand != null
-                && LocateUtils.toPlainText(armorStand.getName().getString()).contains(label);
-    }
-
-    private static int mobOutlineColor(ArmorStand associatedArmorStand) {
-        if (hasLabel(associatedArmorStand, SPARKLING_LABEL)) {
+    private static int mobOutlineColor(boolean sparkling) {
+        if (sparkling) {
             return ARGB.colorFromFloat(1.0f, SPARKLING_R, SPARKLING_G, SPARKLING_B);
         }
         return ARGB.colorFromFloat(1.0f, MOB_R, MOB_G, MOB_B);
@@ -354,11 +351,16 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
         );
     }
 
-    private static List<ArmorStand> namedArmorStands() {
-        List<ArmorStand> armorStands = new ArrayList<>();
+    private static List<NamedArmorStand> namedArmorStands() {
+        List<NamedArmorStand> armorStands = new ArrayList<>();
         for (Entity entity : MC.level.entitiesForRendering()) {
             if (entity instanceof ArmorStand armorStand && armorStand.isAlive() && armorStand.hasCustomName()) {
-                armorStands.add(armorStand);
+                String name = LocateUtils.toPlainText(armorStand.getName().getString());
+                armorStands.add(new NamedArmorStand(
+                        armorStand,
+                        isSafariNpc(name),
+                        name.contains(SPARKLING_LABEL)
+                ));
             }
         }
         return armorStands;
@@ -367,10 +369,13 @@ public final class SafariHighlights implements LevelRenderEvents.AfterSolidFeatu
     private record SafariPlayerTarget(Player player, int outlineColor) {
     }
 
-    private record SafariMobTarget(Mob mob, ArmorStand associatedArmorStand) {
+    private record SafariMobTarget(Mob mob, boolean sparkling) {
     }
 
     private record SafariTargets(List<SafariPlayerTarget> players, List<SafariMobTarget> mobs) {
+    }
+
+    private record NamedArmorStand(ArmorStand armorStand, boolean safariNpc, boolean sparkling) {
     }
 
     private static final class SafariMobModelCollector extends SubmitNodeStorage {
